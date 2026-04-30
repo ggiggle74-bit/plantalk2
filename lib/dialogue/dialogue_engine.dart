@@ -13,6 +13,25 @@ class DialogueEngine {
     final normalizedMessage = userMessage.toLowerCase().trim();
 
     if (waterDay >= 2) {
+      if (_containsAny(normalizedMessage, const [
+        '힘들',
+        '피곤',
+        '지쳤',
+        '지친',
+        '졸려',
+        '아파',
+        'tired',
+        'hard',
+        'exhausted',
+      ])) {
+        return _pick(
+          _plantReplies(normalizedPlantName, const [
+            '너도 물 좀 마셔라. 나만 챙기지 말고. 근데 나도 이틀째다.',
+            '힘들면 잠깐 앉아라. 나는 물 좀 받으면 같이 버틴다.',
+          ]),
+        );
+      }
+
       return _pick(
         _plantReplies(normalizedPlantName, const [
           '목 마르다 너도 수분 보충 좀 해라',
@@ -125,6 +144,7 @@ class DialogueEngine {
       '힘들',
       '피곤',
       '지쳤',
+      '지친',
       '졸려',
       '아파',
       'tired',
@@ -137,6 +157,8 @@ class DialogueEngine {
           '오늘은 이긴 척만 해도 된다.',
           '피곤하면 쉬어라. 내일의 일은 내일로 미뤄라.',
           '너무 애쓰지 마라. 물도 한 번에 많이 주면 탈 난다.',
+          '너도 물 좀 마셔라. 나만 챙기지 말고.',
+          '오늘의 일은 내일로 미뤄라. 무가리 공식이다.',
         ]),
       );
     }
