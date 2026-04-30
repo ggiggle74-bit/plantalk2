@@ -40,10 +40,7 @@ class _ChatPanelState extends State<ChatPanel> {
 
     if (widget.initialPlantMessage.trim().isNotEmpty) {
       _latestPlantReply = widget.initialPlantMessage;
-      _messages.add({
-        'sender': 'plant',
-        'text': widget.initialPlantMessage,
-      });
+      _messages.add({'sender': 'plant', 'text': widget.initialPlantMessage});
     }
   }
 
@@ -61,10 +58,7 @@ class _ChatPanelState extends State<ChatPanel> {
 
     setState(() {
       _userMessageCount++;
-      _messages.add({
-        'sender': 'user',
-        'text': text,
-      });
+      _messages.add({'sender': 'user', 'text': text});
     });
 
     _controller.clear();
@@ -72,14 +66,12 @@ class _ChatPanelState extends State<ChatPanel> {
     final reply = DialogueEngine.placeholderReply(
       plantName: widget.plantName,
       userMessage: text,
+      waterDay: widget.waterDay,
     );
 
     setState(() {
       _latestPlantReply = reply;
-      _messages.add({
-        'sender': 'plant',
-        'text': reply,
-      });
+      _messages.add({'sender': 'plant', 'text': reply});
     });
   }
 
