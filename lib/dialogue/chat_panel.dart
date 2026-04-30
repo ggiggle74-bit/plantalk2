@@ -34,13 +34,17 @@ class _ChatPanelState extends State<ChatPanel> {
   String? _latestPlantReply;
   int _userMessageCount = 0;
 
-  @override
+   @override
   void initState() {
     super.initState();
 
-    if (widget.initialPlantMessage.trim().isNotEmpty) {
-      _latestPlantReply = widget.initialPlantMessage;
-      _messages.add({'sender': 'plant', 'text': widget.initialPlantMessage});
+    final firstMessage = widget.waterDay >= 2
+        ? '목 마르다. 물 좀 챙겨줘.'
+        : widget.initialPlantMessage;
+
+    if (firstMessage.trim().isNotEmpty) {
+      _latestPlantReply = firstMessage;
+      _messages.add({'sender': 'plant', 'text': firstMessage});
     }
   }
 
