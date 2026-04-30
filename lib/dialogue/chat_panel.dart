@@ -50,18 +50,11 @@ class _ChatPanelState extends State<ChatPanel> {
     super.dispose();
   }
 
-  void _sendMessage() {
+   void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) {
       return;
     }
-
-    setState(() {
-      _userMessageCount++;
-      _messages.add({'sender': 'user', 'text': text});
-    });
-
-    _controller.clear();
 
     String? prevUser;
 
@@ -71,6 +64,13 @@ class _ChatPanelState extends State<ChatPanel> {
         break;
       }
     }
+
+    setState(() {
+      _userMessageCount++;
+      _messages.add({'sender': 'user', 'text': text});
+    });
+
+    _controller.clear();
 
     final reply = DialogueEngine.placeholderReply(
       plantName: widget.plantName,
@@ -84,7 +84,7 @@ class _ChatPanelState extends State<ChatPanel> {
       _messages.add({'sender': 'plant', 'text': reply});
     });
   }
-
+  
   void _closePanel() {
     Navigator.of(context).pop(
       ChatPanelResult(
