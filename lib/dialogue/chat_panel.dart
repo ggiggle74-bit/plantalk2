@@ -63,10 +63,20 @@ class _ChatPanelState extends State<ChatPanel> {
 
     _controller.clear();
 
+    String? prevUser;
+
+    for (int i = _messages.length - 1; i >= 0; i--) {
+      if (_messages[i]['sender'] == 'user') {
+        prevUser = _messages[i]['text'];
+        break;
+      }
+    }
+
     final reply = DialogueEngine.placeholderReply(
       plantName: widget.plantName,
       userMessage: text,
       waterDay: widget.waterDay,
+      previousUserMessage: prevUser,
     );
 
     setState(() {

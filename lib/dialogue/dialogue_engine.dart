@@ -7,6 +7,7 @@ class DialogueEngine {
     required String plantName,
     required String userMessage,
     required int waterDay,
+    String? previousUserMessage,
   }) {
     final normalizedPlantName = plantName.toLowerCase();
     final normalizedMessage = userMessage.toLowerCase().trim();
@@ -20,6 +21,40 @@ class DialogueEngine {
           '오늘은 대화도 좋은데 물부터 생각해라.',
         ]),
       );
+    }
+
+    if (previousUserMessage != null) {
+      final prev = previousUserMessage.toLowerCase();
+
+      if (prev.contains('피곤') && normalizedMessage.contains('그래')) {
+        return _pick(
+          _plantReplies(normalizedPlantName, const [
+            '또 버틴다? 인간치고는 끈질기다.',
+            '그래도 한다고? 나쁘지 않다.',
+            '버티는 것도 재능이다. 인정한다.',
+          ]),
+        );
+      }
+
+      if (prev.contains('회사') && normalizedMessage.contains('싫')) {
+        return _pick(
+          _plantReplies(normalizedPlantName, const [
+            '싫은데 하는 게 인간이다. 알고 있다.',
+            '도망 안 가는 것만으로도 상위 10%다.',
+            '싫어도 간다? 그게 인간이다.',
+          ]),
+        );
+      }
+
+      if (prev.contains('스트레스') && normalizedMessage.contains('몰라')) {
+        return _pick(
+          _plantReplies(normalizedPlantName, const [
+            '모를 때는 일단 숨 쉬어라. 식물계 기본기다.',
+            '모르겠으면 잠깐 멈춰라. 뿌리도 가끔 쉬어야 깊어진다.',
+            '답 안 나오는 날도 있다. 그래도 넌 아직 안 시들었다.',
+          ]),
+        );
+      }
     }
 
     if (_containsAny(normalizedMessage, const ['안녕', 'hi', 'hello', '반가'])) {
