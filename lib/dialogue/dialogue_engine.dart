@@ -76,12 +76,20 @@ class DialogueEngine {
       }
     }
 
-    if (_containsAny(normalizedMessage, const ['안녕', 'hi', 'hello', '반가'])) {
+    if (_containsAny(normalizedMessage, const [
+      '안녕',
+      '하이',
+      'hi',
+      'hello',
+      '반가',
+    ])) {
       return _pick(
         _plantReplies(normalizedPlantName, const [
           '왔냐. 오늘도 잎 정리하고 기다렸다.',
           '반갑다. 한마디 하고 가라.',
           '안녕. 오늘도 무가리 모드다.',
+          '왔냐. 오늘은 네가 먼저 말 걸었네.',
+          '늦었다. 그래도 왔으니 봐준다.',
         ]),
       );
     }
