@@ -34,13 +34,21 @@ class _ChatPanelState extends State<ChatPanel> {
   String? _latestPlantReply;
   int _userMessageCount = 0;
 
-   @override
+  @override
   void initState() {
     super.initState();
 
-    final firstMessage = widget.waterDay >= 2
-        ? '목 마르다. 물 좀 챙겨줘.'
-        : widget.initialPlantMessage;
+    final String firstMessage;
+
+    if (widget.waterDay >= 4) {
+      firstMessage = '나 지금 말라가는 중이다. 인간아.';
+    } else if (widget.waterDay >= 3) {
+      firstMessage = '이틀은 참았다. 이제 물 얘기 좀 하자.';
+    } else if (widget.waterDay >= 2) {
+      firstMessage = '목 마르다. 물 좀 챙겨줘.';
+    } else {
+      firstMessage = widget.initialPlantMessage;
+    }
 
     if (firstMessage.trim().isNotEmpty) {
       _latestPlantReply = firstMessage;
@@ -54,7 +62,7 @@ class _ChatPanelState extends State<ChatPanel> {
     super.dispose();
   }
 
-   void _sendMessage() {
+  void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) {
       return;
@@ -88,7 +96,7 @@ class _ChatPanelState extends State<ChatPanel> {
       _messages.add({'sender': 'plant', 'text': reply});
     });
   }
-  
+
   void _closePanel() {
     Navigator.of(context).pop(
       ChatPanelResult(
