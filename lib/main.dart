@@ -62,8 +62,6 @@ class _MyAppState extends State<MyApp> {
       'message': '처음 만나서 반가워요 🌱',
       'water_day': 0,
     });
-
-    print('식물 저장 성공: $plantName');
   }
 
   Future<void> updatePlantFriendship(
@@ -182,6 +180,9 @@ class _MyAppState extends State<MyApp> {
                   });
                   await addPlantToSupabase(controller.text.trim());
                 }
+
+                if (!context.mounted) return;
+
                 Navigator.pop(context);
               },
               child: const Text('추가'),
@@ -410,7 +411,7 @@ class _MyAppState extends State<MyApp> {
                       });
                     },
                   );
-                }).toList(),
+                }),
               ],
             ),
           );
