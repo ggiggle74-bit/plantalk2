@@ -77,10 +77,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> updatePlantWaterDay(String plantName, int waterDay) async {
-    await Supabase.instance.client
-        .from('plants')
-        .update({'water_day': waterDay})
-        .eq('name', plantName);
+    await plantService.updatePlantWaterDay(plantName, waterDay);
   }
 
   Future<void> updatePlantMessage(String plantName, String message) async {
