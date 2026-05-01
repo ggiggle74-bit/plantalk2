@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dialogue/chat_panel.dart';
 import 'services/plant_service.dart';
 
@@ -399,9 +400,15 @@ class _MyAppState extends State<MyApp> {
                         extraPlants.removeAt(index);
                       });
                     },
-                    onPhoto: () {
+                    onPhoto: () async {
+                      final image = await ImagePicker().pickImage(
+                        source: ImageSource.gallery,
+                      );
+
+                      if (image == null) return;
+
                       setState(() {
-                        plant['message'] = '사진 기능 준비 중입니다 📷';
+                        plant['message'] = '사진이 선택됐습니다 📷';
                       });
                     },
                   );
