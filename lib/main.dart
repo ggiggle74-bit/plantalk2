@@ -203,6 +203,7 @@ class _MyAppState extends State<MyApp> {
     VoidCallback onWater, {
     VoidCallback? onTalk,
     VoidCallback? onDelete,
+    VoidCallback? onPhoto,
   }) {
     return Card(
       margin: const EdgeInsets.all(12),
@@ -238,14 +239,20 @@ class _MyAppState extends State<MyApp> {
             Text('친밀도 ❤️ $friendship'),
             const SizedBox(height: 10),
 
-            Row(
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
               children: [
                 ElevatedButton(
                   onPressed: onWater,
                   child: const Text('💧 물 줬어요'),
                 ),
-                const SizedBox(width: 10),
                 ElevatedButton(onPressed: onTalk, child: const Text('💬 말 걸기')),
+                if (onPhoto != null)
+                  ElevatedButton(
+                    onPressed: onPhoto,
+                    child: const Text('📷 사진 등록'),
+                  ),
               ],
             ),
           ],
@@ -390,6 +397,11 @@ class _MyAppState extends State<MyApp> {
 
                       setState(() {
                         extraPlants.removeAt(index);
+                      });
+                    },
+                    onPhoto: () {
+                      setState(() {
+                        plant['message'] = '사진 기능 준비 중입니다 📷';
                       });
                     },
                   );
