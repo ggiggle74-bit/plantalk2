@@ -140,10 +140,10 @@ class _MyAppState extends State<MyApp> {
 
     if (!context.mounted) return;
 
-    addPlantDialog(context);
+    addPlantDialog(context, image.path);
   }
 
-  void addPlantDialog(BuildContext context) {
+  void addPlantDialog(BuildContext context, String photoPath) {
     final controller = TextEditingController();
 
     showDialog(
@@ -171,6 +171,7 @@ class _MyAppState extends State<MyApp> {
                       'message': '새 친구가 왔어요 🌱',
                       'waterDay': 0,
                       'friendship': 0,
+                      'photoPath': photoPath,
                       'mood': '보통',
                     });
                   });
@@ -218,6 +219,7 @@ class _MyAppState extends State<MyApp> {
     VoidCallback? onTalk,
     VoidCallback? onDelete,
     VoidCallback? onPhoto,
+    String? photoPath,
   }) {
     return Card(
       margin: const EdgeInsets.all(12),
@@ -245,6 +247,10 @@ class _MyAppState extends State<MyApp> {
             ),
 
             const SizedBox(height: 10),
+            if (photoPath != null) ...[
+              Image.network(photoPath),
+              const SizedBox(height: 10),
+            ],
             Text(message),
 
             const SizedBox(height: 10),
@@ -413,6 +419,7 @@ class _MyAppState extends State<MyApp> {
                         extraPlants.removeAt(index);
                       });
                     },
+                    photoPath: plant['photoPath'] as String?,
                     onPhoto: () async {
                       final image = await ImagePicker().pickImage(
                         source: ImageSource.gallery,
