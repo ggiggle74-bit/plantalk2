@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'dialogue/chat_panel.dart';
+import 'services/plant_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +23,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final PlantService plantService = PlantService();
+
   String monsteraMessage = '목이 조금 말라요 🌱';
   int monsteraWaterDay = 3;
 
@@ -34,12 +37,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> loadPlantsFromSupabase() async {
-    final supabase = Supabase.instance.client;
+    final data = await plantService.loadPlants();
 
-    final data = await supabase
-        .from('plants')
-        .select()
-        .order('created_at', ascending: true);
+    if (!mounted) return;
 
     setState(() {
       extraPlants = data.map<Map<String, dynamic>>((plant) {
@@ -47,21 +47,15 @@ class _MyAppState extends State<MyApp> {
           'name': plant['name'],
           'message': plant['message'] ?? '안녕하세요 🌱',
           'waterDay': plant['water_day'] ?? 0,
-          'friendship': 0,
-          'mood': '보통',
+          'friendship': plant['friendship'] ?? 0,
+          'mood': plant['mood'] ?? '보통',
         };
       }).toList();
     });
   }
 
   Future<void> addPlantToSupabase(String plantName) async {
-    final supabase = Supabase.instance.client;
-
-    await supabase.from('plants').insert({
-      'name': plantName,
-      'message': '처음 만나서 반가워요 🌱',
-      'water_day': 0,
-    });
+    await plantService.addPlant(plantName);
   }
 
   Future<void> updatePlantFriendship(
