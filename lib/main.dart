@@ -63,17 +63,11 @@ class _MyAppState extends State<MyApp> {
     int friendship,
     String mood,
   ) async {
-    await Supabase.instance.client
-        .from('plants')
-        .update({'friendship': friendship, 'mood': mood})
-        .eq('name', plantName);
+    await plantService.updatePlantFriendship(plantName, friendship, mood);
   }
 
   Future<void> deletePlantFromSupabase(String plantName) async {
-    await Supabase.instance.client
-        .from('plants')
-        .delete()
-        .eq('name', plantName);
+    await plantService.deletePlant(plantName);
   }
 
   Future<void> updatePlantWaterDay(String plantName, int waterDay) async {
