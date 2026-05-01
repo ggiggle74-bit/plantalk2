@@ -130,6 +130,19 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Future<void> startPlantRegistration(BuildContext context) async {
+    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (image == null) return;
+    if (!context.mounted) return;
+
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    if (!context.mounted) return;
+
+    addPlantDialog(context);
+  }
+
   void addPlantDialog(BuildContext context) {
     final controller = TextEditingController();
 
@@ -288,7 +301,7 @@ class _MyAppState extends State<MyApp> {
                 IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () {
-                    addPlantDialog(context);
+                    startPlantRegistration(context);
                   },
                 ),
               ],
