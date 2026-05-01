@@ -81,10 +81,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> updatePlantMessage(String plantName, String message) async {
-    await Supabase.instance.client
-        .from('plants')
-        .update({'message': message})
-        .eq('name', plantName);
+    await plantService.updatePlantMessage(plantName, message);
   }
 
   String stuckyMessage = '오늘 기분 좋아요 ☀️';
