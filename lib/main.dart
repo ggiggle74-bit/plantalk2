@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'admin_dialogue_screen.dart';
 import 'dialogue/chat_panel.dart';
 import 'services/plant_service.dart';
 
@@ -315,6 +316,20 @@ class _MyAppState extends State<MyApp> {
 
             body: ListView(
               children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AdminDialogueScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('관리자 대사 입력'),
+                  ),
+                ),
                 plantCard(
                   '몬스테라',
                   monsteraMessage,
