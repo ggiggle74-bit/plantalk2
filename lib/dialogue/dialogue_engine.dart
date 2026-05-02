@@ -18,22 +18,18 @@ class DialogueEngine {
     }
 
     if (_containsAny(normalizedMessage, const [
-      'hi',
-      'hello',
-      'hey',
-      '안녕',
-      '안녕하세요',
-      '하이',
-      '반가워',
-    ])) {
-      return 'greeting';
-    }
-
-    if (_containsAny(normalizedMessage, const [
       'water',
       'thirst',
       'thirsty',
       'dry',
+      '물',
+      '목말',
+      '목 말',
+      '물필요',
+      '물 필요',
+      '마르다',
+      '말랐',
+      '갈증',
     ])) {
       return 'thirsty';
     }
@@ -43,6 +39,10 @@ class DialogueEngine {
       'alone',
       'bored',
       'boring',
+      '외로',
+      '심심',
+      '지루',
+      '혼자',
     ])) {
       return 'lonely';
     }
@@ -51,6 +51,10 @@ class DialogueEngine {
       'thanks',
       'thank you',
       'thank',
+      '고마워',
+      '고맙',
+      '감사',
+      '고마',
     ])) {
       return 'thanks';
     }
@@ -63,14 +67,32 @@ class DialogueEngine {
       'cute',
       'love',
       'nice',
+      '좋아',
+      '좋다',
+      '예뻐',
+      '예쁘',
+      '귀여',
+      '멋져',
+      '최고',
+      '사랑',
     ])) {
       return 'happy';
+    }
+
+    if (_containsAny(normalizedMessage, const ['안녕', '안녕하세요', '하이', '반가워']) ||
+        _containsAnyWord(normalizedMessage, const ['hi', 'hello', 'hey'])) {
+      return 'greeting';
     }
 
     if (_containsAny(normalizedMessage, const [
       'joke',
       'funny',
       'laugh',
+      '농담',
+      '웃겨',
+      '웃기',
+      '장난',
+      '개그',
     ])) {
       return 'joke';
     }
@@ -83,6 +105,16 @@ class DialogueEngine {
       'stress',
       'work',
       'study',
+      '힘들',
+      '피곤',
+      '지쳤',
+      '지친',
+      '졸려',
+      '아파',
+      '스트레스',
+      '회사',
+      '일',
+      '공부',
     ])) {
       return 'encourage';
     }
@@ -92,6 +124,14 @@ class DialogueEngine {
       'angry',
       'annoyed',
       'bad',
+      '짜증',
+      '불만',
+      '서운',
+      '화나',
+      '화났',
+      '싫어',
+      '싫다',
+      '투덜',
     ])) {
       return 'complain';
     }
@@ -326,6 +366,15 @@ class DialogueEngine {
   static bool _containsAny(String message, List<String> keywords) {
     for (final keyword in keywords) {
       if (message.contains(keyword)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static bool _containsAnyWord(String message, List<String> words) {
+    for (final word in words) {
+      if (RegExp('(^|[^a-z])$word([^a-z]|\$)').hasMatch(message)) {
         return true;
       }
     }
