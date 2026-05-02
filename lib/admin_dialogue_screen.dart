@@ -23,15 +23,15 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
   static const List<String> _situations = [..._activeSituations, 'draft'];
 
   static const Map<String, String> _situationLabels = {
-    'greeting': '인사',
-    'thirsty': '물 필요',
-    'lonely': '외로움',
-    'thanks': '감사',
-    'happy': '기쁨',
+    'greeting': '안녕',
+    'thirsty': '물/목마름',
+    'lonely': '외로움/심심함',
+    'thanks': '고마움',
+    'happy': '칭찬/기분 좋음',
     'joke': '농담',
-    'encourage': '응원',
-    'complain': '불평',
-    'draft': '초안',
+    'encourage': '위로/격려',
+    'complain': '투덜/불만',
+    'draft': '문장 후보',
   };
 
   final TextEditingController _textController = TextEditingController();
