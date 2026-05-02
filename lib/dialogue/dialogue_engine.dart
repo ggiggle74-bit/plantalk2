@@ -3,6 +3,106 @@ import 'dart:math';
 class DialogueEngine {
   static final Random _random = Random();
 
+  static String? detectSituation({
+    required String userMessage,
+    required int waterDay,
+    String? previousUserMessage,
+  }) {
+    final normalizedMessage = userMessage.toLowerCase().trim();
+    final normalizedPreviousMessage = previousUserMessage?.toLowerCase().trim();
+
+    if (normalizedPreviousMessage != null &&
+        _containsAny(normalizedPreviousMessage, const ['joke', 'funny']) &&
+        _containsAny(normalizedMessage, const ['again', 'more'])) {
+      return 'joke';
+    }
+
+    if (_containsAny(normalizedMessage, const [
+      'hi',
+      'hello',
+      'hey',
+      '안녕',
+      '안녕하세요',
+      '하이',
+      '반가워',
+    ])) {
+      return 'greeting';
+    }
+
+    if (_containsAny(normalizedMessage, const [
+      'water',
+      'thirst',
+      'thirsty',
+      'dry',
+    ])) {
+      return 'thirsty';
+    }
+
+    if (_containsAny(normalizedMessage, const [
+      'lonely',
+      'alone',
+      'bored',
+      'boring',
+    ])) {
+      return 'lonely';
+    }
+
+    if (_containsAny(normalizedMessage, const [
+      'thanks',
+      'thank you',
+      'thank',
+    ])) {
+      return 'thanks';
+    }
+
+    if (_containsAny(normalizedMessage, const [
+      'happy',
+      'good',
+      'great',
+      'pretty',
+      'cute',
+      'love',
+      'nice',
+    ])) {
+      return 'happy';
+    }
+
+    if (_containsAny(normalizedMessage, const [
+      'joke',
+      'funny',
+      'laugh',
+    ])) {
+      return 'joke';
+    }
+
+    if (_containsAny(normalizedMessage, const [
+      'tired',
+      'hard',
+      'exhausted',
+      'sad',
+      'stress',
+      'work',
+      'study',
+    ])) {
+      return 'encourage';
+    }
+
+    if (_containsAny(normalizedMessage, const [
+      'complain',
+      'angry',
+      'annoyed',
+      'bad',
+    ])) {
+      return 'complain';
+    }
+
+    if (waterDay >= 2) {
+      return 'thirsty';
+    }
+
+    return null;
+  }
+
   static String placeholderReply({
     required String plantName,
     required String userMessage,

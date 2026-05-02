@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/dialogue_service.dart';
 import 'dialogue_engine.dart';
 
 class ChatPanelResult {
@@ -30,6 +31,7 @@ class ChatPanel extends StatefulWidget {
 
 class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _controller = TextEditingController();
+  final DialogueService _dialogueService = DialogueService();
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
   int _userMessageCount = 0;
@@ -62,7 +64,7 @@ class _ChatPanelState extends State<ChatPanel> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) {
       return;
@@ -84,12 +86,38 @@ class _ChatPanelState extends State<ChatPanel> {
 
     _controller.clear();
 
-    final reply = DialogueEngine.placeholderReply(
+    final fallbackReply = DialogueEngine.placeholderReply(
       plantName: widget.plantName,
       userMessage: text,
       waterDay: widget.waterDay,
       previousUserMessage: prevUser,
     );
+
+    final detectedSituation = DialogueEngine.detectSituation(
+      userMessage: text,
+      waterDay: widget.waterDay,
+      previousUserMessage: prevUser,
+    );
+
+    var reply = fallbackReply;
+
+    if (detectedSituation != null && detectedSituation.trim().isNotEmpty) {
+      try {
+        final dbReply = await _dialogueService.fetchRandomReply(
+          situation: detectedSituation,
+        );
+
+        if (dbReply != null) {
+          reply = dbReply;
+        }
+      } catch (_) {
+        reply = fallbackReply;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _latestPlantReply = reply;
@@ -178,7 +206,9 @@ class _ChatPanelState extends State<ChatPanel> {
                         child: TextField(
                           controller: _controller,
                           textInputAction: TextInputAction.send,
-                          onSubmitted: (_) => _sendMessage(),
+                          onSubmitted: (_) {
+                            _sendMessage();
+                          },
                           decoration: const InputDecoration(
                             hintText: '무가리에게 말 걸기',
                             border: OutlineInputBorder(),
@@ -188,7 +218,9 @@ class _ChatPanelState extends State<ChatPanel> {
                       const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.send),
-                        onPressed: _sendMessage,
+                        onPressed: () {
+                          _sendMessage();
+                        },
                       ),
                     ],
                   ),
