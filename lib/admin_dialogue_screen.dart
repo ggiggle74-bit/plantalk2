@@ -103,7 +103,11 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
         await _loadDraftDialogues();
       }
 
-      _textFocusNode.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _textFocusNode.requestFocus();
+        }
+      });
     } catch (error) {
       if (!mounted) return;
 
