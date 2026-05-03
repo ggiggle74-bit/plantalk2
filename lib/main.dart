@@ -410,10 +410,44 @@ class _MyAppState extends State<MyApp> {
                       );
 
                       if (image == null) return;
+                      if (!context.mounted) return;
+
+                      const reactionMessage = '사진 봤다. 이제 말 좀 걸어봐라';
 
                       setState(() {
-                        plant['message'] = '사진이 선택됐습니다 📷';
+                        plant['photoPath'] = image.path;
+                        plant['message'] = reactionMessage;
                       });
+
+                      final chatResult = await openChatPanel(
+                        context,
+                        plantName: plant['name'],
+                        initialPlantMessage: reactionMessage,
+                        waterDay: plant['waterDay'],
+                      );
+                      if (chatResult != null && mounted) {
+                        final latestReply = chatResult.latestPlantReply;
+                        final currentFriendship = plant['friendship'] is int
+                            ? plant['friendship'] as int
+                            : 0;
+                        final updatedFriendship =
+                            currentFriendship + chatResult.userMessageCount;
+                        final mood = plant['mood']?.toString() ?? '보통';
+                        setState(() {
+                          if (latestReply != null) {
+                            plant['message'] = latestReply;
+                          }
+                          plant['friendship'] = updatedFriendship;
+                        });
+                        if (latestReply != null) {
+                          await updatePlantMessage(plant['name'], latestReply);
+                        }
+                        await plantService.updatePlantFriendship(
+                          plant['name'],
+                          updatedFriendship,
+                          mood,
+                        );
+                      }
                     },
                   );
                 }),
