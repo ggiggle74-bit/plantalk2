@@ -1,37 +1,38 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 class DialogueService {
-  DialogueService({SupabaseClient? client}) : _client = client ?? Supabase.instance.client;
+  DialogueService({SupabaseClient? client})
+    : _client = client ?? Supabase.instance.client;
 
   final SupabaseClient _client;
-  final Random _random = Random();
 
   Future<String?> fetchRandomReply({String? situation}) async {
     final normalizedSituation = situation?.trim();
-    final List<dynamic> data;
 
-    if (normalizedSituation == null || normalizedSituation.isEmpty) {
-      data = await _client.from('dialogues').select('text');
-    } else {
-      data = await _client
-          .from('dialogues')
-          .select('text')
-          .eq('situation', normalizedSituation);
+    if (normalizedSituation == null ||
+        normalizedSituation.isEmpty ||
+        normalizedSituation == 'draft') {
+      return null;
     }
 
+    final data = await _client
+        .from('dialogues')
+        .select('text, created_at')
+        .eq('situation', normalizedSituation)
+        .order('created_at', ascending: false);
+
     final replies = data
-        .map((row) => row is Map ? row['text'] : null)
+        .map((row) => row['text'] as String?)
         .whereType<String>()
-        .map((text) => text.trim())
-        .where((text) => text.isNotEmpty)
+        .where((text) => text.trim().isNotEmpty)
         .toList();
 
     if (replies.isEmpty) {
       return null;
     }
 
-    return replies[_random.nextInt(replies.length)];
+    final random = Random();
+    return replies[random.nextInt(replies.length)];
   }
 }

@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
@@ -60,14 +59,6 @@ class _MyAppState extends State<MyApp> {
     await plantService.addPlant(plantName);
   }
 
-  Future<void> updatePlantFriendship(
-    String plantName,
-    int friendship,
-    String mood,
-  ) async {
-    await plantService.updatePlantFriendship(plantName, friendship, mood);
-  }
-
   Future<void> deletePlantFromSupabase(String plantName) async {
     await plantService.deletePlant(plantName);
   }
@@ -86,14 +77,6 @@ class _MyAppState extends State<MyApp> {
   int monsteraFriendship = 0;
   int stuckyFriendship = 0;
 
-  int monsteraLevel = 1;
-  int stuckyLevel = 1;
-
-  int visitCount = 0;
-
-  String monsteraMood = '보통';
-  String stuckyMood = '보통';
-
   void waterMonstera() {
     setState(() {
       monsteraMessage = '고마워요 💚';
@@ -105,29 +88,6 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       stuckyMessage = '시원해졌어요 💧';
       stuckyWaterDay = 0;
-    });
-  }
-
-  void talkToPlant(Map<String, dynamic> plant) {
-    final messages = ['오늘 햇빛이 참 좋아요 ☀️', '조금 외로웠어요 🌱', '오늘도 와줘서 고마워요 💚'];
-
-    final moods = ['행복 😊', '졸림 😴', '신남 🌞', '평온 🍃'];
-
-    final random = Random();
-
-    setState(() {
-      plant['friendship']++;
-
-      plant['mood'] = moods[random.nextInt(moods.length)];
-
-      plant['message'] =
-          '${messages[random.nextInt(messages.length)]} '
-          '❤️${plant['friendship']} '
-          '기분:${plant['mood']}';
-
-      updatePlantFriendship(plant['name'], plant['friendship'], plant['mood']);
-
-      updatePlantMessage(plant['name'], plant['message']);
     });
   }
 

@@ -100,6 +100,11 @@ class _ChatPanelState extends State<ChatPanel> {
     );
 
     var reply = fallbackReply;
+    var usedDbReply = false;
+
+    debugPrint(
+      'chat input="$text" waterDay=${widget.waterDay} situation=$detectedSituation',
+    );
 
     if (detectedSituation != null && detectedSituation.trim().isNotEmpty) {
       try {
@@ -109,11 +114,14 @@ class _ChatPanelState extends State<ChatPanel> {
 
         if (dbReply != null) {
           reply = dbReply;
+          usedDbReply = true;
         }
       } catch (_) {
         reply = fallbackReply;
       }
     }
+
+    debugPrint('chat dbReplyUsed=$usedDbReply');
 
     if (!mounted) {
       return;
