@@ -8,6 +8,26 @@ class DialogueEngine {
     required int waterDay,
     String? previousUserMessage,
   }) {
+    final userIntent = _detectUserIntent(
+      userMessage: userMessage,
+      previousUserMessage: previousUserMessage,
+    );
+
+    if (userIntent != null) {
+      return userIntent;
+    }
+
+    if (waterDay >= 2) {
+      return 'thirsty';
+    }
+
+    return null;
+  }
+
+  static String? _detectUserIntent({
+    required String userMessage,
+    String? previousUserMessage,
+  }) {
     final normalizedMessage = userMessage.toLowerCase().trim();
     final normalizedPreviousMessage = previousUserMessage?.toLowerCase().trim();
 
@@ -43,6 +63,7 @@ class DialogueEngine {
       'alone',
       'bored',
       'boring',
+      '외롭',
       '외로',
       '심심',
       '지루',
@@ -158,10 +179,6 @@ class DialogueEngine {
       '투덜',
     ])) {
       return 'complain';
-    }
-
-    if (waterDay >= 2) {
-      return 'thirsty';
     }
 
     return null;
