@@ -112,7 +112,22 @@ class DialogueEngine {
       return 'happy';
     }
 
-    if (_containsAny(normalizedMessage, const ['안녕', '안녕하세요', '하이', '반가워']) ||
+    if (_containsAny(normalizedMessage, const [
+          '안녕',
+          '안녕하세요',
+          '하이',
+          '반가워',
+          '잘지내',
+          '잘 지내',
+          '잘지냈',
+          '잘 지냈',
+          '잘있었',
+          '잘 있었',
+          '오늘 어때',
+          '요즘 어때',
+          '오랜만',
+          '별일 없',
+        ]) ||
         _containsAnyWord(normalizedMessage, const ['hi', 'hello', 'hey'])) {
       return 'greeting';
     }
@@ -263,6 +278,16 @@ class DialogueEngine {
       'hi',
       'hello',
       '반가',
+      '잘지내',
+      '잘 지내',
+      '잘지냈',
+      '잘 지냈',
+      '잘있었',
+      '잘 있었',
+      '오늘 어때',
+      '요즘 어때',
+      '오랜만',
+      '별일 없',
     ])) {
       return _pick(
         _plantReplies(normalizedPlantName, const [
