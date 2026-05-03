@@ -374,17 +374,26 @@ class _MyAppState extends State<MyApp> {
                       );
                       if (chatResult != null && mounted) {
                         final latestReply = chatResult.latestPlantReply;
+                        final currentFriendship = plant['friendship'] is int
+                            ? plant['friendship'] as int
+                            : 0;
+                        final updatedFriendship =
+                            currentFriendship + chatResult.userMessageCount;
+                        final mood = plant['mood']?.toString() ?? '보통';
                         setState(() {
                           if (latestReply != null) {
                             plant['message'] = latestReply;
                           }
-                          plant['friendship'] =
-                              (plant['friendship'] ?? 0) +
-                              chatResult.userMessageCount;
+                          plant['friendship'] = updatedFriendship;
                         });
                         if (latestReply != null) {
                           await updatePlantMessage(plant['name'], latestReply);
                         }
+                        await plantService.updatePlantFriendship(
+                          plant['name'],
+                          updatedFriendship,
+                          mood,
+                        );
                       }
                     },
                     onDelete: () async {
