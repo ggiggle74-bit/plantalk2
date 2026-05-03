@@ -209,7 +209,17 @@ class _MyAppState extends State<MyApp> {
 
             const SizedBox(height: 10),
             if (photoPath != null) ...[
-              Image.network(photoPath),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 140,
+                    height: 90,
+                    child: Image.network(photoPath, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
               const SizedBox(height: 10),
             ],
             Text(message),
