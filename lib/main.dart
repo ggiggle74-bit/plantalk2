@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
 import 'dialogue/chat_panel.dart';
+import 'photo/plant_registration_preview.dart';
 import 'services/plant_service.dart';
 import 'widgets/add_plant_dialog.dart';
 import 'widgets/plant_card.dart';
@@ -173,7 +174,21 @@ class _MyAppState extends State<MyApp> {
 
     if (!context.mounted) return;
 
-    addPlantDialog(context, image.path);
+    await showDialog(
+      context: context,
+      builder: (_) {
+        return plantRegistrationPreviewContent(
+          photoPath: image.path,
+          onCancel: () {
+            Navigator.pop(context);
+          },
+          onContinue: () {
+            Navigator.pop(context);
+            addPlantDialog(context, image.path);
+          },
+        );
+      },
+    );
   }
 
   void addPlantDialog(BuildContext context, String photoPath) {
@@ -419,42 +434,65 @@ class _MyAppState extends State<MyApp> {
                       if (image == null) return;
                       if (!context.mounted) return;
 
-                      const reactionMessage = '사진 봤다. 이제 말 좀 걸어봐라';
+                      const reactionMessage = '사진 봤다. 이제 말 좀 걸어봐라.';
 
-                      setState(() {
-                        plant['photoPath'] = image.path;
-                        plant['message'] = reactionMessage;
-                      });
+                      await showDialog(
+                        context: context,
+                        builder: (_) {
+                          return plantRegistrationPreviewContent(
+                            photoPath: image.path,
+                            reactionText: reactionMessage,
+                            continueLabel: '계속하기',
+                            onCancel: () {
+                              Navigator.pop(context);
+                            },
+                            onContinue: () async {
+                              Navigator.pop(context);
+                              if (!context.mounted) return;
 
-                      final chatResult = await openChatPanel(
-                        context,
-                        plantName: plant['name'],
-                        initialPlantMessage: reactionMessage,
-                        waterDay: plant['waterDay'],
+                              setState(() {
+                                plant['photoPath'] = image.path;
+                                plant['message'] = reactionMessage;
+                              });
+
+                              final chatResult = await openChatPanel(
+                                context,
+                                plantName: plant['name'],
+                                initialPlantMessage: reactionMessage,
+                                waterDay: plant['waterDay'],
+                              );
+                              if (chatResult != null && mounted) {
+                                final latestReply = chatResult.latestPlantReply;
+                                final currentFriendship =
+                                    plant['friendship'] is int
+                                    ? plant['friendship'] as int
+                                    : 0;
+                                final updatedFriendship =
+                                    currentFriendship +
+                                    chatResult.userMessageCount;
+                                final mood = plant['mood']?.toString() ?? '보통';
+                                setState(() {
+                                  if (latestReply != null) {
+                                    plant['message'] = latestReply;
+                                  }
+                                  plant['friendship'] = updatedFriendship;
+                                });
+                                if (latestReply != null) {
+                                  await updatePlantMessageByPlant(
+                                    plant,
+                                    latestReply,
+                                  );
+                                }
+                                await updatePlantFriendshipByPlant(
+                                  plant,
+                                  updatedFriendship,
+                                  mood,
+                                );
+                              }
+                            },
+                          );
+                        },
                       );
-                      if (chatResult != null && mounted) {
-                        final latestReply = chatResult.latestPlantReply;
-                        final currentFriendship = plant['friendship'] is int
-                            ? plant['friendship'] as int
-                            : 0;
-                        final updatedFriendship =
-                            currentFriendship + chatResult.userMessageCount;
-                        final mood = plant['mood']?.toString() ?? '보통';
-                        setState(() {
-                          if (latestReply != null) {
-                            plant['message'] = latestReply;
-                          }
-                          plant['friendship'] = updatedFriendship;
-                        });
-                        if (latestReply != null) {
-                          await updatePlantMessageByPlant(plant, latestReply);
-                        }
-                        await updatePlantFriendshipByPlant(
-                          plant,
-                          updatedFriendship,
-                          mood,
-                        );
-                      }
                     },
                   );
                 }),
