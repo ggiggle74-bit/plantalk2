@@ -56,8 +56,8 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  Future<void> addPlantToSupabase(String plantName) async {
-    await plantService.addPlant(plantName);
+  Future<Map<String, dynamic>> addPlantToSupabase(String plantName) async {
+    return await plantService.addPlant(plantName);
   }
 
   Future<void> deletePlantFromSupabase(String plantName) async {
@@ -70,6 +70,75 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> updatePlantMessage(String plantName, String message) async {
     await plantService.updatePlantMessage(plantName, message);
+  }
+
+  String? _plantIdOf(Map<String, dynamic> plant) {
+    final id = plant['id']?.toString();
+    if (id == null || id.isEmpty) return null;
+    return id;
+  }
+
+  int _waterDayOf(Map<String, dynamic> plant) {
+    final value = plant['waterDay'] ?? plant['water_day'] ?? 0;
+    if (value is int) return value;
+    return int.tryParse(value.toString()) ?? 0;
+  }
+
+  void _setWaterDay(Map<String, dynamic> plant, int waterDay) {
+    plant['waterDay'] = waterDay;
+    plant['water_day'] = waterDay;
+  }
+
+  Future<void> updatePlantWaterDayByPlant(
+    Map<String, dynamic> plant,
+    int waterDay,
+  ) async {
+    final id = _plantIdOf(plant);
+    if (id != null) {
+      await plantService.updatePlantWaterDayById(id, waterDay);
+      return;
+    }
+
+    await updatePlantWaterDay(plant['name'], waterDay);
+  }
+
+  Future<void> updatePlantMessageByPlant(
+    Map<String, dynamic> plant,
+    String message,
+  ) async {
+    final id = _plantIdOf(plant);
+    if (id != null) {
+      await plantService.updatePlantMessageById(id, message);
+      return;
+    }
+
+    await updatePlantMessage(plant['name'], message);
+  }
+
+  Future<void> updatePlantFriendshipByPlant(
+    Map<String, dynamic> plant,
+    int friendship,
+    String mood,
+  ) async {
+    final id = _plantIdOf(plant);
+    if (id != null) {
+      await plantService.updatePlantFriendshipById(id, friendship, mood);
+      return;
+    }
+
+    await plantService.updatePlantFriendship(plant['name'], friendship, mood);
+  }
+
+  Future<void> deletePlantFromSupabaseByPlant(
+    Map<String, dynamic> plant,
+  ) async {
+    final id = _plantIdOf(plant);
+    if (id != null) {
+      await plantService.deletePlantById(id);
+      return;
+    }
+
+    await deletePlantFromSupabase(plant['name']);
   }
 
   String stuckyMessage = '오늘 기분 좋아요 ☀️';
@@ -126,19 +195,24 @@ class _MyAppState extends State<MyApp> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (controller.text.trim().isNotEmpty) {
-                  setState(() {
-                    extraPlants.add({
-                      'name': controller.text.trim(),
-                      'message': '새 친구가 왔어요 🌱',
-                      'waterDay': 0,
-                      'friendship': 0,
-                      'photoPath': photoPath,
-                      'mood': '보통',
-                    });
+                final plantName = controller.text.trim();
+                if (plantName.isEmpty) return;
+
+                final insertedPlant = await addPlantToSupabase(plantName);
+
+                if (!mounted) return;
+
+                setState(() {
+                  extraPlants.add({
+                    'id': insertedPlant['id'],
+                    'name': insertedPlant['name'] ?? plantName,
+                    'message': insertedPlant['message'] ?? '새 친구가 왔어요 🌱',
+                    'waterDay': insertedPlant['water_day'] ?? 0,
+                    'friendship': insertedPlant['friendship'] ?? 0,
+                    'photoPath': photoPath,
+                    'mood': insertedPlant['mood'] ?? '보통',
                   });
-                  await addPlantToSupabase(controller.text.trim());
-                }
+                });
 
                 if (!context.mounted) return;
 
@@ -365,21 +439,34 @@ class _MyAppState extends State<MyApp> {
                   return plantCard(
                     plant['name'],
                     plant['message'],
-                    plant['waterDay'],
+                    _waterDayOf(plant),
                     plant['friendship'] ?? 0,
 
                     () async {
+                      final plantId = _plantIdOf(plant);
+                      final plantIndex = plantId == null
+                          ? extraPlants.indexOf(plant)
+                          : extraPlants.indexWhere(
+                              (extraPlant) => _plantIdOf(extraPlant) == plantId,
+                            );
+                      if (plantIndex < 0) return;
+
+                      final selectedPlant = extraPlants[plantIndex];
+
                       setState(() {
-                        plant['message'] = '고마워요 💧';
-                        plant['waterDay'] = 0;
+                        selectedPlant['message'] = '고마워요 💧';
+                        _setWaterDay(selectedPlant, 0);
                       });
 
-                      await updatePlantWaterDay(
-                        plant['name'],
-                        plant['waterDay'],
+                      await updatePlantWaterDayByPlant(
+                        selectedPlant,
+                        _waterDayOf(selectedPlant),
                       );
 
-                      await updatePlantMessage(plant['name'], plant['message']);
+                      await updatePlantMessageByPlant(
+                        selectedPlant,
+                        selectedPlant['message'],
+                      );
                     },
                     onTalk: () async {
                       final chatResult = await openChatPanel(
@@ -403,17 +490,17 @@ class _MyAppState extends State<MyApp> {
                           plant['friendship'] = updatedFriendship;
                         });
                         if (latestReply != null) {
-                          await updatePlantMessage(plant['name'], latestReply);
+                          await updatePlantMessageByPlant(plant, latestReply);
                         }
-                        await plantService.updatePlantFriendship(
-                          plant['name'],
+                        await updatePlantFriendshipByPlant(
+                          plant,
                           updatedFriendship,
                           mood,
                         );
                       }
                     },
                     onDelete: () async {
-                      await deletePlantFromSupabase(plant['name']);
+                      await deletePlantFromSupabaseByPlant(plant);
 
                       setState(() {
                         extraPlants.removeAt(index);
@@ -456,10 +543,10 @@ class _MyAppState extends State<MyApp> {
                           plant['friendship'] = updatedFriendship;
                         });
                         if (latestReply != null) {
-                          await updatePlantMessage(plant['name'], latestReply);
+                          await updatePlantMessageByPlant(plant, latestReply);
                         }
-                        await plantService.updatePlantFriendship(
-                          plant['name'],
+                        await updatePlantFriendshipByPlant(
+                          plant,
                           updatedFriendship,
                           mood,
                         );
