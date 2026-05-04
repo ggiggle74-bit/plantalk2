@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'photo_preview.dart';
+
 Widget plantCard(
   String name,
   String message,
@@ -38,22 +40,7 @@ Widget plantCard(
 
           const SizedBox(height: 10),
           if (photoPath != null) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 140,
-                  height: 90,
-                  child:
-                      photoPath.startsWith('http://') ||
-                          photoPath.startsWith('https://') ||
-                          photoPath.startsWith('blob:')
-                      ? Image.network(photoPath, fit: BoxFit.contain)
-                      : const Center(child: Text('사진 미리보기 준비 중')),
-                ),
-              ),
-            ),
+            photoPreview(photoPath),
             const SizedBox(height: 10),
           ],
           Text(message),
