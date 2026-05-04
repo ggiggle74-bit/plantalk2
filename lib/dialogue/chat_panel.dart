@@ -35,6 +35,7 @@ class _ChatPanelState extends State<ChatPanel> {
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
   int _userMessageCount = 0;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -65,72 +66,90 @@ class _ChatPanelState extends State<ChatPanel> {
   }
 
   Future<void> _sendMessage() async {
+    if (_isSending) {
+      return;
+    }
+
     final text = _controller.text.trim();
     if (text.isEmpty) {
       return;
     }
 
-    String? prevUser;
-
-    for (int i = _messages.length - 1; i >= 0; i--) {
-      if (_messages[i]['sender'] == 'user') {
-        prevUser = _messages[i]['text'];
-        break;
-      }
-    }
-
     setState(() {
-      _userMessageCount++;
-      _messages.add({'sender': 'user', 'text': text});
+      _isSending = true;
     });
 
-    _controller.clear();
+    try {
+      String? prevUser;
 
-    final fallbackReply = DialogueEngine.placeholderReply(
-      plantName: widget.plantName,
-      userMessage: text,
-      waterDay: widget.waterDay,
-      previousUserMessage: prevUser,
-    );
-
-    final detectedSituation = DialogueEngine.detectSituation(
-      userMessage: text,
-      waterDay: widget.waterDay,
-      previousUserMessage: prevUser,
-    );
-
-    var reply = fallbackReply;
-    var usedDbReply = false;
-
-    debugPrint(
-      'chat input="$text" waterDay=${widget.waterDay} situation=$detectedSituation',
-    );
-
-    if (detectedSituation != null && detectedSituation.trim().isNotEmpty) {
-      try {
-        final dbReply = await _dialogueService.fetchRandomReply(
-          situation: detectedSituation,
-        );
-
-        if (dbReply != null) {
-          reply = dbReply;
-          usedDbReply = true;
+      for (int i = _messages.length - 1; i >= 0; i--) {
+        if (_messages[i]['sender'] == 'user') {
+          prevUser = _messages[i]['text'];
+          break;
         }
-      } catch (_) {
-        reply = fallbackReply;
+      }
+
+      setState(() {
+        _userMessageCount++;
+        _messages.add({'sender': 'user', 'text': text});
+      });
+
+      _controller.clear();
+
+      final fallbackReply = DialogueEngine.placeholderReply(
+        plantName: widget.plantName,
+        userMessage: text,
+        waterDay: widget.waterDay,
+        previousUserMessage: prevUser,
+      );
+
+      final detectedSituation = DialogueEngine.detectSituation(
+        userMessage: text,
+        waterDay: widget.waterDay,
+        previousUserMessage: prevUser,
+      );
+
+      var reply = fallbackReply;
+      var usedDbReply = false;
+
+      debugPrint(
+        'chat input="$text" waterDay=${widget.waterDay} situation=$detectedSituation',
+      );
+
+      if (detectedSituation != null && detectedSituation.trim().isNotEmpty) {
+        try {
+          final dbReply = await _dialogueService.fetchRandomReply(
+            situation: detectedSituation,
+          );
+
+          if (dbReply != null) {
+            reply = dbReply;
+            usedDbReply = true;
+          }
+        } catch (_) {
+          reply = fallbackReply;
+        }
+      }
+
+      debugPrint('chat dbReplyUsed=$usedDbReply');
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _latestPlantReply = reply;
+        _messages.add({'sender': 'plant', 'text': reply});
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      } else {
+        _isSending = false;
       }
     }
-
-    debugPrint('chat dbReplyUsed=$usedDbReply');
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _latestPlantReply = reply;
-      _messages.add({'sender': 'plant', 'text': reply});
-    });
   }
 
   void _closePanel() {
@@ -214,9 +233,8 @@ class _ChatPanelState extends State<ChatPanel> {
                         child: TextField(
                           controller: _controller,
                           textInputAction: TextInputAction.send,
-                          onSubmitted: (_) {
-                            _sendMessage();
-                          },
+                          enabled: !_isSending,
+                          onSubmitted: _isSending ? null : (_) => _sendMessage(),
                           decoration: const InputDecoration(
                             hintText: '무가리에게 말 걸기',
                             border: OutlineInputBorder(),
@@ -226,9 +244,7 @@ class _ChatPanelState extends State<ChatPanel> {
                       const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.send),
-                        onPressed: () {
-                          _sendMessage();
-                        },
+                        onPressed: _isSending ? null : () => _sendMessage(),
                       ),
                     ],
                   ),

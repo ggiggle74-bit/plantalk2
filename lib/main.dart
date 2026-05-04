@@ -45,6 +45,7 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       extraPlants = data.map<Map<String, dynamic>>((plant) {
         return {
+          'id': plant['id'],
           'name': plant['name'],
           'message': plant['message'] ?? '안녕하세요 🌱',
           'waterDay': plant['water_day'] ?? 0,
@@ -216,7 +217,12 @@ class _MyAppState extends State<MyApp> {
                   child: SizedBox(
                     width: 140,
                     height: 90,
-                    child: Image.network(photoPath, fit: BoxFit.contain),
+                    child:
+                        photoPath.startsWith('http://') ||
+                            photoPath.startsWith('https://') ||
+                            photoPath.startsWith('blob:')
+                        ? Image.network(photoPath, fit: BoxFit.contain)
+                        : const Center(child: Text('사진 미리보기 준비 중')),
                   ),
                 ),
               ),
