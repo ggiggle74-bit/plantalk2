@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
 import 'dialogue/chat_panel.dart';
 import 'services/plant_service.dart';
+import 'widgets/add_plant_dialog.dart';
 import 'widgets/plant_card.dart';
 
 Future<void> main() async {
@@ -181,47 +182,35 @@ class _MyAppState extends State<MyApp> {
     showDialog(
       context: context,
       builder: (_) {
-        return AlertDialog(
-          title: const Text('새 식물 추가'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: '식물 이름 입력'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('취소'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final plantName = controller.text.trim();
-                if (plantName.isEmpty) return;
+        return addPlantDialogContent(
+          controller: controller,
+          onCancel: () {
+            Navigator.pop(context);
+          },
+          onAdd: () async {
+            final plantName = controller.text.trim();
+            if (plantName.isEmpty) return;
 
-                final insertedPlant = await addPlantToSupabase(plantName);
+            final insertedPlant = await addPlantToSupabase(plantName);
 
-                if (!mounted) return;
+            if (!mounted) return;
 
-                setState(() {
-                  extraPlants.add({
-                    'id': insertedPlant['id'],
-                    'name': insertedPlant['name'] ?? plantName,
-                    'message': insertedPlant['message'] ?? '새 친구가 왔어요 🌱',
-                    'waterDay': insertedPlant['water_day'] ?? 0,
-                    'friendship': insertedPlant['friendship'] ?? 0,
-                    'photoPath': photoPath,
-                    'mood': insertedPlant['mood'] ?? '보통',
-                  });
-                });
+            setState(() {
+              extraPlants.add({
+                'id': insertedPlant['id'],
+                'name': insertedPlant['name'] ?? plantName,
+                'message': insertedPlant['message'] ?? '새 친구가 왔어요 🌱',
+                'waterDay': insertedPlant['water_day'] ?? 0,
+                'friendship': insertedPlant['friendship'] ?? 0,
+                'photoPath': photoPath,
+                'mood': insertedPlant['mood'] ?? '보통',
+              });
+            });
 
-                if (!context.mounted) return;
+            if (!context.mounted) return;
 
-                Navigator.pop(context);
-              },
-              child: const Text('추가'),
-            ),
-          ],
+            Navigator.pop(context);
+          },
         );
       },
     );
