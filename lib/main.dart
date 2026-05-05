@@ -496,7 +496,7 @@ class _MyAppState extends State<MyApp> {
                       if (image == null) return;
                       if (!context.mounted) return;
 
-                      const reactionMessage = '사진 봤다. 이제 말 좀 걸어봐라.';
+                      const reactionMessage = '사진 봤다. 저장도 해뒀다. 이제 말 좀 걸어봐라.';
 
                       await showDialog(
                         context: context,
