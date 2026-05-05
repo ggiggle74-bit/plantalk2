@@ -50,6 +50,13 @@ class PlantService {
         .eq('id', plantId);
   }
 
+  Future<void> updatePlantPhotoUrlById(String plantId, String photoUrl) async {
+    await _client
+        .from('plants')
+        .update({'photo_url': photoUrl})
+        .eq('id', plantId);
+  }
+
   Future<void> updatePlantFriendship(
     String plantName,
     int friendship,

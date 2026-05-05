@@ -5,6 +5,7 @@ import 'admin_dialogue_screen.dart';
 import 'dialogue/chat_panel.dart';
 import 'photo/plant_registration_preview.dart';
 import 'services/plant_service.dart';
+import 'services/photo_service.dart';
 import 'widgets/add_plant_dialog.dart';
 import 'widgets/plant_card.dart';
 
@@ -28,6 +29,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final PlantService plantService = PlantService();
+  final PhotoService photoService = PhotoService();
 
   String monsteraMessage = '목이 조금 말라요 🌱';
   int monsteraWaterDay = 3;
@@ -53,6 +55,7 @@ class _MyAppState extends State<MyApp> {
           'message': plant['message'] ?? '안녕하세요 🌱',
           'waterDay': plant['water_day'] ?? 0,
           'friendship': plant['friendship'] ?? 0,
+          'photoPath': plant['photo_url'],
           'mood': plant['mood'] ?? '보통',
         };
       }).toList();
@@ -184,14 +187,14 @@ class _MyAppState extends State<MyApp> {
           },
           onContinue: () {
             Navigator.pop(context);
-            addPlantDialog(context, image.path);
+            addPlantDialog(context, image);
           },
         );
       },
     );
   }
 
-  void addPlantDialog(BuildContext context, String photoPath) {
+  void addPlantDialog(BuildContext context, XFile image) {
     final controller = TextEditingController();
 
     showDialog(
@@ -211,6 +214,18 @@ class _MyAppState extends State<MyApp> {
             if (!mounted) return;
 
             const firstMessage = '너를 기다리고 있었다.';
+
+            final plantId = insertedPlant['id']?.toString();
+            var photoPath = image.path;
+
+            if (plantId != null && plantId.isNotEmpty) {
+              final photoUrl = await photoService.uploadPlantPhoto(
+                image: image,
+                plantId: plantId,
+              );
+              await plantService.updatePlantPhotoUrlById(plantId, photoUrl);
+              photoPath = photoUrl;
+            }
 
             final newPlant = <String, dynamic>{
               'id': insertedPlant['id'],
@@ -475,8 +490,26 @@ class _MyAppState extends State<MyApp> {
                               Navigator.pop(context);
                               if (!context.mounted) return;
 
+                              final plantId = _plantIdOf(plant);
+                              var photoPath = image.path;
+
+                              if (plantId != null) {
+                                final photoUrl = await photoService
+                                    .uploadPlantPhoto(
+                                      image: image,
+                                      plantId: plantId,
+                                    );
+                                await plantService.updatePlantPhotoUrlById(
+                                  plantId,
+                                  photoUrl,
+                                );
+                                photoPath = photoUrl;
+                              }
+
+                              if (!context.mounted) return;
+
                               setState(() {
-                                plant['photoPath'] = image.path;
+                                plant['photoPath'] = photoPath;
                                 plant['message'] = reactionMessage;
                               });
 
