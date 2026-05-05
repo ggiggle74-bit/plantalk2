@@ -22,6 +22,10 @@ class PlantService {
     return Map<String, dynamic>.from(data);
   }
 
+  Future<void> updatePlantNameById(String plantId, String name) async {
+    await _client.from('plants').update({'name': name}).eq('id', plantId);
+  }
+
   Future<void> updatePlantWaterDay(String plantName, int waterDay) async {
     await _client
         .from('plants')

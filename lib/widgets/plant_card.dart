@@ -9,6 +9,7 @@ Widget plantCard(
   int friendship,
   VoidCallback onWater, {
   VoidCallback? onTalk,
+  VoidCallback? onEditName,
   VoidCallback? onDelete,
   VoidCallback? onPhoto,
   String? photoPath,
@@ -30,8 +31,22 @@ Widget plantCard(
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (onDelete != null)
-                IconButton(icon: const Icon(Icons.delete), onPressed: onDelete),
+              if (onEditName != null || onDelete != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onEditName != null)
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: onEditName,
+                      ),
+                    if (onDelete != null)
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: onDelete,
+                      ),
+                  ],
+                ),
             ],
           ),
 

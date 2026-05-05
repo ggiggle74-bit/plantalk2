@@ -137,6 +137,66 @@ class _MyAppState extends State<MyApp> {
     await updatePlantMessage(plant['name'], message);
   }
 
+  Future<void> showEditPlantNameDialog(
+    BuildContext context,
+    Map<String, dynamic> plant,
+  ) async {
+    final id = _plantIdOf(plant);
+
+    final controller = TextEditingController(
+      text: plant['name']?.toString() ?? '',
+    );
+
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('식물 이름 수정'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(labelText: '식물 이름'),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () {
+                final trimmedName = controller.text.trim();
+                if (trimmedName.isEmpty) return;
+                Navigator.pop(dialogContext, trimmedName);
+              },
+              child: const Text('저장'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (newName == null) return;
+
+    if (id == null) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('식물 id가 없어 이름을 저장할 수 없습니다.')),
+      );
+      return;
+    }
+
+    await plantService.updatePlantNameById(id, newName);
+
+    if (!mounted) return;
+
+    setState(() {
+      plant['name'] = newName;
+    });
+  }
+
   Future<void> updatePlantFriendshipByPlant(
     Map<String, dynamic> plant,
     int friendship,
@@ -452,6 +512,7 @@ class _MyAppState extends State<MyApp> {
                         await updatePlantAfterChat(plant, chatResult);
                       }
                     },
+                    onEditName: () => showEditPlantNameDialog(context, plant),
                     onDelete: () async {
                       final shouldDelete = await showDialog<bool>(
                         context: context,
