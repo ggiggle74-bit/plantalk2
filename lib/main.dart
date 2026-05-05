@@ -210,21 +210,59 @@ class _MyAppState extends State<MyApp> {
 
             if (!mounted) return;
 
+            const firstMessage = '너를 기다리고 있었다.';
+
+            final newPlant = <String, dynamic>{
+              'id': insertedPlant['id'],
+              'name': insertedPlant['name'] ?? plantName,
+              'message': firstMessage,
+              'waterDay': insertedPlant['water_day'] ?? 0,
+              'friendship': insertedPlant['friendship'] ?? 0,
+              'photoPath': photoPath,
+              'mood': insertedPlant['mood'] ?? '보통',
+            };
+
             setState(() {
-              extraPlants.add({
-                'id': insertedPlant['id'],
-                'name': insertedPlant['name'] ?? plantName,
-                'message': '너를 기다리고 있었다.',
-                'waterDay': insertedPlant['water_day'] ?? 0,
-                'friendship': insertedPlant['friendship'] ?? 0,
-                'photoPath': photoPath,
-                'mood': insertedPlant['mood'] ?? '보통',
-              });
+              extraPlants.add(newPlant);
             });
 
             if (!context.mounted) return;
 
             Navigator.pop(context);
+
+            final chatResult = await openChatPanel(
+              context,
+              plantName: newPlant['name'],
+              initialPlantMessage: firstMessage,
+              waterDay: _waterDayOf(newPlant),
+            );
+
+            if (chatResult != null && mounted) {
+              final latestReply = chatResult.latestPlantReply;
+              final currentFriendship = newPlant['friendship'] is int
+                  ? newPlant['friendship'] as int
+                  : 0;
+              final updatedFriendship =
+                  currentFriendship + chatResult.userMessageCount;
+              final mood = newPlant['mood']?.toString() ?? '보통';
+
+              setState(() {
+                if (latestReply != null) {
+                  newPlant['message'] = latestReply;
+                }
+                newPlant['friendship'] = updatedFriendship;
+              });
+
+              if (latestReply != null) {
+                await updatePlantMessageByPlant(newPlant, latestReply);
+              }
+
+              await updatePlantFriendshipByPlant(
+                newPlant,
+                updatedFriendship,
+                mood,
+              );
+            }
           },
         );
       },
