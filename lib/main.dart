@@ -251,19 +251,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Widget extraPlantCard(String name) {
-    return Card(
-      margin: const EdgeInsets.all(12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(
-          name,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
