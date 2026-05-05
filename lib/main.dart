@@ -429,7 +429,7 @@ class _MyAppState extends State<MyApp> {
                           return plantRegistrationPreviewContent(
                             photoPath: image.path,
                             reactionText: reactionMessage,
-                            continueLabel: '계속하기',
+                            continueLabel: '말걸기',
                             onCancel: () {
                               Navigator.pop(context);
                             },

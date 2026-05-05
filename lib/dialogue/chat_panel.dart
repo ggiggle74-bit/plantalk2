@@ -42,15 +42,18 @@ class _ChatPanelState extends State<ChatPanel> {
     super.initState();
 
     final String firstMessage;
+    final initialMessage = widget.initialPlantMessage.trim();
 
-    if (widget.waterDay >= 4) {
+    if (initialMessage.isNotEmpty) {
+      firstMessage = initialMessage;
+    } else if (widget.waterDay >= 4) {
       firstMessage = '나 지금 말라가는 중이다. 인간아.';
     } else if (widget.waterDay >= 3) {
       firstMessage = '이틀은 참았다. 이제 물 얘기 좀 하자.';
     } else if (widget.waterDay >= 2) {
       firstMessage = '목 마르다. 물 좀 챙겨줘.';
     } else {
-      firstMessage = widget.initialPlantMessage;
+      firstMessage = '';
     }
 
     if (firstMessage.trim().isNotEmpty) {
@@ -234,7 +237,9 @@ class _ChatPanelState extends State<ChatPanel> {
                           controller: _controller,
                           textInputAction: TextInputAction.send,
                           enabled: !_isSending,
-                          onSubmitted: _isSending ? null : (_) => _sendMessage(),
+                          onSubmitted: _isSending
+                              ? null
+                              : (_) => _sendMessage(),
                           decoration: const InputDecoration(
                             hintText: '무가리에게 말 걸기',
                             border: OutlineInputBorder(),
