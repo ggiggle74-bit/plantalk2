@@ -252,35 +252,44 @@ class _MyAppState extends State<MyApp> {
               waterDay: _waterDayOf(newPlant),
             );
 
-            if (chatResult != null && mounted) {
-              final latestReply = chatResult.latestPlantReply;
-              final currentFriendship = newPlant['friendship'] is int
-                  ? newPlant['friendship'] as int
-                  : 0;
-              final updatedFriendship =
-                  currentFriendship + chatResult.userMessageCount;
-              final mood = newPlant['mood']?.toString() ?? '보통';
-
-              setState(() {
-                if (latestReply != null) {
-                  newPlant['message'] = latestReply;
-                }
-                newPlant['friendship'] = updatedFriendship;
-              });
-
-              if (latestReply != null) {
-                await updatePlantMessageByPlant(newPlant, latestReply);
-              }
-
-              await updatePlantFriendshipByPlant(
-                newPlant,
-                updatedFriendship,
-                mood,
-              );
+            if (chatResult != null) {
+              await updatePlantAfterChat(newPlant, chatResult);
             }
           },
         );
       },
+    );
+  }
+
+  Future<void> updatePlantAfterChat(
+    Map<String, dynamic> plant,
+    ChatPanelResult chatResult,
+  ) async {
+    if (!mounted) return;
+
+    final latestReply = chatResult.latestPlantReply;
+    final currentFriendship = plant['friendship'] is int
+        ? plant['friendship'] as int
+        : 0;
+    final updatedFriendship =
+        currentFriendship + chatResult.userMessageCount;
+    final mood = plant['mood']?.toString() ?? '보통';
+
+    setState(() {
+      if (latestReply != null) {
+        plant['message'] = latestReply;
+      }
+      plant['friendship'] = updatedFriendship;
+    });
+
+    if (latestReply != null) {
+      await updatePlantMessageByPlant(plant, latestReply);
+    }
+
+    await updatePlantFriendshipByPlant(
+      plant,
+      updatedFriendship,
+      mood,
     );
   }
 
@@ -434,28 +443,8 @@ class _MyAppState extends State<MyApp> {
                         initialPlantMessage: plant['message'],
                         waterDay: plant['waterDay'],
                       );
-                      if (chatResult != null && mounted) {
-                        final latestReply = chatResult.latestPlantReply;
-                        final currentFriendship = plant['friendship'] is int
-                            ? plant['friendship'] as int
-                            : 0;
-                        final updatedFriendship =
-                            currentFriendship + chatResult.userMessageCount;
-                        final mood = plant['mood']?.toString() ?? '보통';
-                        setState(() {
-                          if (latestReply != null) {
-                            plant['message'] = latestReply;
-                          }
-                          plant['friendship'] = updatedFriendship;
-                        });
-                        if (latestReply != null) {
-                          await updatePlantMessageByPlant(plant, latestReply);
-                        }
-                        await updatePlantFriendshipByPlant(
-                          plant,
-                          updatedFriendship,
-                          mood,
-                        );
+                      if (chatResult != null) {
+                        await updatePlantAfterChat(plant, chatResult);
                       }
                     },
                     onDelete: () async {
@@ -519,33 +508,8 @@ class _MyAppState extends State<MyApp> {
                                 initialPlantMessage: reactionMessage,
                                 waterDay: plant['waterDay'],
                               );
-                              if (chatResult != null && mounted) {
-                                final latestReply = chatResult.latestPlantReply;
-                                final currentFriendship =
-                                    plant['friendship'] is int
-                                    ? plant['friendship'] as int
-                                    : 0;
-                                final updatedFriendship =
-                                    currentFriendship +
-                                    chatResult.userMessageCount;
-                                final mood = plant['mood']?.toString() ?? '보통';
-                                setState(() {
-                                  if (latestReply != null) {
-                                    plant['message'] = latestReply;
-                                  }
-                                  plant['friendship'] = updatedFriendship;
-                                });
-                                if (latestReply != null) {
-                                  await updatePlantMessageByPlant(
-                                    plant,
-                                    latestReply,
-                                  );
-                                }
-                                await updatePlantFriendshipByPlant(
-                                  plant,
-                                  updatedFriendship,
-                                  mood,
-                                );
+                              if (chatResult != null) {
+                                await updatePlantAfterChat(plant, chatResult);
                               }
                             },
                           );
