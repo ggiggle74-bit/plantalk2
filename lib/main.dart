@@ -271,8 +271,7 @@ class _MyAppState extends State<MyApp> {
     final currentFriendship = plant['friendship'] is int
         ? plant['friendship'] as int
         : 0;
-    final updatedFriendship =
-        currentFriendship + chatResult.userMessageCount;
+    final updatedFriendship = currentFriendship + chatResult.userMessageCount;
     final mood = plant['mood']?.toString() ?? '보통';
 
     setState(() {
@@ -286,11 +285,7 @@ class _MyAppState extends State<MyApp> {
       await updatePlantMessageByPlant(plant, latestReply);
     }
 
-    await updatePlantFriendshipByPlant(
-      plant,
-      updatedFriendship,
-      mood,
-    );
+    await updatePlantFriendshipByPlant(plant, updatedFriendship, mood);
   }
 
   Future<ChatPanelResult?> openChatPanel(
