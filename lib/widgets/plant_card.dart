@@ -31,10 +31,7 @@ Widget plantCard(
                 ),
               ),
               if (onDelete != null)
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: onDelete,
-                ),
+                IconButton(icon: const Icon(Icons.delete), onPressed: onDelete),
             ],
           ),
 
@@ -46,7 +43,7 @@ Widget plantCard(
           Text(message),
 
           const SizedBox(height: 10),
-          Text('물 준지 $days일'),
+          Text('물 안 준지 $days일'),
           const SizedBox(height: 10),
           Text('친밀도 ❤️ $friendship'),
           const SizedBox(height: 10),
@@ -55,10 +52,7 @@ Widget plantCard(
             spacing: 10,
             runSpacing: 8,
             children: [
-              ElevatedButton(
-                onPressed: onWater,
-                child: const Text('💧 물 줬어요'),
-              ),
+              ElevatedButton(onPressed: onWater, child: const Text('💧 물 줬어요')),
               ElevatedButton(onPressed: onTalk, child: const Text('💬 말 걸기')),
               if (onPhoto != null)
                 ElevatedButton(
