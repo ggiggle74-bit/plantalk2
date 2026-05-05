@@ -84,6 +84,22 @@ class _MyAppState extends State<MyApp> {
     return id;
   }
 
+  Future<String> resolvePhotoPath({
+    required XFile image,
+    String? plantId,
+  }) async {
+    if (plantId == null || plantId.isEmpty) {
+      return image.path;
+    }
+
+    final photoUrl = await photoService.uploadPlantPhoto(
+      image: image,
+      plantId: plantId,
+    );
+    await plantService.updatePlantPhotoUrlById(plantId, photoUrl);
+    return photoUrl;
+  }
+
   int _waterDayOf(Map<String, dynamic> plant) {
     final value = plant['waterDay'] ?? plant['water_day'] ?? 0;
     if (value is int) return value;
@@ -216,16 +232,10 @@ class _MyAppState extends State<MyApp> {
             const firstMessage = '너를 기다리고 있었다.';
 
             final plantId = insertedPlant['id']?.toString();
-            var photoPath = image.path;
-
-            if (plantId != null && plantId.isNotEmpty) {
-              final photoUrl = await photoService.uploadPlantPhoto(
-                image: image,
-                plantId: plantId,
-              );
-              await plantService.updatePlantPhotoUrlById(plantId, photoUrl);
-              photoPath = photoUrl;
-            }
+            final photoPath = await resolvePhotoPath(
+              image: image,
+              plantId: plantId,
+            );
 
             final newPlant = <String, dynamic>{
               'id': insertedPlant['id'],
@@ -475,20 +485,10 @@ class _MyAppState extends State<MyApp> {
                               if (!context.mounted) return;
 
                               final plantId = _plantIdOf(plant);
-                              var photoPath = image.path;
-
-                              if (plantId != null) {
-                                final photoUrl = await photoService
-                                    .uploadPlantPhoto(
-                                      image: image,
-                                      plantId: plantId,
-                                    );
-                                await plantService.updatePlantPhotoUrlById(
-                                  plantId,
-                                  photoUrl,
-                                );
-                                photoPath = photoUrl;
-                              }
+                              final photoPath = await resolvePhotoPath(
+                                image: image,
+                                plantId: plantId,
+                              );
 
                               if (!context.mounted) return;
 
