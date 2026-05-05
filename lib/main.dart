@@ -214,7 +214,7 @@ class _MyAppState extends State<MyApp> {
               extraPlants.add({
                 'id': insertedPlant['id'],
                 'name': insertedPlant['name'] ?? plantName,
-                'message': insertedPlant['message'] ?? '새 친구가 왔어요 🌱',
+                'message': '너를 기다리고 있었다.',
                 'waterDay': insertedPlant['water_day'] ?? 0,
                 'friendship': insertedPlant['friendship'] ?? 0,
                 'photoPath': photoPath,
