@@ -24,11 +24,14 @@ Widget plantCard(
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               if (onEditName != null || onDelete != null)
@@ -37,6 +40,7 @@ Widget plantCard(
                   children: [
                     if (onEditName != null)
                       IconButton(
+                        tooltip: '이름 수정',
                         icon: const Icon(Icons.edit),
                         onPressed: onEditName,
                       ),
