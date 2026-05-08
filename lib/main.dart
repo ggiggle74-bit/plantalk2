@@ -7,6 +7,7 @@ import 'photo/plant_registration_preview.dart';
 import 'services/plant_service.dart';
 import 'services/photo_service.dart';
 import 'widgets/add_plant_dialog.dart';
+import 'widgets/delete_plant_confirmation_dialog.dart';
 import 'widgets/plant_card.dart';
 
 Future<void> main() async {
@@ -528,29 +529,8 @@ class _MyAppState extends State<MyApp> {
                     },
                     onEditName: () => showEditPlantNameDialog(context, plant),
                     onDelete: () async {
-                      final shouldDelete = await showDialog<bool>(
-                        context: context,
-                        builder: (dialogContext) {
-                          return AlertDialog(
-                            title: const Text('식물 삭제'),
-                            content: const Text('정말 이 식물을 삭제할까요?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(dialogContext, false);
-                                },
-                                child: const Text('취소'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(dialogContext, true);
-                                },
-                                child: const Text('삭제'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
+                      final shouldDelete =
+                          await showDeletePlantConfirmationDialog(context);
 
                       if (shouldDelete != true) return;
 
