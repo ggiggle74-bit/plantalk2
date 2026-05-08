@@ -169,7 +169,6 @@ class DialogueEngine {
       '아파',
       '스트레스',
       '회사',
-      '일',
       '공부',
     ])) {
       return 'encourage';
