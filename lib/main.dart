@@ -8,6 +8,7 @@ import 'services/plant_service.dart';
 import 'services/photo_service.dart';
 import 'widgets/add_plant_dialog.dart';
 import 'widgets/delete_plant_confirmation_dialog.dart';
+import 'widgets/edit_plant_name_dialog.dart';
 import 'widgets/plant_card.dart';
 
 Future<void> main() async {
@@ -144,52 +145,9 @@ class _MyAppState extends State<MyApp> {
   ) async {
     final id = _plantIdOf(plant);
 
-    final controller = TextEditingController(
-      text: plant['name']?.toString() ?? '',
-    );
-
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        String? errorText;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('식물 이름 수정'),
-              content: TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: '식물 이름',
-                  errorText: errorText,
-                ),
-                autofocus: true,
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('취소'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    final trimmedName = controller.text.trim();
-                    if (trimmedName.isEmpty) {
-                      setDialogState(() {
-                        errorText = '식물 이름을 입력해주세요.';
-                      });
-                      return;
-                    }
-                    Navigator.pop(dialogContext, trimmedName);
-                  },
-                  child: const Text('저장'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+    final newName = await showEditPlantNameDialogInput(
+      context,
+      currentName: plant['name']?.toString() ?? '',
     );
 
     if (newName == null) return;
