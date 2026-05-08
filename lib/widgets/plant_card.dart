@@ -46,6 +46,7 @@ Widget plantCard(
                       ),
                     if (onDelete != null)
                       IconButton(
+                        tooltip: '삭제',
                         icon: const Icon(Icons.delete),
                         onPressed: onDelete,
                       ),
