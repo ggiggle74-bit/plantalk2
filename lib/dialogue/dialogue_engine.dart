@@ -1,7 +1,58 @@
 import 'dart:math';
 
+enum PlantPersonality {
+  calm,
+  cheerful,
+  shy,
+  playful,
+  blunt,
+}
+
 class DialogueEngine {
   static final Random _random = Random();
+
+  static PlantPersonality personalityForPlant({
+    String? plantId,
+    required String plantName,
+  }) {
+    final normalizedPlantId = plantId?.trim();
+    final seed = normalizedPlantId != null && normalizedPlantId.isNotEmpty
+        ? normalizedPlantId
+        : plantName.trim();
+    final safeSeed = seed.isEmpty ? 'plantalk' : seed;
+    final index = _stableHash(safeSeed) % PlantPersonality.values.length;
+
+    return PlantPersonality.values[index];
+  }
+
+  static String applyPlantPersonality({
+    required String reply,
+    String? plantId,
+    required String plantName,
+  }) {
+    final trimmedReply = reply.trim();
+    if (trimmedReply.isEmpty) {
+      return reply;
+    }
+
+    final personality = personalityForPlant(
+      plantId: plantId,
+      plantName: plantName,
+    );
+
+    switch (personality) {
+      case PlantPersonality.calm:
+        return '$trimmedReply 천천히 말해도 괜찮아.';
+      case PlantPersonality.cheerful:
+        return '$trimmedReply 오늘도 같이 힘내자.';
+      case PlantPersonality.shy:
+        return '$trimmedReply ...조금 쑥스럽지만.';
+      case PlantPersonality.playful:
+        return '$trimmedReply 헤헤.';
+      case PlantPersonality.blunt:
+        return '$trimmedReply 딱 그 정도야.';
+    }
+  }
 
   static String? detectSituation({
     required String userMessage,
@@ -458,7 +509,15 @@ class DialogueEngine {
       return [...baseReplies, '나는 조용한데 은근히 할 말은 많다.'];
     }
 
-    return [...baseReplies, '무가리답게 짧게 답했다. 그래도 진심이다.'];
+    return [...baseReplies, '이 식물답게 짧게 답했다. 그래도 진심이다.'];
+  }
+
+  static int _stableHash(String value) {
+    var hash = 0;
+    for (final codeUnit in value.codeUnits) {
+      hash = (hash * 31 + codeUnit) & 0x7fffffff;
+    }
+    return hash;
   }
 
   static String _pick(List<String> replies) {

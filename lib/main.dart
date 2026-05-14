@@ -290,6 +290,7 @@ class _MyAppState extends State<MyApp> {
 
             final chatResult = await openChatPanel(
               context,
+              plantId: _plantIdOf(newPlant),
               plantName: newPlant['name'],
               initialPlantMessage: firstMessage,
               waterDay: _waterDayOf(newPlant),
@@ -333,6 +334,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<ChatPanelResult?> openChatPanel(
     BuildContext context, {
+    String? plantId,
     required String plantName,
     required String initialPlantMessage,
     required int waterDay,
@@ -342,6 +344,7 @@ class _MyAppState extends State<MyApp> {
       MaterialPageRoute(
         builder: (_) {
           return ChatPanel(
+            plantId: plantId,
             plantName: plantName,
             initialPlantMessage: initialPlantMessage,
             waterDay: waterDay,
@@ -477,6 +480,7 @@ class _MyAppState extends State<MyApp> {
                     onTalk: () async {
                       final chatResult = await openChatPanel(
                         context,
+                        plantId: _plantIdOf(plant),
                         plantName: plant['name'],
                         initialPlantMessage: plant['message'],
                         waterDay: plant['waterDay'],
@@ -540,6 +544,7 @@ class _MyAppState extends State<MyApp> {
 
                               final chatResult = await openChatPanel(
                                 context,
+                                plantId: plantId,
                                 plantName: plant['name'],
                                 initialPlantMessage: reactionMessage,
                                 waterDay: plant['waterDay'],

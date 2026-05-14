@@ -16,11 +16,13 @@ class ChatPanelResult {
 class ChatPanel extends StatefulWidget {
   const ChatPanel({
     super.key,
+    this.plantId,
     required this.plantName,
     required this.initialPlantMessage,
     required this.waterDay,
   });
 
+  final String? plantId;
   final String plantName;
   final String initialPlantMessage;
   final int waterDay;
@@ -136,6 +138,12 @@ class _ChatPanelState extends State<ChatPanel> {
 
       debugPrint('chat dbReplyUsed=$usedDbReply');
 
+      reply = DialogueEngine.applyPlantPersonality(
+        reply: reply,
+        plantId: widget.plantId,
+        plantName: widget.plantName,
+      );
+
       if (!mounted) {
         return;
       }
@@ -240,8 +248,8 @@ class _ChatPanelState extends State<ChatPanel> {
                           onSubmitted: _isSending
                               ? null
                               : (_) => _sendMessage(),
-                          decoration: const InputDecoration(
-                            hintText: '무가리에게 말 걸기',
+                          decoration: InputDecoration(
+                            hintText: '${widget.plantName}에게 말 걸기',
                             border: OutlineInputBorder(),
                           ),
                         ),
