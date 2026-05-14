@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'services/dialogue_service.dart';
+
 class AdminDialogueScreen extends StatefulWidget {
   const AdminDialogueScreen({super.key});
 
@@ -31,11 +33,12 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
     'joke': '농담',
     'encourage': '위로/격려',
     'complain': '투덜/불만',
-    'draft': '문장 후보',
+    'draft': '문장후보',
   };
 
   final TextEditingController _textController = TextEditingController();
   final FocusNode _textFocusNode = FocusNode();
+  final DialogueService _dialogueService = DialogueService();
 
   final List<Map<String, String>> _recentSaved = [];
   final List<Map<String, dynamic>> _draftDialogues = [];
@@ -130,15 +133,9 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
     });
 
     try {
-      final data = await Supabase.instance.client
-          .from('dialogues')
-          .select('id, situation, text, created_at')
-          .eq('situation', 'draft')
-          .order('created_at', ascending: false);
+      final rows = await _dialogueService.fetchDraftDialogueCandidates();
 
       if (!mounted) return;
-
-      final rows = List<Map<String, dynamic>>.from(data);
 
       setState(() {
         _draftDialogues
@@ -154,14 +151,14 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
         }
 
         if (rows.isEmpty) {
-          _draftStatusMessage = '검토할 초안이 없습니다.';
+          _draftStatusMessage = '검토할 문장후보가 없습니다.';
         }
       });
     } catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _draftStatusMessage = '초안을 불러오지 못했습니다: $error';
+        _draftStatusMessage = '문장후보를 불러오지 못했습니다: $error';
       });
     } finally {
       if (mounted) {
@@ -176,7 +173,7 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
     final id = dialogue['id'];
     if (id == null) {
       setState(() {
-        _draftStatusMessage = '초안 id가 없어 수정할 수 없습니다.';
+        _draftStatusMessage = '문장후보 id가 없어 이동할 수 없습니다.';
       });
       return;
     }
@@ -189,23 +186,25 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
     });
 
     try {
-      await Supabase.instance.client
-          .from('dialogues')
-          .update({'situation': selectedSituation})
-          .eq('id', id);
+      await _dialogueService.moveDraftDialogueCandidate(
+        id: id,
+        situation: selectedSituation,
+      );
+
+      if (!mounted) return;
+
+      await _loadDraftDialogues();
 
       if (!mounted) return;
 
       setState(() {
-        _draftDialogues.removeWhere((row) => row['id'] == id);
-        _draftSelections.remove(id);
-        _draftStatusMessage = '초안을 ${_labelFor(selectedSituation)}(으)로 이동했습니다.';
+        _draftStatusMessage = '문장후보를 ${_labelFor(selectedSituation)}(으)로 이동했습니다.';
       });
     } catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _draftStatusMessage = '초안 수정에 실패했습니다: $error';
+        _draftStatusMessage = '문장후보 이동에 실패했습니다: $error';
       });
     } finally {
       if (mounted) {
@@ -226,6 +225,11 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Text(
+                '새 대사 입력/저장',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
               const Text(
                 'Situation',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -295,7 +299,7 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
                 children: [
                   const Expanded(
                     child: Text(
-                      '초안 검토',
+                      '문장후보 정리/이동',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -351,7 +355,7 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
                             onPressed: isUpdating || id == null
                                 ? null
                                 : () => _reclassifyDraft(dialogue),
-                            child: Text(isUpdating ? '이동 중...' : '카테고리로 이동'),
+                            child: const Text('이동'),
                           ),
                         ],
                       ),
@@ -359,7 +363,7 @@ class _AdminDialogueScreenState extends State<AdminDialogueScreen> {
                   );
                 })
               else
-                const Text('검토할 초안이 없습니다.'),
+                const Text('검토할 문장후보가 없습니다.'),
               if (_draftStatusMessage.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(_draftStatusMessage),

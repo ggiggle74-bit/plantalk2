@@ -5,7 +5,48 @@ class DialogueService {
   DialogueService({SupabaseClient? client})
     : _client = client ?? Supabase.instance.client;
 
+  static const Set<String> _draftMoveSituations = {
+    'greeting',
+    'thirsty',
+    'lonely',
+    'thanks',
+    'happy',
+    'joke',
+    'encourage',
+    'complain',
+  };
+
   final SupabaseClient _client;
+
+  Future<List<Map<String, dynamic>>> fetchDraftDialogueCandidates() async {
+    final data = await _client
+        .from('dialogues')
+        .select('id, text')
+        .eq('situation', 'draft')
+        .order('created_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  Future<void> moveDraftDialogueCandidate({
+    required Object id,
+    required String situation,
+  }) async {
+    if (!_draftMoveSituations.contains(situation)) {
+      throw ArgumentError.value(situation, 'situation', 'Invalid situation');
+    }
+
+    final updatedRows = await _client
+        .from('dialogues')
+        .update({'situation': situation})
+        .eq('id', id)
+        .eq('situation', 'draft')
+        .select('id');
+
+    if (updatedRows.isEmpty) {
+      throw StateError('No draft dialogue row was updated.');
+    }
+  }
 
   Future<String?> fetchRandomReply({String? situation}) async {
     final normalizedSituation = situation?.trim();
