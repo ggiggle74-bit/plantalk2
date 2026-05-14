@@ -39,19 +39,18 @@ class DialogueEngine {
       plantId: plantId,
       plantName: plantName,
     );
+    final phrase = _tonePhraseFor(
+      personality: personality,
+      plantId: plantId,
+      plantName: plantName,
+      reply: trimmedReply,
+    );
 
-    switch (personality) {
-      case PlantPersonality.calm:
-        return '$trimmedReply 천천히 말해도 괜찮아.';
-      case PlantPersonality.cheerful:
-        return '$trimmedReply 오늘도 같이 힘내자.';
-      case PlantPersonality.shy:
-        return '$trimmedReply ...조금 쑥스럽지만.';
-      case PlantPersonality.playful:
-        return '$trimmedReply 헤헤.';
-      case PlantPersonality.blunt:
-        return '$trimmedReply 딱 그 정도야.';
+    if (_shouldSkipTonePhrase(trimmedReply, phrase)) {
+      return trimmedReply;
     }
+
+    return '$trimmedReply $phrase';
   }
 
   static String? detectSituation({
@@ -519,6 +518,56 @@ class DialogueEngine {
     }
     return hash;
   }
+
+  static String _tonePhraseFor({
+    required PlantPersonality personality,
+    String? plantId,
+    required String plantName,
+    required String reply,
+  }) {
+    final phrases = _tonePhrases(personality);
+    final normalizedPlantId = plantId?.trim();
+    final seed = normalizedPlantId != null && normalizedPlantId.isNotEmpty
+        ? normalizedPlantId
+        : plantName.trim();
+    final safeSeed = seed.isEmpty ? 'plantalk' : seed;
+    final index = _stableHash('$safeSeed|$plantName|$reply') % phrases.length;
+
+    return phrases[index];
+  }
+
+  static List<String> _tonePhrases(PlantPersonality personality) {
+    switch (personality) {
+      case PlantPersonality.calm:
+        return const ['천천히 괜찮아.', '조용히 들어줄게.', '서두르지 마.'];
+      case PlantPersonality.cheerful:
+        return const ['같이 힘내자.', '오늘도 좋아.', '잘하고 있어.'];
+      case PlantPersonality.shy:
+        return const ['조금 쑥스럽지만.', '작게 말해볼게.', '음... 그래도.'];
+      case PlantPersonality.playful:
+        return const ['헤헤.', '살짝 장난이야.', '재밌는데?'];
+      case PlantPersonality.blunt:
+        return const ['딱 그 정도야.', '짧게 말할게.', '그게 핵심이야.'];
+    }
+  }
+
+  static bool _shouldSkipTonePhrase(String reply, String phrase) {
+    if (reply.length >= 80) {
+      return true;
+    }
+
+    for (final existingPhrase in _allTonePhrases) {
+      if (reply.endsWith(existingPhrase)) {
+        return true;
+      }
+    }
+
+    return reply.endsWith(phrase);
+  }
+
+  static final List<String> _allTonePhrases = PlantPersonality.values
+      .expand(_tonePhrases)
+      .toList(growable: false);
 
   static String _pick(List<String> replies) {
     return replies[_random.nextInt(replies.length)];
