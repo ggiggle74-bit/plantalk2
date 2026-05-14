@@ -203,7 +203,7 @@ class _ChatPanelState extends State<ChatPanel> {
                           child: Text(
                             widget.waterDay >= 2
                                 ? '목 마르다. 물 좀 챙겨줘 '
-                                : '무가리한테 말을 걸어보세요',
+                                : '${widget.plantName}에게 말을 걸어보세요.',
                           ),
                         )
                       : ListView.builder(
