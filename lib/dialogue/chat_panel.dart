@@ -41,8 +41,10 @@ class _ChatPanelState extends State<ChatPanel> {
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
   String? _latestConditionMemoryMessage;
+  String? _latestConditionMemoryEventType;
   int _userMessageCount = 0;
   bool _isSending = false;
+  bool _hasUsedConditionMemoryReply = false;
 
   @override
   void initState() {
@@ -108,6 +110,20 @@ class _ChatPanelState extends State<ChatPanel> {
 
       _controller.clear();
 
+      final memoryReply = _hasUsedConditionMemoryReply
+          ? null
+          : DialogueEngine.conditionMemoryReply(
+              plantName: widget.plantName,
+              userMessage: text,
+              waterDay: widget.waterDay,
+              memoryMessage: _latestConditionMemoryMessage,
+              memoryEventType: _latestConditionMemoryEventType,
+            );
+
+      if (memoryReply != null) {
+        _hasUsedConditionMemoryReply = true;
+      }
+
       final fallbackReply = DialogueEngine.placeholderReply(
         plantName: widget.plantName,
         userMessage: text,
@@ -121,14 +137,16 @@ class _ChatPanelState extends State<ChatPanel> {
         previousUserMessage: prevUser,
       );
 
-      var reply = fallbackReply;
+      var reply = memoryReply ?? fallbackReply;
       var usedDbReply = false;
 
       debugPrint(
         'chat input="$text" waterDay=${widget.waterDay} situation=$detectedSituation',
       );
 
-      if (detectedSituation != null && detectedSituation.trim().isNotEmpty) {
+      if (memoryReply == null &&
+          detectedSituation != null &&
+          detectedSituation.trim().isNotEmpty) {
         try {
           final dbReply = await _dialogueService.fetchRandomReply(
             situation: detectedSituation,
@@ -191,6 +209,7 @@ class _ChatPanelState extends State<ChatPanel> {
 
     setState(() {
       _latestConditionMemoryMessage = message;
+      _latestConditionMemoryEventType = memory?['event_type']?.toString();
     });
   }
 

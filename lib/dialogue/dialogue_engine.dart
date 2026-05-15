@@ -87,24 +87,7 @@ class DialogueEngine {
       return 'joke';
     }
 
-    if (_containsAny(normalizedMessage, const [
-      'water',
-      'thirst',
-      'thirsty',
-      'dry',
-      '물',
-      '물 필요해',
-      '물 줄까',
-      '목말',
-      '목 말',
-      '물필요',
-      '물 필요',
-      '목말라',
-      '목 마르다',
-      '마르다',
-      '말랐',
-      '갈증',
-    ])) {
+    if (_isSpecificMoistureQuestion(normalizedMessage)) {
       return 'thirsty';
     }
 
@@ -248,6 +231,109 @@ class DialogueEngine {
     return null;
   }
 
+  static bool isConditionMemoryQuestion(String userMessage) {
+    final normalizedMessage = userMessage.toLowerCase().trim();
+
+    return _isSpecificMoistureQuestion(normalizedMessage) ||
+        _containsAny(normalizedMessage, const [
+          '상태 어때',
+          '상태가 어때',
+          '괜찮아',
+          '괜찮니',
+          '건강',
+          '아파',
+          '아픈 데',
+          '이상 있어',
+          '문제 있어',
+          '시들',
+          '오늘 어때',
+          '요즘 어때',
+          '잘 지내',
+          '잘지내',
+          '사진 봤어',
+          '사진 봤잖아',
+          '사진 확인',
+          '상태 확인',
+          '방금 사진',
+          'status',
+          'condition',
+          'health',
+          'photo',
+          'picture',
+        ]) ||
+        _containsAnyWord(normalizedMessage, const ['okay', 'ok']);
+  }
+
+  static String? conditionMemoryReply({
+    required String plantName,
+    required String userMessage,
+    required int waterDay,
+    String? memoryMessage,
+    String? memoryEventType,
+  }) {
+    final memory = memoryMessage?.trim();
+    if (memory == null || memory.isEmpty) {
+      return null;
+    }
+
+    if (!isConditionMemoryQuestion(userMessage)) {
+      return null;
+    }
+
+    final plantLabel = plantName.trim().isEmpty ? '이 식물' : plantName.trim();
+    final normalizedEventType = memoryEventType?.trim().toLowerCase();
+    final asksMoisture = _isSpecificMoistureQuestion(
+      userMessage.toLowerCase().trim(),
+    );
+
+    if (asksMoisture && waterDay >= 2 && normalizedEventType == 'normal') {
+      return '최근 사진상 큰 이상은 없어 보였어. 그래도 물 준 지 좀 됐으면 흙부터 확인해라.';
+    }
+
+    switch (normalizedEventType) {
+      case 'normal':
+        return '최근 사진으로 봤을 때는 큰 이상 없어 보였어. 그래도 잎 색은 한 번 더 봐라.';
+      case 'needs_water':
+        return '최근 상태 확인으로는 물이 좀 신경 쓰였어. 흙부터 확인해라.';
+      case 'low_light':
+        return '최근 상태 확인으로는 빛이 조금 부족할 수 있어. 자리 한번 봐라.';
+      case 'pest_risk':
+        return '최근 상태 확인에서 잎 상태를 더 봐야 할 것 같았어. 뒷면도 확인해라.';
+      case 'leaf_damage':
+        return '최근 사진에서 잎 손상이 신경 쓰였어. 더 번지는지 봐라.';
+      default:
+        return '최근 상태 확인에서 $plantLabel은 이렇게 나왔어. $memory';
+    }
+  }
+
+  static bool _isSpecificMoistureQuestion(String normalizedMessage) {
+    return _containsAny(normalizedMessage, const [
+      '물 필요',
+      '물 줄까',
+      '물 줘야',
+      '물 줘도 돼',
+      '물 부족',
+      '목말',
+      '목 말',
+      '목말라',
+      '목 마르다',
+      '말랐',
+      '마른 것 같',
+      '흙 말랐',
+      '흙이 말랐',
+      '건조',
+      '수분 부족',
+      '수분 상태',
+      '갈증',
+      'need water',
+      'needs water',
+      'thirsty',
+      'too dry',
+      'dry soil',
+      'low moisture',
+    ]);
+  }
+
   static String placeholderReply({
     required String plantName,
     required String userMessage,
@@ -349,14 +435,7 @@ class DialogueEngine {
       );
     }
 
-    if (_containsAny(normalizedMessage, const [
-      '물',
-      '목말',
-      '목 말',
-      '갈증',
-      'thirst',
-      'water',
-    ])) {
+    if (_isSpecificMoistureQuestion(normalizedMessage)) {
       return _pick(
         _plantReplies(normalizedPlantName, const [
           '목 마르다 너도 수분 보충 좀 해라',
