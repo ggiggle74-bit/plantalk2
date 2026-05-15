@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
 import 'dialogue/chat_panel.dart';
+import 'photo/existing_plant_match_dialog.dart';
+import 'photo/mock_plant_photo_analysis.dart';
 import 'photo/plant_registration_preview.dart';
+import 'photo/species_selection_dialog.dart';
+import 'photo/supported_species.dart';
 import 'services/plant_service.dart';
 import 'services/photo_service.dart';
 import 'widgets/add_plant_dialog.dart';
@@ -234,16 +238,100 @@ class _MyAppState extends State<MyApp> {
           onCancel: () {
             Navigator.pop(context);
           },
-          onContinue: () {
+          onContinue: () async {
             Navigator.pop(context);
-            addPlantDialog(context, image);
+            await continuePlantRegistrationAfterPreview(context, image);
           },
         );
       },
     );
   }
 
-  void addPlantDialog(BuildContext context, XFile image) {
+  Future<void> continuePlantRegistrationAfterPreview(
+    BuildContext context,
+    XFile image,
+  ) async {
+    final analysis = mockAnalyzePlantPhoto(image.path);
+
+    if (extraPlants.isNotEmpty) {
+      final matchResult = await showExistingPlantMatchDialog(
+        context,
+        plants: List<Map<String, dynamic>>.from(extraPlants),
+        analysis: analysis,
+      );
+
+      if (!context.mounted) return;
+      if (matchResult == null) return;
+
+      final existingPlant = matchResult.plant;
+      if (!matchResult.createNewPlant && existingPlant != null) {
+        await attachPhotoToExistingPlant(context, image, existingPlant);
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
+
+    await startNewPlantCreation(context, image, analysis);
+  }
+
+  Future<void> attachPhotoToExistingPlant(
+    BuildContext context,
+    XFile image,
+    Map<String, dynamic> plant,
+  ) async {
+    const reactionMessage = '사진 봤다. 이제 말 좀 걸어봐라.';
+    final plantId = _plantIdOf(plant);
+    final photoPath = await resolvePhotoPath(image: image, plantId: plantId);
+
+    if (!mounted || !context.mounted) return;
+
+    setState(() {
+      plant['photoPath'] = photoPath;
+      plant['message'] = reactionMessage;
+    });
+
+    final chatResult = await openChatPanel(
+      context,
+      plantId: plantId,
+      plantName: plant['name']?.toString() ?? '이름 없는 식물',
+      initialPlantMessage: reactionMessage,
+      waterDay: _waterDayOf(plant),
+    );
+
+    if (chatResult != null) {
+      await updatePlantAfterChat(plant, chatResult);
+    }
+  }
+
+  Future<void> startNewPlantCreation(
+    BuildContext context,
+    XFile image,
+    MockPlantPhotoAnalysis analysis,
+  ) async {
+    final selectedSpecies = await showSpeciesSelectionDialog(
+      context,
+      suggestedSpecies: analysis.speciesSuggestions,
+    );
+
+    if (selectedSpecies == null || !context.mounted) return;
+
+    addPlantDialog(
+      context,
+      image,
+      selectedSpecies: selectedSpecies,
+      speciesGuess: analysis.speciesSuggestions
+          .map((species) => species.displayName)
+          .join(', '),
+    );
+  }
+
+  void addPlantDialog(
+    BuildContext context,
+    XFile image, {
+    required SupportedSpecies selectedSpecies,
+    required String speciesGuess,
+  }) {
     final controller = TextEditingController();
 
     showDialog(
@@ -277,6 +365,9 @@ class _MyAppState extends State<MyApp> {
               'waterDay': insertedPlant['water_day'] ?? 0,
               'friendship': insertedPlant['friendship'] ?? 0,
               'photoPath': photoPath,
+              'speciesKey': selectedSpecies.key,
+              'speciesDisplayName': selectedSpecies.displayName,
+              'speciesGuess': speciesGuess,
               'mood': insertedPlant['mood'] ?? '보통',
             };
 

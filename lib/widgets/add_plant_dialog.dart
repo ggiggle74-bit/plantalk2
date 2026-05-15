@@ -6,10 +6,10 @@ Widget addPlantDialogContent({
   required Future<void> Function() onAdd,
 }) {
   return AlertDialog(
-    title: const Text('새 식물 추가'),
+    title: const Text('식물 별명 정하기'),
     content: TextField(
       controller: controller,
-      decoration: const InputDecoration(hintText: '식물 이름 입력'),
+      decoration: const InputDecoration(hintText: '예: 몬돌이'),
     ),
     actions: [
       TextButton(
@@ -18,7 +18,7 @@ Widget addPlantDialogContent({
       ),
       ElevatedButton(
         onPressed: onAdd,
-        child: const Text('추가'),
+        child: const Text('등록'),
       ),
     ],
   );
