@@ -12,11 +12,19 @@ class PlantService {
     return List<Map<String, dynamic>>.from(data);
   }
 
-  Future<Map<String, dynamic>> addPlant(String plantName) async {
+  Future<Map<String, dynamic>> addPlant(
+    String plantName, {
+    String speciesKey = 'unknown',
+    String speciesDisplayName = '알 수 없음',
+    String? speciesGuess,
+  }) async {
     final data = await _client.from('plants').insert({
       'name': plantName,
       'message': '처음 만나서 반가워요 🌱',
       'water_day': 0,
+      'species_key': speciesKey,
+      'species_display_name': speciesDisplayName,
+      'species_guess': speciesGuess,
     }).select().single();
 
     return Map<String, dynamic>.from(data);

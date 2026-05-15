@@ -62,14 +62,27 @@ class _MyAppState extends State<MyApp> {
           'waterDay': plant['water_day'] ?? 0,
           'friendship': plant['friendship'] ?? 0,
           'photoPath': plant['photo_url'],
+          'speciesKey': plant['species_key'] ?? 'unknown',
+          'speciesDisplayName': plant['species_display_name'] ?? '알 수 없음',
+          'speciesGuess': plant['species_guess'],
           'mood': plant['mood'] ?? '보통',
         };
       }).toList();
     });
   }
 
-  Future<Map<String, dynamic>> addPlantToSupabase(String plantName) async {
-    return await plantService.addPlant(plantName);
+  Future<Map<String, dynamic>> addPlantToSupabase(
+    String plantName, {
+    String speciesKey = 'unknown',
+    String speciesDisplayName = '알 수 없음',
+    String? speciesGuess,
+  }) async {
+    return await plantService.addPlant(
+      plantName,
+      speciesKey: speciesKey,
+      speciesDisplayName: speciesDisplayName,
+      speciesGuess: speciesGuess,
+    );
   }
 
   Future<void> deletePlantFromSupabase(String plantName) async {
@@ -346,7 +359,12 @@ class _MyAppState extends State<MyApp> {
             final plantName = controller.text.trim();
             if (plantName.isEmpty) return;
 
-            final insertedPlant = await addPlantToSupabase(plantName);
+            final insertedPlant = await addPlantToSupabase(
+              plantName,
+              speciesKey: selectedSpecies.key,
+              speciesDisplayName: selectedSpecies.displayName,
+              speciesGuess: speciesGuess,
+            );
 
             if (!mounted) return;
 
@@ -365,9 +383,11 @@ class _MyAppState extends State<MyApp> {
               'waterDay': insertedPlant['water_day'] ?? 0,
               'friendship': insertedPlant['friendship'] ?? 0,
               'photoPath': photoPath,
-              'speciesKey': selectedSpecies.key,
-              'speciesDisplayName': selectedSpecies.displayName,
-              'speciesGuess': speciesGuess,
+              'speciesKey': insertedPlant['species_key'] ?? selectedSpecies.key,
+              'speciesDisplayName':
+                  insertedPlant['species_display_name'] ??
+                  selectedSpecies.displayName,
+              'speciesGuess': insertedPlant['species_guess'] ?? speciesGuess,
               'mood': insertedPlant['mood'] ?? '보통',
             };
 
@@ -596,6 +616,7 @@ class _MyAppState extends State<MyApp> {
                       });
                     },
                     photoPath: plant['photoPath'] as String?,
+                    speciesDisplayName: plant['speciesDisplayName']?.toString(),
                     onPhoto: () async {
                       final image = await ImagePicker().pickImage(
                         source: ImageSource.gallery,

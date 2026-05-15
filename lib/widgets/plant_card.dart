@@ -13,7 +13,15 @@ Widget plantCard(
   VoidCallback? onDelete,
   VoidCallback? onPhoto,
   String? photoPath,
+  String? speciesDisplayName,
 }) {
+  final speciesLabel =
+      speciesDisplayName == null ||
+          speciesDisplayName.trim().isEmpty ||
+          speciesDisplayName == '알 수 없음'
+      ? '종류 미확인'
+      : '$speciesDisplayName 후보';
+
   return Card(
     margin: const EdgeInsets.all(12),
     child: Padding(
@@ -55,6 +63,11 @@ Widget plantCard(
             ],
           ),
 
+          const SizedBox(height: 4),
+          Text(
+            speciesLabel,
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+          ),
           const SizedBox(height: 10),
           if (photoPath != null) ...[
             photoPreview(photoPath),
