@@ -9,6 +9,7 @@ import 'photo/plant_registration_preview.dart';
 import 'photo/species_selection_dialog.dart';
 import 'photo/supported_species.dart';
 import 'services/plant_service.dart';
+import 'services/plant_photo_flow_service.dart';
 import 'services/photo_service.dart';
 import 'widgets/add_plant_dialog.dart';
 import 'widgets/delete_plant_confirmation_dialog.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final PlantService plantService = PlantService();
   final PhotoService photoService = PhotoService();
+  late final PlantPhotoFlowService plantPhotoFlowService;
 
   String monsteraMessage = '목이 조금 말라요 🌱';
   int monsteraWaterDay = 3;
@@ -45,6 +47,10 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    plantPhotoFlowService = PlantPhotoFlowService(
+      photoService: photoService,
+      plantService: plantService,
+    );
     loadPlantsFromSupabase();
   }
 
@@ -115,7 +121,7 @@ class _MyAppState extends State<MyApp> {
     return null;
   }
 
-  Future<String> resolvePhotoPath({
+  Future<String> saveRepresentativePlantPhoto({
     required XFile image,
     String? plantId,
   }) async {
@@ -123,13 +129,10 @@ class _MyAppState extends State<MyApp> {
       return image.path;
     }
 
-    final photoUrl = await photoService.uploadPlantPhoto(
+    return plantPhotoFlowService.saveRepresentativePhoto(
       image: image,
       plantId: plantId,
     );
-    await plantService.updatePlantPhotoUrlById(plantId, photoUrl);
-    await plantService.insertPlantPhotoHistoryBestEffort(plantId, photoUrl);
-    return photoUrl;
   }
 
   int _waterDayOf(Map<String, dynamic> plant) {
@@ -308,7 +311,10 @@ class _MyAppState extends State<MyApp> {
   ) async {
     const reactionMessage = '사진 봤다. 이제 말 좀 걸어봐라.';
     final plantId = _plantIdOf(plant);
-    final photoPath = await resolvePhotoPath(image: image, plantId: plantId);
+    final photoPath = await saveRepresentativePlantPhoto(
+      image: image,
+      plantId: plantId,
+    );
 
     if (!mounted || !context.mounted) return;
 
@@ -384,7 +390,7 @@ class _MyAppState extends State<MyApp> {
             const firstMessage = '너를 기다리고 있었다.';
 
             final plantId = insertedPlant['id']?.toString();
-            final photoPath = await resolvePhotoPath(
+            final photoPath = await saveRepresentativePlantPhoto(
               image: image,
               plantId: plantId,
             );
@@ -656,7 +662,8 @@ class _MyAppState extends State<MyApp> {
                               if (!context.mounted) return;
 
                               final plantId = _plantIdOf(plant);
-                              final photoPath = await resolvePhotoPath(
+                              final photoPath =
+                                  await saveRepresentativePlantPhoto(
                                 image: image,
                                 plantId: plantId,
                               );
