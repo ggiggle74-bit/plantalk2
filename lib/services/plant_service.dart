@@ -106,6 +106,30 @@ class PlantService {
     }
   }
 
+  Future<Map<String, dynamic>?> fetchLatestPlantMemoryBestEffort({
+    required String plantId,
+    String memoryType = 'condition_check',
+  }) async {
+    try {
+      final data = await _client
+          .from('plant_memories')
+          .select(
+            'memory_type, event_type, message, photo_url, is_mock, created_at',
+          )
+          .eq('plant_id', plantId)
+          .eq('memory_type', memoryType)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (data == null) return null;
+      return Map<String, dynamic>.from(data);
+    } catch (error) {
+      debugPrint('plant_memories fetch failed: $error');
+      return null;
+    }
+  }
+
   Future<void> updatePlantFriendship(
     String plantName,
     int friendship,

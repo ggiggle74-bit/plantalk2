@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/dialogue_service.dart';
+import '../services/plant_service.dart';
 import 'dialogue_engine.dart';
 
 class ChatPanelResult {
@@ -36,8 +37,10 @@ class ChatPanel extends StatefulWidget {
 class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _controller = TextEditingController();
   final DialogueService _dialogueService = DialogueService();
+  final PlantService _plantService = PlantService();
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
+  String? _latestConditionMemoryMessage;
   int _userMessageCount = 0;
   bool _isSending = false;
 
@@ -64,6 +67,8 @@ class _ChatPanelState extends State<ChatPanel> {
       _latestPlantReply = firstMessage;
       _messages.add({'sender': 'plant', 'text': firstMessage});
     }
+
+    _loadLatestConditionMemory();
   }
 
   @override
@@ -174,6 +179,21 @@ class _ChatPanelState extends State<ChatPanel> {
     );
   }
 
+  Future<void> _loadLatestConditionMemory() async {
+    final plantId = widget.plantId;
+    if (plantId == null || plantId.isEmpty) return;
+
+    final memory = await _plantService.fetchLatestPlantMemoryBestEffort(
+      plantId: plantId,
+    );
+    final message = memory?['message']?.toString().trim();
+    if (message == null || message.isEmpty || !mounted) return;
+
+    setState(() {
+      _latestConditionMemoryMessage = message;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -199,7 +219,11 @@ class _ChatPanelState extends State<ChatPanel> {
               children: [
                 ListTile(
                   title: Text(widget.plantName),
-                  subtitle: Text(speciesLabel),
+                  subtitle: Text(
+                    _latestConditionMemoryMessage == null
+                        ? speciesLabel
+                        : '$speciesLabel\n최근 상태 확인: $_latestConditionMemoryMessage',
+                  ),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: _closePanel,
