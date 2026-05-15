@@ -12,6 +12,7 @@ Widget plantCard(
   VoidCallback? onEditName,
   VoidCallback? onDelete,
   VoidCallback? onPhoto,
+  VoidCallback? onConditionCheck,
   String? photoPath,
   String? speciesDisplayName,
 }) {
@@ -91,6 +92,11 @@ Widget plantCard(
                 ElevatedButton(
                   onPressed: onPhoto,
                   child: const Text('📷 사진 등록'),
+                ),
+              if (onConditionCheck != null)
+                ElevatedButton(
+                  onPressed: onConditionCheck,
+                  child: const Text('상태 확인'),
                 ),
             ],
           ),

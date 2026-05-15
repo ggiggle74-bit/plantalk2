@@ -8,6 +8,8 @@ import 'photo/mock_plant_photo_analysis.dart';
 import 'photo/plant_registration_preview.dart';
 import 'photo/species_selection_dialog.dart';
 import 'photo/supported_species.dart';
+import 'services/plant_condition_analysis_service.dart';
+import 'services/plant_condition_check_flow_service.dart';
 import 'services/plant_service.dart';
 import 'services/plant_photo_flow_service.dart';
 import 'services/photo_service.dart';
@@ -37,7 +39,10 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final PlantService plantService = PlantService();
   final PhotoService photoService = PhotoService();
+  final PlantConditionAnalysisService conditionAnalysisService =
+      MockPlantConditionAnalysisService();
   late final PlantPhotoFlowService plantPhotoFlowService;
+  late final PlantConditionCheckFlowService plantConditionCheckFlowService;
 
   String monsteraMessage = '목이 조금 말라요 🌱';
   int monsteraWaterDay = 3;
@@ -50,6 +55,10 @@ class _MyAppState extends State<MyApp> {
     plantPhotoFlowService = PlantPhotoFlowService(
       photoService: photoService,
       plantService: plantService,
+    );
+    plantConditionCheckFlowService = PlantConditionCheckFlowService(
+      plantPhotoFlowService: plantPhotoFlowService,
+      conditionAnalysisService: conditionAnalysisService,
     );
     loadPlantsFromSupabase();
   }
@@ -132,6 +141,45 @@ class _MyAppState extends State<MyApp> {
     return plantPhotoFlowService.saveRepresentativePhoto(
       image: image,
       plantId: plantId,
+    );
+  }
+
+  Future<void> handleConditionCheck(
+    BuildContext context,
+    Map<String, dynamic> plant,
+  ) async {
+    final plantId = _plantIdOf(plant);
+    if (plantId == null) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('식물 id가 없어 상태 확인을 할 수 없어요.')),
+      );
+      return;
+    }
+
+    final result = await plantConditionCheckFlowService.checkCondition(
+      plantId: plantId,
+      speciesKey: plant['speciesKey']?.toString(),
+      speciesDisplayName: plant['speciesDisplayName']?.toString(),
+    );
+
+    if (result == null || !context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text('상태 확인'),
+          content: Text(result.conditionMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -637,6 +685,10 @@ class _MyAppState extends State<MyApp> {
                     },
                     photoPath: plant['photoPath'] as String?,
                     speciesDisplayName: plant['speciesDisplayName']?.toString(),
+                    onConditionCheck: () => handleConditionCheck(
+                      context,
+                      plant,
+                    ),
                     onPhoto: () async {
                       final image = await ImagePicker().pickImage(
                         source: ImageSource.gallery,
