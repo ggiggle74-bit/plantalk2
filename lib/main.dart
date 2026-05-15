@@ -59,6 +59,7 @@ class _MyAppState extends State<MyApp> {
     plantConditionCheckFlowService = PlantConditionCheckFlowService(
       plantPhotoFlowService: plantPhotoFlowService,
       conditionAnalysisService: conditionAnalysisService,
+      plantService: plantService,
     );
     loadPlantsFromSupabase();
   }
@@ -171,7 +172,7 @@ class _MyAppState extends State<MyApp> {
       builder: (_) {
         return AlertDialog(
           title: const Text('상태 확인'),
-          content: Text(result.conditionMessage),
+          content: Text(result.analysisResult.conditionMessage),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),

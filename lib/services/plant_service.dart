@@ -84,6 +84,28 @@ class PlantService {
     }
   }
 
+  Future<void> insertPlantMemoryBestEffort({
+    required String plantId,
+    required String memoryType,
+    required String message,
+    String? eventType,
+    String? photoUrl,
+    bool isMock = false,
+  }) async {
+    try {
+      await _client.from('plant_memories').insert({
+        'plant_id': plantId,
+        'memory_type': memoryType,
+        'event_type': eventType,
+        'message': message,
+        'photo_url': photoUrl,
+        'is_mock': isMock,
+      });
+    } catch (error) {
+      debugPrint('plant_memories insert failed: $error');
+    }
+  }
+
   Future<void> updatePlantFriendship(
     String plantName,
     int friendship,
