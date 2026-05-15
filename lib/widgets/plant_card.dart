@@ -20,7 +20,7 @@ Widget plantCard(
           speciesDisplayName.trim().isEmpty ||
           speciesDisplayName == '알 수 없음'
       ? '종류 미확인'
-      : '$speciesDisplayName 후보';
+      : '추정 종류: $speciesDisplayName';
 
   return Card(
     margin: const EdgeInsets.all(12),

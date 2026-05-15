@@ -17,12 +17,14 @@ class ChatPanel extends StatefulWidget {
   const ChatPanel({
     super.key,
     this.plantId,
+    this.speciesDisplayName,
     required this.plantName,
     required this.initialPlantMessage,
     required this.waterDay,
   });
 
   final String? plantId;
+  final String? speciesDisplayName;
   final String plantName;
   final String initialPlantMessage;
   final int waterDay;
@@ -175,6 +177,13 @@ class _ChatPanelState extends State<ChatPanel> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final speciesDisplayName = widget.speciesDisplayName;
+    final speciesLabel =
+        speciesDisplayName == null ||
+            speciesDisplayName.trim().isEmpty ||
+            speciesDisplayName == '알 수 없음'
+        ? '종류 미확인'
+        : '추정 종류: $speciesDisplayName';
 
     return PopScope(
       canPop: false,
@@ -190,7 +199,7 @@ class _ChatPanelState extends State<ChatPanel> {
               children: [
                 ListTile(
                   title: Text(widget.plantName),
-                  subtitle: Text('${widget.plantName}와 대화 중'),
+                  subtitle: Text(speciesLabel),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: _closePanel,

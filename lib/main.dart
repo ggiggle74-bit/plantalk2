@@ -103,6 +103,18 @@ class _MyAppState extends State<MyApp> {
     return id;
   }
 
+  String? _speciesDisplayNameForChat(String? plantId) {
+    if (plantId == null || plantId.isEmpty) return null;
+
+    for (final plant in extraPlants) {
+      if (_plantIdOf(plant) == plantId) {
+        return plant['speciesDisplayName']?.toString();
+      }
+    }
+
+    return null;
+  }
+
   Future<String> resolvePhotoPath({
     required XFile image,
     String? plantId,
@@ -457,6 +469,7 @@ class _MyAppState extends State<MyApp> {
           return ChatPanel(
             plantId: plantId,
             plantName: plantName,
+            speciesDisplayName: _speciesDisplayNameForChat(plantId),
             initialPlantMessage: initialPlantMessage,
             waterDay: waterDay,
           );
