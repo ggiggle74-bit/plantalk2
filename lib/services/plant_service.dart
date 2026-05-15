@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PlantService {
@@ -67,6 +68,20 @@ class PlantService {
         .from('plants')
         .update({'photo_url': photoUrl})
         .eq('id', plantId);
+  }
+
+  Future<void> insertPlantPhotoHistoryBestEffort(
+    String plantId,
+    String photoUrl,
+  ) async {
+    try {
+      await _client.from('plant_photos').insert({
+        'plant_id': plantId,
+        'photo_url': photoUrl,
+      });
+    } catch (error) {
+      debugPrint('plant_photos insert failed: $error');
+    }
   }
 
   Future<void> updatePlantFriendship(

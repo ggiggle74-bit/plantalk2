@@ -128,6 +128,7 @@ class _MyAppState extends State<MyApp> {
       plantId: plantId,
     );
     await plantService.updatePlantPhotoUrlById(plantId, photoUrl);
+    await plantService.insertPlantPhotoHistoryBestEffort(plantId, photoUrl);
     return photoUrl;
   }
 
