@@ -19,25 +19,20 @@ class PlantConditionCheckFlowService {
     required PlantPhotoFlowService plantPhotoFlowService,
     required PlantConditionAnalysisService conditionAnalysisService,
     required PlantService plantService,
-    ImagePicker? imagePicker,
   }) : _plantPhotoFlowService = plantPhotoFlowService,
        _conditionAnalysisService = conditionAnalysisService,
-       _plantService = plantService,
-       _imagePicker = imagePicker ?? ImagePicker();
+       _plantService = plantService;
 
   final PlantPhotoFlowService _plantPhotoFlowService;
   final PlantConditionAnalysisService _conditionAnalysisService;
   final PlantService _plantService;
-  final ImagePicker _imagePicker;
 
-  Future<PlantConditionCheckFlowResult?> checkCondition({
+  Future<PlantConditionCheckFlowResult> checkCondition({
+    required XFile image,
     required String plantId,
     String? speciesKey,
     String? speciesDisplayName,
   }) async {
-    final image = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (image == null) return null;
-
     final photoUrl = await _plantPhotoFlowService.saveConditionCheckPhoto(
       image: image,
       plantId: plantId,

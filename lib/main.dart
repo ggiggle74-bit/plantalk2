@@ -162,13 +162,20 @@ class _MyAppState extends State<MyApp> {
       return;
     }
 
+    final source = await showPhotoSourcePicker(context);
+    if (source == null) return;
+
+    final image = await photoInputService.pickImage(source);
+    if (image == null) return;
+
     final result = await plantConditionCheckFlowService.checkCondition(
+      image: image,
       plantId: plantId,
       speciesKey: plant['speciesKey']?.toString(),
       speciesDisplayName: plant['speciesDisplayName']?.toString(),
     );
 
-    if (result == null || !context.mounted) return;
+    if (!context.mounted) return;
 
     await showDialog(
       context: context,
