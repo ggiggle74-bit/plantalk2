@@ -49,7 +49,7 @@ class PlantConditionCheckFlowService {
 
     await _plantService.insertPlantMemoryBestEffort(
       plantId: plantId,
-      memoryType: 'condition_check',
+      memoryType: PlantMemoryTypes.conditionCheck,
       eventType: analysisResult.conditionEventType,
       message: analysisResult.conditionMessage,
       photoUrl: photoUrl,

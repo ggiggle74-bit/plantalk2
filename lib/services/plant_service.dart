@@ -1,6 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class PlantMemoryTypes {
+  const PlantMemoryTypes._();
+
+  static const conditionCheck = 'condition_check';
+}
+
 class PlantService {
   final SupabaseClient _client = Supabase.instance.client;
 
@@ -108,7 +114,7 @@ class PlantService {
 
   Future<Map<String, dynamic>?> fetchLatestPlantMemoryBestEffort({
     required String plantId,
-    String memoryType = 'condition_check',
+    String memoryType = PlantMemoryTypes.conditionCheck,
   }) async {
     try {
       final data = await _client
