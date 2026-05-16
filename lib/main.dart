@@ -5,6 +5,8 @@ import 'admin_dialogue_screen.dart';
 import 'dialogue/chat_panel.dart';
 import 'photo/existing_plant_match_dialog.dart';
 import 'photo/mock_plant_photo_analysis.dart';
+import 'photo/photo_input_service.dart';
+import 'photo/photo_source_picker.dart';
 import 'photo/plant_registration_preview.dart';
 import 'photo/species_selection_dialog.dart';
 import 'photo/supported_species.dart';
@@ -39,6 +41,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final PlantService plantService = PlantService();
   final PhotoService photoService = PhotoService();
+  final PhotoInputService photoInputService = PhotoInputService();
   final PlantConditionAnalysisService conditionAnalysisService =
       MockPlantConditionAnalysisService();
   late final PlantPhotoFlowService plantPhotoFlowService;
@@ -299,7 +302,10 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> startPlantRegistration(BuildContext context) async {
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final source = await showPhotoSourcePicker(context);
+    if (source == null) return;
+
+    final image = await photoInputService.pickImage(source);
 
     if (image == null) return;
     if (!context.mounted) return;
