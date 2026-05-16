@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../services/plant_condition_analysis_service.dart';
+
 enum PlantPersonality {
   calm,
   cheerful,
@@ -254,8 +256,7 @@ class DialogueEngine {
           'health',
           'photo',
           'picture',
-        ]) ||
-        _containsAnyWord(normalizedMessage, const ['okay', 'ok']);
+        ]);
   }
 
   static String? conditionMemoryReply({
@@ -280,20 +281,22 @@ class DialogueEngine {
       userMessage.toLowerCase().trim(),
     );
 
-    if (asksMoisture && waterDay >= 2 && normalizedEventType == 'normal') {
+    if (asksMoisture &&
+        waterDay >= 2 &&
+        normalizedEventType == PlantConditionEventTypes.normal) {
       return '최근 사진상 큰 이상은 없어 보였어. 그래도 물 준 지 좀 됐으면 흙부터 확인해라.';
     }
 
     switch (normalizedEventType) {
-      case 'normal':
+      case PlantConditionEventTypes.normal:
         return '최근 사진으로 봤을 때는 큰 이상 없어 보였어. 그래도 잎 색은 한 번 더 봐라.';
-      case 'needs_water':
+      case PlantConditionEventTypes.needsWater:
         return '최근 상태 확인으로는 물이 좀 신경 쓰였어. 흙부터 확인해라.';
-      case 'low_light':
+      case PlantConditionEventTypes.lowLight:
         return '최근 상태 확인으로는 빛이 조금 부족할 수 있어. 자리 한번 봐라.';
-      case 'pest_risk':
+      case PlantConditionEventTypes.pestRisk:
         return '최근 상태 확인에서 잎 상태를 더 봐야 할 것 같았어. 뒷면도 확인해라.';
-      case 'leaf_damage':
+      case PlantConditionEventTypes.leafDamage:
         return '최근 사진에서 잎 손상이 신경 쓰였어. 더 번지는지 봐라.';
       default:
         return '최근 상태 확인에서 $plantLabel은 이렇게 나왔어. $memory';
