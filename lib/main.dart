@@ -697,9 +697,10 @@ class _MyAppState extends State<MyApp> {
                       plant,
                     ),
                     onPhoto: () async {
-                      final image = await ImagePicker().pickImage(
-                        source: ImageSource.gallery,
-                      );
+                      final source = await showPhotoSourcePicker(context);
+                      if (source == null) return;
+
+                      final image = await photoInputService.pickImage(source);
 
                       if (image == null) return;
                       if (!context.mounted) return;
