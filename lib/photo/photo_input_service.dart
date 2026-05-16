@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 class PhotoInputService {
@@ -6,7 +7,12 @@ class PhotoInputService {
 
   final ImagePicker _imagePicker;
 
-  Future<XFile?> pickImage(ImageSource source) {
-    return _imagePicker.pickImage(source: source);
+  Future<XFile?> pickImage(ImageSource source) async {
+    try {
+      return await _imagePicker.pickImage(source: source);
+    } catch (error) {
+      debugPrint('Image picker failed: $error');
+      return null;
+    }
   }
 }
