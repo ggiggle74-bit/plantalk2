@@ -3,9 +3,24 @@ class PlantConditionEventTypes {
 
   static const normal = 'normal';
   static const needsWater = 'needs_water';
+  static const waterNeeded = 'water_needed';
   static const lowLight = 'low_light';
   static const pestRisk = 'pest_risk';
   static const leafDamage = 'leaf_damage';
+
+  static String? normalize(String? eventType) {
+    final normalized = eventType?.trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+
+    switch (normalized) {
+      case waterNeeded:
+        return needsWater;
+      default:
+        return normalized;
+    }
+  }
 }
 
 class PlantConditionAnalysisRequest {

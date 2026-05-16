@@ -276,7 +276,9 @@ class DialogueEngine {
     }
 
     final plantLabel = plantName.trim().isEmpty ? '이 식물' : plantName.trim();
-    final normalizedEventType = memoryEventType?.trim().toLowerCase();
+    final normalizedEventType = PlantConditionEventTypes.normalize(
+      memoryEventType,
+    );
     final asksMoisture = _isSpecificMoistureQuestion(
       userMessage.toLowerCase().trim(),
     );
