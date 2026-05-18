@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/latest_condition_memory.dart';
 import '../services/dialogue_service.dart';
 import '../services/plant_service.dart';
 import 'dialogue_engine.dart';
@@ -40,8 +41,7 @@ class _ChatPanelState extends State<ChatPanel> {
   final PlantService _plantService = PlantService();
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
-  String? _latestConditionMemoryMessage;
-  String? _latestConditionMemoryEventType;
+  LatestConditionMemory? _latestConditionMemory;
   int _userMessageCount = 0;
   bool _isSending = false;
   bool _hasUsedConditionMemoryReply = false;
@@ -116,8 +116,8 @@ class _ChatPanelState extends State<ChatPanel> {
               plantName: widget.plantName,
               userMessage: text,
               waterDay: widget.waterDay,
-              memoryMessage: _latestConditionMemoryMessage,
-              memoryEventType: _latestConditionMemoryEventType,
+              memoryMessage: _latestConditionMemory?.message,
+              memoryEventType: _latestConditionMemory?.eventType,
             );
 
       if (memoryReply != null) {
@@ -201,15 +201,13 @@ class _ChatPanelState extends State<ChatPanel> {
     final plantId = widget.plantId;
     if (plantId == null || plantId.isEmpty) return;
 
-    final memory = await _plantService.fetchLatestPlantMemoryBestEffort(
+    final memory = await _plantService.fetchLatestConditionMemoryBestEffort(
       plantId: plantId,
     );
-    final message = memory?['message']?.toString().trim();
-    if (message == null || message.isEmpty || !mounted) return;
+    if (memory == null || !mounted) return;
 
     setState(() {
-      _latestConditionMemoryMessage = message;
-      _latestConditionMemoryEventType = memory?['event_type']?.toString();
+      _latestConditionMemory = memory;
     });
   }
 
@@ -223,6 +221,8 @@ class _ChatPanelState extends State<ChatPanel> {
             speciesDisplayName == '알 수 없음'
         ? '종류 미확인'
         : '추정 종류: $speciesDisplayName';
+
+    final latestConditionMemoryMessage = _latestConditionMemory?.message;
 
     return PopScope(
       canPop: false,
@@ -239,9 +239,9 @@ class _ChatPanelState extends State<ChatPanel> {
                 ListTile(
                   title: Text(widget.plantName),
                   subtitle: Text(
-                    _latestConditionMemoryMessage == null
+                    latestConditionMemoryMessage == null
                         ? speciesLabel
-                        : '$speciesLabel\n최근 상태 확인: $_latestConditionMemoryMessage',
+                        : '$speciesLabel\n최근 상태 확인: $latestConditionMemoryMessage',
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),

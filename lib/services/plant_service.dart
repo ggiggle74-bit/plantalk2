@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/latest_condition_memory.dart';
+
 class PlantMemoryTypes {
   const PlantMemoryTypes._();
 
@@ -134,6 +136,17 @@ class PlantService {
       debugPrint('plant_memories fetch failed: $error');
       return null;
     }
+  }
+
+  Future<LatestConditionMemory?> fetchLatestConditionMemoryBestEffort({
+    required String plantId,
+  }) async {
+    final memory = await fetchLatestPlantMemoryBestEffort(
+      plantId: plantId,
+      memoryType: PlantMemoryTypes.conditionCheck,
+    );
+
+    return LatestConditionMemory.fromRow(memory);
   }
 
   Future<void> updatePlantFriendship(
