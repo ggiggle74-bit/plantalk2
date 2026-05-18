@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/condition_check_memory_item.dart';
 import '../models/latest_condition_memory.dart';
 import '../models/plant_photo_history_item.dart';
 
@@ -169,6 +170,30 @@ class PlantService {
     );
 
     return LatestConditionMemory.fromRow(memory);
+  }
+
+  Future<List<ConditionCheckMemoryItem>> fetchRecentConditionCheckMemoriesBestEffort({
+    required String plantId,
+    int limit = 10,
+  }) async {
+    try {
+      final data = await _client
+          .from('plant_memories')
+          .select(
+            'plant_id, event_type, message, photo_url, is_mock, created_at',
+          )
+          .eq('plant_id', plantId)
+          .eq('memory_type', PlantMemoryTypes.conditionCheck)
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return List<Map<String, dynamic>>.from(data)
+          .map(ConditionCheckMemoryItem.fromRow)
+          .toList();
+    } catch (error) {
+      debugPrint('plant_memories condition_check fetch failed: $error');
+      return const [];
+    }
   }
 
   Future<void> updatePlantFriendship(
