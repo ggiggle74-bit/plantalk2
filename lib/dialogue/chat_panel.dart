@@ -43,8 +43,8 @@ class _ChatPanelState extends State<ChatPanel> {
   String? _latestPlantReply;
   LatestConditionMemory? _latestConditionMemory;
   int _userMessageCount = 0;
+  int _conditionMemoryReplyCount = 0;
   bool _isSending = false;
-  bool _hasUsedConditionMemoryReply = false;
 
   @override
   void initState() {
@@ -110,19 +110,22 @@ class _ChatPanelState extends State<ChatPanel> {
 
       _controller.clear();
 
-      final memoryReply = _hasUsedConditionMemoryReply
+      final conditionContext = _conditionMemoryReplyCount >= 2
+          ? null
+          : DialogueEngine.photoConditionDialogueContext(
+              userMessage: text,
+              memoryMessage: _latestConditionMemory?.message,
+              memoryEventType: _latestConditionMemory?.eventType,
+              replyCount: _conditionMemoryReplyCount,
+            );
+
+      final memoryReply = conditionContext == null
           ? null
           : DialogueEngine.conditionMemoryReply(
               plantName: widget.plantName,
-              userMessage: text,
               waterDay: widget.waterDay,
-              memoryMessage: _latestConditionMemory?.message,
-              memoryEventType: _latestConditionMemory?.eventType,
+              context: conditionContext,
             );
-
-      if (memoryReply != null) {
-        _hasUsedConditionMemoryReply = true;
-      }
 
       final fallbackReply = DialogueEngine.placeholderReply(
         plantName: widget.plantName,
@@ -137,14 +140,31 @@ class _ChatPanelState extends State<ChatPanel> {
         previousUserMessage: prevUser,
       );
 
-      var reply = memoryReply ?? fallbackReply;
+      var reply = fallbackReply;
       var usedDbReply = false;
 
       debugPrint(
-        'chat input="$text" waterDay=${widget.waterDay} situation=$detectedSituation',
+        'chat input="$text" waterDay=${widget.waterDay} situation=${conditionContext?.situation ?? detectedSituation}',
       );
 
-      if (memoryReply == null &&
+      if (conditionContext != null) {
+        try {
+          final dbReply = await _dialogueService.fetchRandomReply(
+            situation: conditionContext.situation,
+          );
+
+          if (dbReply != null) {
+            reply = dbReply;
+            usedDbReply = true;
+          } else if (memoryReply != null) {
+            reply = memoryReply;
+          }
+        } catch (_) {
+          reply = memoryReply ?? fallbackReply;
+        }
+
+        _conditionMemoryReplyCount++;
+      } else if (memoryReply == null &&
           detectedSituation != null &&
           detectedSituation.trim().isNotEmpty) {
         try {

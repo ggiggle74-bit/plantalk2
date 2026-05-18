@@ -10,6 +10,32 @@ enum PlantPersonality {
   blunt,
 }
 
+class PhotoConditionDialogueSituations {
+  const PhotoConditionDialogueSituations._();
+
+  static const conditionCheck = 'condition_check';
+  static const conditionCheckFollowup = 'condition_check_followup';
+  static const conditionWaterQuestion = 'condition_water_question';
+}
+
+class PhotoConditionDialogueContext {
+  const PhotoConditionDialogueContext({
+    required this.memoryMessage,
+    required this.eventType,
+    required this.asksMoisture,
+    required this.replyCount,
+    required this.situation,
+  });
+
+  final String memoryMessage;
+  final String? eventType;
+  final bool asksMoisture;
+  final int replyCount;
+  final String situation;
+
+  bool get isFollowUp => replyCount > 0;
+}
+
 class DialogueEngine {
   static final Random _random = Random();
 
@@ -247,8 +273,13 @@ class DialogueEngine {
           '문제 있어',
           '시들',
           '사진 봤어',
+          '사진 봤을 때',
           '사진 봤잖아',
+          '사진으로 보면',
+          '사진으로 상태',
+          '사진 확인했을 때',
           '사진 확인',
+          '사진상',
           '상태 확인',
           '방금 사진',
           'status',
@@ -259,10 +290,9 @@ class DialogueEngine {
         ]);
   }
 
-  static String? conditionMemoryReply({
-    required String plantName,
+  static PhotoConditionDialogueContext? photoConditionDialogueContext({
     required String userMessage,
-    required int waterDay,
+    required int replyCount,
     String? memoryMessage,
     String? memoryEventType,
   }) {
@@ -271,25 +301,52 @@ class DialogueEngine {
       return null;
     }
 
-    if (!isConditionMemoryQuestion(userMessage)) {
+    final normalizedMessage = userMessage.toLowerCase().trim();
+    final isExplicitConditionQuestion = isConditionMemoryQuestion(userMessage);
+    final isContextualFollowUp =
+        replyCount > 0 && _isConditionMemoryFollowUpQuestion(normalizedMessage);
+    if (!isExplicitConditionQuestion && !isContextualFollowUp) {
       return null;
     }
 
-    final plantLabel = plantName.trim().isEmpty ? '이 식물' : plantName.trim();
     final normalizedEventType = PlantConditionEventTypes.normalize(
       memoryEventType,
     );
-    final asksMoisture = _isSpecificMoistureQuestion(
-      userMessage.toLowerCase().trim(),
-    );
+    final asksMoisture = _isSpecificMoistureQuestion(normalizedMessage);
+    final situation = asksMoisture
+        ? PhotoConditionDialogueSituations.conditionWaterQuestion
+        : replyCount > 0
+        ? PhotoConditionDialogueSituations.conditionCheckFollowup
+        : PhotoConditionDialogueSituations.conditionCheck;
 
-    if (asksMoisture &&
+    return PhotoConditionDialogueContext(
+      memoryMessage: memory,
+      eventType: normalizedEventType,
+      asksMoisture: asksMoisture,
+      replyCount: replyCount,
+      situation: situation,
+    );
+  }
+
+  static String? conditionMemoryReply({
+    required String plantName,
+    required int waterDay,
+    required PhotoConditionDialogueContext context,
+  }) {
+    final plantLabel = plantName.trim().isEmpty ? '이 식물' : plantName.trim();
+    final memory = context.memoryMessage;
+
+    if (context.isFollowUp) {
+      return conditionMemoryFallbackReply(context);
+    }
+
+    if (context.asksMoisture &&
         waterDay >= 2 &&
-        normalizedEventType == PlantConditionEventTypes.normal) {
+        context.eventType == PlantConditionEventTypes.normal) {
       return '최근 사진상 큰 이상은 없어 보였어. 그래도 물 준 지 좀 됐으면 흙부터 확인해라.';
     }
 
-    switch (normalizedEventType) {
+    switch (context.eventType) {
       case PlantConditionEventTypes.normal:
         return '최근 사진으로 봤을 때는 큰 이상 없어 보였어. 그래도 잎 색은 한 번 더 봐라.';
       case PlantConditionEventTypes.needsWater:
@@ -303,6 +360,12 @@ class DialogueEngine {
       default:
         return '최근 상태 확인에서 $plantLabel은 이렇게 나왔어. $memory';
     }
+  }
+
+  static String conditionMemoryFallbackReply(
+    PhotoConditionDialogueContext context,
+  ) {
+    return '아까 사진 기준으로는 이렇게 기억하고 있어. ${context.memoryMessage}';
   }
 
   static bool _isSpecificMoistureQuestion(String normalizedMessage) {
@@ -330,6 +393,20 @@ class DialogueEngine {
       'too dry',
       'dry soil',
       'low moisture',
+    ]);
+  }
+
+  static bool _isConditionMemoryFollowUpQuestion(String normalizedMessage) {
+    return _containsAny(normalizedMessage, const [
+      '다시 봐도',
+      '진짜 괜찮',
+      '그럼 괜찮',
+      '문제 없는',
+      '문제 없',
+      '계속 봐야',
+      '걱정 안 해도',
+      '다시 확인하면',
+      '그래도 괜찮',
     ]);
   }
 
