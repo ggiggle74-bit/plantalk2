@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/latest_condition_memory.dart';
+import '../models/plant_photo_history_item.dart';
 
 class PlantMemoryTypes {
   const PlantMemoryTypes._();
@@ -89,6 +90,27 @@ class PlantService {
       });
     } catch (error) {
       debugPrint('plant_photos insert failed: $error');
+    }
+  }
+
+  Future<List<PlantPhotoHistoryItem>> fetchPlantPhotoHistoryBestEffort({
+    required String plantId,
+    int limit = 20,
+  }) async {
+    try {
+      final data = await _client
+          .from('plant_photos')
+          .select('id, plant_id, photo_url, created_at')
+          .eq('plant_id', plantId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return List<Map<String, dynamic>>.from(data)
+          .map(PlantPhotoHistoryItem.fromRow)
+          .toList();
+    } catch (error) {
+      debugPrint('plant_photos fetch failed: $error');
+      return const [];
     }
   }
 
