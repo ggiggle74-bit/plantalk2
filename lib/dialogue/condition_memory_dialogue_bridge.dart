@@ -56,6 +56,24 @@ class ConditionMemoryDialogueBridge {
     );
   }
 
+  static String? conditionKeyForDetectedSituation({
+    required String detectedSituation,
+    required LatestConditionMemory? memory,
+  }) {
+    final normalizedSituation = detectedSituation.trim();
+    if (normalizedSituation.isEmpty) {
+      return null;
+    }
+
+    final decision = decide(memory);
+    if (normalizedSituation == 'thirsty' &&
+        decision?.conditionKey == conditionKeyWaterNeeded) {
+      return conditionKeyWaterNeeded;
+    }
+
+    return null;
+  }
+
   static bool _isWaterMemory({
     required String? eventType,
     required String message,

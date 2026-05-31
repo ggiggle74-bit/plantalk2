@@ -128,9 +128,18 @@ class _ChatPanelState extends State<ChatPanel> {
               replyCount: _conditionMemoryReplyCount,
             );
 
-      final conditionDecision = hasDetectedSituation || conditionContext == null
+      final conditionDecision = ConditionMemoryDialogueBridge.decide(
+        _latestConditionMemory,
+      );
+      final detectedConditionKey = hasDetectedSituation
+          ? ConditionMemoryDialogueBridge.conditionKeyForDetectedSituation(
+              detectedSituation: detectedSituation,
+              memory: _latestConditionMemory,
+            )
+          : null;
+      final fallbackConditionDecision = conditionContext == null
           ? null
-          : ConditionMemoryDialogueBridge.decide(_latestConditionMemory);
+          : conditionDecision;
 
       final fallbackReply = DialogueEngine.placeholderReply(
         plantName: widget.plantName,
@@ -138,18 +147,25 @@ class _ChatPanelState extends State<ChatPanel> {
         waterDay: widget.waterDay,
         previousUserMessage: prevUser,
       );
+      final loggedConditionKey = hasDetectedSituation
+          ? detectedConditionKey
+          : fallbackConditionDecision?.conditionKey;
+      final loggedConditionSource = hasDetectedSituation
+          ? null
+          : fallbackConditionDecision?.sourceLabel;
 
       var reply = fallbackReply;
       var usedDbReply = false;
 
       debugPrint(
-        'chat input="$text" waterDay=${widget.waterDay} situation=${detectedSituation ?? conditionDecision?.situationKey ?? conditionContext?.situation} conditionKey=${conditionDecision?.conditionKey} conditionSource=${conditionDecision?.sourceLabel}',
+        'chat input="$text" waterDay=${widget.waterDay} situation=${detectedSituation ?? fallbackConditionDecision?.situationKey ?? conditionContext?.situation} conditionKey=$loggedConditionKey conditionSource=$loggedConditionSource',
       );
 
       if (hasDetectedSituation) {
         try {
           final dbReply = await _dialogueService.fetchRandomReply(
             situation: detectedSituation,
+            conditionKey: detectedConditionKey,
           );
 
           if (dbReply != null) {
@@ -159,11 +175,11 @@ class _ChatPanelState extends State<ChatPanel> {
         } catch (_) {
           reply = fallbackReply;
         }
-      } else if (conditionDecision != null) {
+      } else if (fallbackConditionDecision != null) {
         try {
           final dbReply = await _dialogueService.fetchRandomReply(
-            situation: conditionDecision.situationKey,
-            conditionKey: conditionDecision.conditionKey,
+            situation: fallbackConditionDecision.situationKey,
+            conditionKey: fallbackConditionDecision.conditionKey,
           );
 
           if (dbReply != null) {
