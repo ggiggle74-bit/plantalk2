@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/latest_condition_memory.dart';
 import '../services/dialogue_service.dart';
 import '../services/plant_service.dart';
+import 'condition_memory_dialogue_bridge.dart';
 import 'dialogue_engine.dart';
 
 class ChatPanelResult {
@@ -110,6 +111,14 @@ class _ChatPanelState extends State<ChatPanel> {
 
       _controller.clear();
 
+      final detectedSituation = DialogueEngine.detectSituation(
+        userMessage: text,
+        waterDay: widget.waterDay,
+        previousUserMessage: prevUser,
+      );
+      final hasDetectedSituation =
+          detectedSituation != null && detectedSituation.trim().isNotEmpty;
+
       final conditionContext = _conditionMemoryReplyCount >= 2
           ? null
           : DialogueEngine.photoConditionDialogueContext(
@@ -119,22 +128,12 @@ class _ChatPanelState extends State<ChatPanel> {
               replyCount: _conditionMemoryReplyCount,
             );
 
-      final memoryReply = conditionContext == null
+      final conditionDecision = hasDetectedSituation || conditionContext == null
           ? null
-          : DialogueEngine.conditionMemoryReply(
-              plantName: widget.plantName,
-              waterDay: widget.waterDay,
-              context: conditionContext,
-            );
+          : ConditionMemoryDialogueBridge.decide(_latestConditionMemory);
 
       final fallbackReply = DialogueEngine.placeholderReply(
         plantName: widget.plantName,
-        userMessage: text,
-        waterDay: widget.waterDay,
-        previousUserMessage: prevUser,
-      );
-
-      final detectedSituation = DialogueEngine.detectSituation(
         userMessage: text,
         waterDay: widget.waterDay,
         previousUserMessage: prevUser,
@@ -144,29 +143,10 @@ class _ChatPanelState extends State<ChatPanel> {
       var usedDbReply = false;
 
       debugPrint(
-        'chat input="$text" waterDay=${widget.waterDay} situation=${conditionContext?.situation ?? detectedSituation}',
+        'chat input="$text" waterDay=${widget.waterDay} situation=${detectedSituation ?? conditionDecision?.situationKey ?? conditionContext?.situation} conditionKey=${conditionDecision?.conditionKey} conditionSource=${conditionDecision?.sourceLabel}',
       );
 
-      if (conditionContext != null) {
-        try {
-          final dbReply = await _dialogueService.fetchRandomReply(
-            situation: conditionContext.situation,
-          );
-
-          if (dbReply != null) {
-            reply = dbReply;
-            usedDbReply = true;
-          } else if (memoryReply != null) {
-            reply = memoryReply;
-          }
-        } catch (_) {
-          reply = memoryReply ?? fallbackReply;
-        }
-
-        _conditionMemoryReplyCount++;
-      } else if (memoryReply == null &&
-          detectedSituation != null &&
-          detectedSituation.trim().isNotEmpty) {
+      if (hasDetectedSituation) {
         try {
           final dbReply = await _dialogueService.fetchRandomReply(
             situation: detectedSituation,
@@ -179,6 +159,22 @@ class _ChatPanelState extends State<ChatPanel> {
         } catch (_) {
           reply = fallbackReply;
         }
+      } else if (conditionDecision != null) {
+        try {
+          final dbReply = await _dialogueService.fetchRandomReply(
+            situation: conditionDecision.situationKey,
+            conditionKey: conditionDecision.conditionKey,
+          );
+
+          if (dbReply != null) {
+            reply = dbReply;
+            usedDbReply = true;
+          }
+        } catch (_) {
+          reply = fallbackReply;
+        }
+
+        _conditionMemoryReplyCount++;
       }
 
       debugPrint('chat dbReplyUsed=$usedDbReply');
