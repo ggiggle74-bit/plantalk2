@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/latest_condition_memory.dart';
 import '../services/dialogue_service.dart';
 import '../services/plant_service.dart';
-import 'condition_memory_dialogue_bridge.dart';
+import 'dialogue_decision_context_builder.dart';
 import 'dialogue_engine.dart';
 
 class ChatPanelResult {
@@ -38,6 +38,8 @@ class ChatPanel extends StatefulWidget {
 
 class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _controller = TextEditingController();
+  final DialogueDecisionContextBuilder _decisionContextBuilder =
+      const DialogueDecisionContextBuilder();
   final DialogueService _dialogueService = DialogueService();
   final PlantService _plantService = PlantService();
   final List<Map<String, String>> _messages = [];
@@ -111,35 +113,14 @@ class _ChatPanelState extends State<ChatPanel> {
 
       _controller.clear();
 
-      final detectedSituation = DialogueEngine.detectSituation(
-        userMessage: text,
+      final decisionContext = _decisionContextBuilder.build(
+        input: text,
         waterDay: widget.waterDay,
         previousUserMessage: prevUser,
+        conditionMemoryContext: _latestConditionMemory,
+        conditionMemoryReplyCount: _conditionMemoryReplyCount,
+        allowConditionMemoryFallback: _conditionMemoryReplyCount < 2,
       );
-      final hasDetectedSituation =
-          detectedSituation != null && detectedSituation.trim().isNotEmpty;
-
-      final conditionContext = _conditionMemoryReplyCount >= 2
-          ? null
-          : DialogueEngine.photoConditionDialogueContext(
-              userMessage: text,
-              memoryMessage: _latestConditionMemory?.message,
-              memoryEventType: _latestConditionMemory?.eventType,
-              replyCount: _conditionMemoryReplyCount,
-            );
-
-      final conditionDecision = ConditionMemoryDialogueBridge.decide(
-        _latestConditionMemory,
-      );
-      final detectedConditionKey = hasDetectedSituation
-          ? ConditionMemoryDialogueBridge.conditionKeyForDetectedSituation(
-              detectedSituation: detectedSituation,
-              memory: _latestConditionMemory,
-            )
-          : null;
-      final fallbackConditionDecision = conditionContext == null
-          ? null
-          : conditionDecision;
 
       final fallbackReply = DialogueEngine.placeholderReply(
         plantName: widget.plantName,
@@ -147,25 +128,19 @@ class _ChatPanelState extends State<ChatPanel> {
         waterDay: widget.waterDay,
         previousUserMessage: prevUser,
       );
-      final loggedConditionKey = hasDetectedSituation
-          ? detectedConditionKey
-          : fallbackConditionDecision?.conditionKey;
-      final loggedConditionSource = hasDetectedSituation
-          ? null
-          : fallbackConditionDecision?.sourceLabel;
 
       var reply = fallbackReply;
       var usedDbReply = false;
 
       debugPrint(
-        'chat input="$text" waterDay=${widget.waterDay} situation=${detectedSituation ?? fallbackConditionDecision?.situationKey ?? conditionContext?.situation} conditionKey=$loggedConditionKey conditionSource=$loggedConditionSource',
+        'chat input="$text" waterDay=${widget.waterDay} situation=${decisionContext.situationKey} conditionKey=${decisionContext.conditionKey} conditionSource=${decisionContext.conditionSource}',
       );
 
-      if (hasDetectedSituation) {
+      if (decisionContext.hasDetectedSituation) {
         try {
           final dbReply = await _dialogueService.fetchRandomReply(
-            situation: detectedSituation,
-            conditionKey: detectedConditionKey,
+            situation: decisionContext.situationKey,
+            conditionKey: decisionContext.conditionKey,
           );
 
           if (dbReply != null) {
@@ -175,11 +150,11 @@ class _ChatPanelState extends State<ChatPanel> {
         } catch (_) {
           reply = fallbackReply;
         }
-      } else if (fallbackConditionDecision != null) {
+      } else if (decisionContext.usesConditionMemoryFallback) {
         try {
           final dbReply = await _dialogueService.fetchRandomReply(
-            situation: fallbackConditionDecision.situationKey,
-            conditionKey: fallbackConditionDecision.conditionKey,
+            situation: decisionContext.situationKey,
+            conditionKey: decisionContext.conditionKey,
           );
 
           if (dbReply != null) {
