@@ -136,7 +136,9 @@ class _ChatPanelState extends State<ChatPanel> {
         'chat input="$text" waterDay=${widget.waterDay} situation=${decisionContext.situationKey} conditionKey=${decisionContext.conditionKey} conditionSource=${decisionContext.conditionSource}',
       );
 
-      if (decisionContext.hasDetectedSituation) {
+      if (decisionContext.hasDetectedSituation ||
+          decisionContext.situationKey ==
+              PhotoConditionDialogueSituations.conditionCheckRequest) {
         try {
           final dbReply = await _dialogueService.fetchRandomReply(
             situation: decisionContext.situationKey,
