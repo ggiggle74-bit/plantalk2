@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
+import 'app/plant_chat_result_handler.dart';
 import 'app/plant_card_state_mapper.dart';
 import 'dialogue/chat_panel.dart';
 import 'photo/existing_plant_match_dialog.dart';
@@ -45,6 +46,8 @@ class _MyAppState extends State<MyApp> {
   final PhotoInputService photoInputService = PhotoInputService();
   final PlantConditionAnalysisService conditionAnalysisService =
       MockPlantConditionAnalysisService();
+  final PlantChatResultHandler plantChatResultHandler =
+      const PlantChatResultHandler();
   late final PlantPhotoFlowService plantPhotoFlowService;
   late final PlantConditionCheckFlowService plantConditionCheckFlowService;
 
@@ -462,27 +465,14 @@ class _MyAppState extends State<MyApp> {
     Map<String, dynamic> plant,
     ChatPanelResult chatResult,
   ) async {
-    if (!mounted) return;
-
-    final latestReply = chatResult.latestPlantReply;
-    final currentFriendship = plant['friendship'] is int
-        ? plant['friendship'] as int
-        : 0;
-    final updatedFriendship = currentFriendship + chatResult.userMessageCount;
-    final mood = plant['mood']?.toString() ?? '보통';
-
-    setState(() {
-      if (latestReply != null) {
-        plant['message'] = latestReply;
-      }
-      plant['friendship'] = updatedFriendship;
-    });
-
-    if (latestReply != null) {
-      await updatePlantMessageByPlant(plant, latestReply);
-    }
-
-    await updatePlantFriendshipByPlant(plant, updatedFriendship, mood);
+    await plantChatResultHandler.updatePlantAfterChat(
+      isMounted: mounted,
+      plant: plant,
+      chatResult: chatResult,
+      updateState: setState,
+      updatePlantMessage: updatePlantMessageByPlant,
+      updatePlantFriendship: updatePlantFriendshipByPlant,
+    );
   }
 
   Future<ChatPanelResult?> openChatPanel(
