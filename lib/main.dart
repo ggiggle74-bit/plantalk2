@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
+import 'app/plant_card_state_mapper.dart';
 import 'dialogue/chat_panel.dart';
 import 'photo/existing_plant_match_dialog.dart';
 import 'photo/mock_plant_photo_analysis.dart';
@@ -74,18 +75,7 @@ class _MyAppState extends State<MyApp> {
 
     setState(() {
       extraPlants = data.map<Map<String, dynamic>>((plant) {
-        return {
-          'id': plant['id'],
-          'name': plant['name'],
-          'message': plant['message'] ?? '안녕하세요 🌱',
-          'waterDay': plant['water_day'] ?? 0,
-          'friendship': plant['friendship'] ?? 0,
-          'photoPath': plant['photo_url'],
-          'speciesKey': plant['species_key'] ?? 'unknown',
-          'speciesDisplayName': plant['species_display_name'] ?? '알 수 없음',
-          'speciesGuess': plant['species_guess'],
-          'mood': plant['mood'] ?? '보통',
-        };
+        return plantCardStateFromSupabaseRow(plant);
       }).toList();
     });
   }
@@ -116,24 +106,6 @@ class _MyAppState extends State<MyApp> {
     await plantService.updatePlantMessage(plantName, message);
   }
 
-  String? _plantIdOf(Map<String, dynamic> plant) {
-    final id = plant['id']?.toString();
-    if (id == null || id.isEmpty) return null;
-    return id;
-  }
-
-  String? _speciesDisplayNameForChat(String? plantId) {
-    if (plantId == null || plantId.isEmpty) return null;
-
-    for (final plant in extraPlants) {
-      if (_plantIdOf(plant) == plantId) {
-        return plant['speciesDisplayName']?.toString();
-      }
-    }
-
-    return null;
-  }
-
   Future<String> saveRepresentativePlantPhoto({
     required XFile image,
     String? plantId,
@@ -152,7 +124,7 @@ class _MyAppState extends State<MyApp> {
     BuildContext context,
     Map<String, dynamic> plant,
   ) async {
-    final plantId = _plantIdOf(plant);
+    final plantId = plantIdOf(plant);
     if (plantId == null) {
       if (!context.mounted) return;
 
@@ -194,22 +166,11 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  int _waterDayOf(Map<String, dynamic> plant) {
-    final value = plant['waterDay'] ?? plant['water_day'] ?? 0;
-    if (value is int) return value;
-    return int.tryParse(value.toString()) ?? 0;
-  }
-
-  void _setWaterDay(Map<String, dynamic> plant, int waterDay) {
-    plant['waterDay'] = waterDay;
-    plant['water_day'] = waterDay;
-  }
-
   Future<void> updatePlantWaterDayByPlant(
     Map<String, dynamic> plant,
     int waterDay,
   ) async {
-    final id = _plantIdOf(plant);
+    final id = plantIdOf(plant);
     if (id != null) {
       await plantService.updatePlantWaterDayById(id, waterDay);
       return;
@@ -222,7 +183,7 @@ class _MyAppState extends State<MyApp> {
     Map<String, dynamic> plant,
     String message,
   ) async {
-    final id = _plantIdOf(plant);
+    final id = plantIdOf(plant);
     if (id != null) {
       await plantService.updatePlantMessageById(id, message);
       return;
@@ -235,7 +196,7 @@ class _MyAppState extends State<MyApp> {
     BuildContext context,
     Map<String, dynamic> plant,
   ) async {
-    final id = _plantIdOf(plant);
+    final id = plantIdOf(plant);
 
     final newName = await showEditPlantNameDialogInput(
       context,
@@ -267,7 +228,7 @@ class _MyAppState extends State<MyApp> {
     int friendship,
     String mood,
   ) async {
-    final id = _plantIdOf(plant);
+    final id = plantIdOf(plant);
     if (id != null) {
       await plantService.updatePlantFriendshipById(id, friendship, mood);
       return;
@@ -279,7 +240,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> deletePlantFromSupabaseByPlant(
     Map<String, dynamic> plant,
   ) async {
-    final id = _plantIdOf(plant);
+    final id = plantIdOf(plant);
     if (id != null) {
       await plantService.deletePlantById(id);
       return;
@@ -372,7 +333,7 @@ class _MyAppState extends State<MyApp> {
     Map<String, dynamic> plant,
   ) async {
     const reactionMessage = '사진 봤다. 이제 말 좀 걸어봐라.';
-    final plantId = _plantIdOf(plant);
+    final plantId = plantIdOf(plant);
     final photoPath = await saveRepresentativePlantPhoto(
       image: image,
       plantId: plantId,
@@ -390,7 +351,7 @@ class _MyAppState extends State<MyApp> {
       plantId: plantId,
       plantName: plant['name']?.toString() ?? '이름 없는 식물',
       initialPlantMessage: reactionMessage,
-      waterDay: _waterDayOf(plant),
+      waterDay: waterDayOf(plant),
     );
 
     if (chatResult != null) {
@@ -482,10 +443,10 @@ class _MyAppState extends State<MyApp> {
 
             final chatResult = await openChatPanel(
               context,
-              plantId: _plantIdOf(newPlant),
+              plantId: plantIdOf(newPlant),
               plantName: newPlant['name'],
               initialPlantMessage: firstMessage,
-              waterDay: _waterDayOf(newPlant),
+              waterDay: waterDayOf(newPlant),
             );
 
             if (chatResult != null) {
@@ -538,7 +499,7 @@ class _MyAppState extends State<MyApp> {
           return ChatPanel(
             plantId: plantId,
             plantName: plantName,
-            speciesDisplayName: _speciesDisplayNameForChat(plantId),
+            speciesDisplayName: speciesDisplayNameForChat(plantId, extraPlants),
             initialPlantMessage: initialPlantMessage,
             waterDay: waterDay,
           );
@@ -641,15 +602,15 @@ class _MyAppState extends State<MyApp> {
                   return plantCard(
                     plant['name'],
                     plant['message'],
-                    _waterDayOf(plant),
+                    waterDayOf(plant),
                     plant['friendship'] ?? 0,
 
                     () async {
-                      final plantId = _plantIdOf(plant);
+                      final plantId = plantIdOf(plant);
                       final plantIndex = plantId == null
                           ? extraPlants.indexOf(plant)
                           : extraPlants.indexWhere(
-                              (extraPlant) => _plantIdOf(extraPlant) == plantId,
+                              (extraPlant) => plantIdOf(extraPlant) == plantId,
                             );
                       if (plantIndex < 0) return;
 
@@ -657,12 +618,12 @@ class _MyAppState extends State<MyApp> {
 
                       setState(() {
                         selectedPlant['message'] = '고마워요 💧';
-                        _setWaterDay(selectedPlant, 0);
+                        setWaterDay(selectedPlant, 0);
                       });
 
                       await updatePlantWaterDayByPlant(
                         selectedPlant,
-                        _waterDayOf(selectedPlant),
+                        waterDayOf(selectedPlant),
                       );
 
                       await updatePlantMessageByPlant(
@@ -673,7 +634,7 @@ class _MyAppState extends State<MyApp> {
                     onTalk: () async {
                       final chatResult = await openChatPanel(
                         context,
-                        plantId: _plantIdOf(plant),
+                        plantId: plantIdOf(plant),
                         plantName: plant['name'],
                         initialPlantMessage: plant['message'],
                         waterDay: plant['waterDay'],
@@ -699,10 +660,8 @@ class _MyAppState extends State<MyApp> {
                     },
                     photoPath: plant['photoPath'] as String?,
                     speciesDisplayName: plant['speciesDisplayName']?.toString(),
-                    onConditionCheck: () => handleConditionCheck(
-                      context,
-                      plant,
-                    ),
+                    onConditionCheck: () =>
+                        handleConditionCheck(context, plant),
                     onPhoto: () async {
                       final source = await showPhotoSourcePicker(context);
                       if (source == null) return;
@@ -728,12 +687,12 @@ class _MyAppState extends State<MyApp> {
                               Navigator.pop(context);
                               if (!context.mounted) return;
 
-                              final plantId = _plantIdOf(plant);
+                              final plantId = plantIdOf(plant);
                               final photoPath =
                                   await saveRepresentativePlantPhoto(
-                                image: image,
-                                plantId: plantId,
-                              );
+                                    image: image,
+                                    plantId: plantId,
+                                  );
 
                               if (!context.mounted) return;
 
