@@ -62,6 +62,12 @@ class DialogueDecisionContextBuilder {
     final fallbackConditionDecision = conditionContext == null
         ? null
         : conditionDecision;
+    final conditionRequestSituation =
+        !hasDetectedSituation &&
+            fallbackConditionDecision == null &&
+            DialogueEngine.isConditionMemoryQuestion(input)
+        ? PhotoConditionDialogueSituations.conditionCheckRequest
+        : null;
 
     return DialogueDecisionContext(
       input: input,
@@ -69,7 +75,8 @@ class DialogueDecisionContextBuilder {
       situationKey:
           detectedSituation ??
           fallbackConditionDecision?.situationKey ??
-          conditionContext?.situation,
+          conditionContext?.situation ??
+          conditionRequestSituation,
       conditionKey: hasDetectedSituation
           ? detectedConditionKey
           : fallbackConditionDecision?.conditionKey,

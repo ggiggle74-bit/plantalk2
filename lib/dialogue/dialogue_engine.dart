@@ -2,19 +2,14 @@ import 'dart:math';
 
 import '../services/plant_condition_analysis_service.dart';
 
-enum PlantPersonality {
-  calm,
-  cheerful,
-  shy,
-  playful,
-  blunt,
-}
+enum PlantPersonality { calm, cheerful, shy, playful, blunt }
 
 class PhotoConditionDialogueSituations {
   const PhotoConditionDialogueSituations._();
 
   static const conditionCheck = 'condition_check';
   static const conditionCheckFollowup = 'condition_check_followup';
+  static const conditionCheckRequest = 'condition_check_request';
   static const conditionWaterQuestion = 'condition_water_question';
 }
 
@@ -267,6 +262,9 @@ class DialogueEngine {
           '상태 어때',
           '상태가 어때',
           '건강',
+          '괜찮아',
+          '괜찮니',
+          '괜찮은',
           '아파',
           '아픈 데',
           '이상 있어',
