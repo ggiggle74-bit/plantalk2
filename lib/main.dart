@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
+import 'app/condition_check_action_coordinator.dart';
 import 'app/plant_chat_result_handler.dart';
 import 'app/plant_card_state_mapper.dart';
 import 'dialogue/chat_panel.dart';
@@ -46,6 +47,8 @@ class _MyAppState extends State<MyApp> {
   final PhotoInputService photoInputService = PhotoInputService();
   final PlantConditionAnalysisService conditionAnalysisService =
       MockPlantConditionAnalysisService();
+  final ConditionCheckActionCoordinator conditionCheckActionCoordinator =
+      const ConditionCheckActionCoordinator();
   final PlantChatResultHandler plantChatResultHandler =
       const PlantChatResultHandler();
   late final PlantPhotoFlowService plantPhotoFlowService;
@@ -127,45 +130,11 @@ class _MyAppState extends State<MyApp> {
     BuildContext context,
     Map<String, dynamic> plant,
   ) async {
-    final plantId = plantIdOf(plant);
-    if (plantId == null) {
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('식물 id가 없어 상태 확인을 할 수 없어요.')),
-      );
-      return;
-    }
-
-    final source = await showPhotoSourcePicker(context);
-    if (source == null) return;
-
-    final image = await photoInputService.pickImage(source);
-    if (image == null) return;
-
-    final result = await plantConditionCheckFlowService.checkCondition(
-      image: image,
-      plantId: plantId,
-      speciesKey: plant['speciesKey']?.toString(),
-      speciesDisplayName: plant['speciesDisplayName']?.toString(),
-    );
-
-    if (!context.mounted) return;
-
-    await showDialog(
+    await conditionCheckActionCoordinator.handleConditionCheck(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text('상태 확인'),
-          content: Text(result.analysisResult.conditionMessage),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('확인'),
-            ),
-          ],
-        );
-      },
+      plant: plant,
+      photoInputService: photoInputService,
+      plantConditionCheckFlowService: plantConditionCheckFlowService,
     );
   }
 
