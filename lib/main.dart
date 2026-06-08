@@ -11,14 +11,11 @@ import 'photo/mock_plant_photo_analysis.dart';
 import 'photo/photo_input_service.dart';
 import 'photo/photo_source_picker.dart';
 import 'photo/plant_registration_preview.dart';
-import 'photo/species_selection_dialog.dart';
-import 'photo/supported_species.dart';
 import 'services/plant_condition_analysis_service.dart';
 import 'services/plant_condition_check_flow_service.dart';
 import 'services/plant_service.dart';
 import 'services/plant_photo_flow_service.dart';
 import 'services/photo_service.dart';
-import 'widgets/add_plant_dialog.dart';
 import 'widgets/delete_plant_confirmation_dialog.dart';
 import 'widgets/edit_plant_name_dialog.dart';
 import 'widgets/plant_card.dart';
@@ -290,98 +287,38 @@ class _MyAppState extends State<MyApp> {
     XFile image,
     MockPlantPhotoAnalysis analysis,
   ) async {
-    final selectedSpecies = await showSpeciesSelectionDialog(
-      context,
-      suggestedSpecies: analysis.speciesSuggestions,
-    );
-
-    if (selectedSpecies == null || !context.mounted) return;
-
-    addPlantDialog(
-      context,
-      image,
-      selectedSpecies: selectedSpecies,
-      speciesGuess: analysis.speciesSuggestions
-          .map((species) => species.displayName)
-          .join(', '),
+    await plantRegistrationActionCoordinator.startNewPlantCreation(
+      context: context,
+      image: image,
+      analysis: analysis,
+      isMounted: () => mounted,
+      onAddPlantToSupabase: addPlantToSupabase,
+      onSaveRepresentativePlantPhoto: saveRepresentativePlantPhoto,
+      onAppendNewPlant: (newPlant) {
+        setState(() {
+          extraPlants.add(newPlant);
+        });
+      },
+      onOpenFirstChatForNewPlant: openFirstChatForNewPlant,
     );
   }
 
-  void addPlantDialog(
+  Future<void> openFirstChatForNewPlant(
     BuildContext context,
-    XFile image, {
-    required SupportedSpecies selectedSpecies,
-    required String speciesGuess,
-  }) {
-    final controller = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (_) {
-        return addPlantDialogContent(
-          controller: controller,
-          onCancel: () {
-            Navigator.pop(context);
-          },
-          onAdd: () async {
-            final plantName = controller.text.trim();
-            if (plantName.isEmpty) return;
-
-            final insertedPlant = await addPlantToSupabase(
-              plantName,
-              speciesKey: selectedSpecies.key,
-              speciesDisplayName: selectedSpecies.displayName,
-              speciesGuess: speciesGuess,
-            );
-
-            if (!mounted) return;
-
-            const firstMessage = '너를 기다리고 있었다.';
-
-            final plantId = insertedPlant['id']?.toString();
-            final photoPath = await saveRepresentativePlantPhoto(
-              image: image,
-              plantId: plantId,
-            );
-
-            final newPlant = <String, dynamic>{
-              'id': insertedPlant['id'],
-              'name': insertedPlant['name'] ?? plantName,
-              'message': firstMessage,
-              'waterDay': insertedPlant['water_day'] ?? 0,
-              'friendship': insertedPlant['friendship'] ?? 0,
-              'photoPath': photoPath,
-              'speciesKey': insertedPlant['species_key'] ?? selectedSpecies.key,
-              'speciesDisplayName':
-                  insertedPlant['species_display_name'] ??
-                  selectedSpecies.displayName,
-              'speciesGuess': insertedPlant['species_guess'] ?? speciesGuess,
-              'mood': insertedPlant['mood'] ?? '보통',
-            };
-
-            setState(() {
-              extraPlants.add(newPlant);
-            });
-
-            if (!context.mounted) return;
-
-            Navigator.pop(context);
-
-            final chatResult = await openChatPanel(
-              context,
-              plantId: plantIdOf(newPlant),
-              plantName: newPlant['name'],
-              initialPlantMessage: firstMessage,
-              waterDay: waterDayOf(newPlant),
-            );
-
-            if (chatResult != null) {
-              await updatePlantAfterChat(newPlant, chatResult);
-            }
-          },
-        );
-      },
+    Map<String, dynamic> newPlant,
+    String initialPlantMessage,
+  ) async {
+    final chatResult = await openChatPanel(
+      context,
+      plantId: plantIdOf(newPlant),
+      plantName: newPlant['name'],
+      initialPlantMessage: initialPlantMessage,
+      waterDay: waterDayOf(newPlant),
     );
+
+    if (chatResult != null) {
+      await updatePlantAfterChat(newPlant, chatResult);
+    }
   }
 
   Future<void> updatePlantAfterChat(
