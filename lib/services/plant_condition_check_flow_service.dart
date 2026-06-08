@@ -1,5 +1,6 @@
 import 'package:image_picker/image_picker.dart';
 
+import '../plant_analysis/bridges/condition_check_memory_payload_bridge.dart';
 import 'plant_condition_analysis_service.dart';
 import 'plant_service.dart';
 import 'plant_photo_flow_service.dart';
@@ -46,14 +47,20 @@ class PlantConditionCheckFlowService {
         speciesDisplayName: speciesDisplayName,
       ),
     );
+    final memoryPayload = const ConditionCheckMemoryPayloadBridge()
+        .fromNormalizedEvent(
+          event: analysisResult.normalizedEvent,
+          plantId: plantId,
+          photoUrl: photoUrl,
+        );
 
     await _plantService.insertPlantMemoryBestEffort(
-      plantId: plantId,
-      memoryType: PlantMemoryTypes.conditionCheck,
-      eventType: analysisResult.conditionEventType,
-      message: analysisResult.conditionMessage,
-      photoUrl: photoUrl,
-      isMock: analysisResult.isMock,
+      plantId: memoryPayload.plantId,
+      memoryType: memoryPayload.memoryType,
+      eventType: memoryPayload.eventType,
+      message: memoryPayload.message,
+      photoUrl: memoryPayload.photoUrl,
+      isMock: memoryPayload.isMock,
     );
 
     return PlantConditionCheckFlowResult(

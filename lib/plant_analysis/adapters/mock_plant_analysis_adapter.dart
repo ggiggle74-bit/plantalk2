@@ -6,12 +6,14 @@ import 'plant_analysis_adapter.dart';
 class MockPlantAnalysisAdapter implements PlantAnalysisAdapter {
   const MockPlantAnalysisAdapter({
     this.mockEventType = PlantAnalysisEventTypes.conditionUncertain,
+    this.mockNote = 'Mock adapter output for boundary testing only.',
   });
 
   @override
   String get providerKey => 'mock_plant_analysis';
 
   final String mockEventType;
+  final String mockNote;
 
   @override
   Future<ExternalPlantAnalysisResult> analyze(PlantAnalysisInput input) async {
@@ -26,7 +28,7 @@ class MockPlantAnalysisAdapter implements PlantAnalysisAdapter {
           confidence: eventType == PlantAnalysisEventTypes.conditionUncertain
               ? 0.3
               : 0.7,
-          note: 'Mock adapter output for boundary testing only.',
+          note: mockNote,
         ),
       ],
       summary: 'Mock plant analysis result. Do not use as direct dialogue.',
