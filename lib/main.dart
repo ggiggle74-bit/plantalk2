@@ -4,9 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
 import 'app/condition_check_action_coordinator.dart';
 import 'app/plant_chat_result_handler.dart';
+import 'app/plant_registration_action_coordinator.dart';
 import 'app/plant_card_state_mapper.dart';
 import 'dialogue/chat_panel.dart';
-import 'photo/existing_plant_match_dialog.dart';
 import 'photo/mock_plant_photo_analysis.dart';
 import 'photo/photo_input_service.dart';
 import 'photo/photo_source_picker.dart';
@@ -51,6 +51,8 @@ class _MyAppState extends State<MyApp> {
       const ConditionCheckActionCoordinator();
   final PlantChatResultHandler plantChatResultHandler =
       const PlantChatResultHandler();
+  final PlantRegistrationActionCoordinator plantRegistrationActionCoordinator =
+      const PlantRegistrationActionCoordinator();
   late final PlantPhotoFlowService plantPhotoFlowService;
   late final PlantConditionCheckFlowService plantConditionCheckFlowService;
 
@@ -242,61 +244,13 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> startPlantRegistration(BuildContext context) async {
-    final source = await showPhotoSourcePicker(context);
-    if (source == null) return;
-
-    final image = await photoInputService.pickImage(source);
-
-    if (image == null) return;
-    if (!context.mounted) return;
-
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    if (!context.mounted) return;
-
-    await showDialog(
+    await plantRegistrationActionCoordinator.startPlantRegistration(
       context: context,
-      builder: (_) {
-        return plantRegistrationPreviewContent(
-          photoPath: image.path,
-          onCancel: () {
-            Navigator.pop(context);
-          },
-          onContinue: () async {
-            Navigator.pop(context);
-            await continuePlantRegistrationAfterPreview(context, image);
-          },
-        );
-      },
+      extraPlants: extraPlants,
+      photoInputService: photoInputService,
+      onAttachPhotoToExistingPlant: attachPhotoToExistingPlant,
+      onStartNewPlantCreation: startNewPlantCreation,
     );
-  }
-
-  Future<void> continuePlantRegistrationAfterPreview(
-    BuildContext context,
-    XFile image,
-  ) async {
-    final analysis = mockAnalyzePlantPhoto(image.path);
-
-    if (extraPlants.isNotEmpty) {
-      final matchResult = await showExistingPlantMatchDialog(
-        context,
-        plants: List<Map<String, dynamic>>.from(extraPlants),
-        analysis: analysis,
-      );
-
-      if (!context.mounted) return;
-      if (matchResult == null) return;
-
-      final existingPlant = matchResult.plant;
-      if (!matchResult.createNewPlant && existingPlant != null) {
-        await attachPhotoToExistingPlant(context, image, existingPlant);
-        return;
-      }
-    }
-
-    if (!context.mounted) return;
-
-    await startNewPlantCreation(context, image, analysis);
   }
 
   Future<void> attachPhotoToExistingPlant(
