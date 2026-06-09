@@ -22,48 +22,77 @@ class ConditionCheckMemoryPayloadBridge {
   const ConditionCheckMemoryPayloadBridge();
 
   static const conditionCheckMemoryType = 'condition_check';
+  static const _eventTypeNormal = 'normal';
+  static const _eventTypeNeedsWater = 'needs_water';
+  static const _eventTypeLowLight = 'low_light';
+  static const _eventTypePestRisk = 'pest_risk';
+  static const _eventTypeLeafDamage = 'leaf_damage';
 
   ConditionCheckMemoryPayload fromNormalizedEvent({
     required NormalizedPlantEvent event,
     required String plantId,
     required String photoUrl,
   }) {
+    final conditionEventType = _conditionMemoryEventType(event.eventType);
+
     return ConditionCheckMemoryPayload(
       plantId: plantId,
       memoryType: conditionCheckMemoryType,
-      eventType: _conditionMemoryEventType(event.eventType),
-      message: _conditionMemoryMessage(event),
+      eventType: conditionEventType,
+      message: _conditionMemoryMessage(event, conditionEventType),
       photoUrl: photoUrl,
       isMock: event.isMock,
     );
   }
 
-  String _conditionMemoryMessage(NormalizedPlantEvent event) {
+  String _conditionMemoryMessage(
+    NormalizedPlantEvent event,
+    String conditionEventType,
+  ) {
     final message = event.message?.trim();
     if (message != null && message.isNotEmpty) {
       return message;
     }
 
-    return event.eventType;
+    switch (conditionEventType) {
+      case _eventTypeNeedsWater:
+        return '사진을 보니 물이 조금 필요해 보여요.';
+      case _eventTypeLowLight:
+        return '사진을 보니 빛이 조금 부족해 보여요.';
+      case _eventTypePestRisk:
+        return '사진을 보니 잎 상태를 조금 더 살펴보는 게 좋겠어요.';
+      case _eventTypeLeafDamage:
+        return '사진을 보니 잎에 스트레스 신호가 조금 보여요.';
+      case _eventTypeNormal:
+      default:
+        return '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
+    }
   }
 
   String _conditionMemoryEventType(String eventType) {
     switch (PlantAnalysisEventTypes.normalize(eventType)) {
       case PlantAnalysisEventTypes.healthOk:
-        return 'normal';
+      case PlantAnalysisEventTypes.growthPositive:
+      case PlantAnalysisEventTypes.newLeafObserved:
+      case PlantAnalysisEventTypes.floweringObserved:
+      case PlantAnalysisEventTypes.conditionUncertain:
+        return _eventTypeNormal;
       case PlantAnalysisEventTypes.waterNeeded:
-        return 'needs_water';
+        return _eventTypeNeedsWater;
       case PlantAnalysisEventTypes.lightNeeded:
-        return 'low_light';
+        return _eventTypeLowLight;
       case PlantAnalysisEventTypes.pestSuspected:
       case PlantAnalysisEventTypes.diseaseSuspected:
-        return 'pest_risk';
+        return _eventTypePestRisk;
+      case PlantAnalysisEventTypes.overwaterSuspected:
       case PlantAnalysisEventTypes.tooMuchSunSuspected:
+      case PlantAnalysisEventTypes.repottingSuggested:
+      case PlantAnalysisEventTypes.soilCheckNeeded:
       case PlantAnalysisEventTypes.temperatureStressSuspected:
       case PlantAnalysisEventTypes.humidityIssueSuspected:
-        return 'leaf_damage';
+        return _eventTypeLeafDamage;
       default:
-        return PlantAnalysisEventTypes.normalize(eventType);
+        return _eventTypeNormal;
     }
   }
 }
