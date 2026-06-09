@@ -87,7 +87,10 @@ class ConditionMemoryDialogueBridge {
     required String? eventType,
     required String message,
   }) {
-    return eventType == conditionKeyHealthWatch ||
+    return eventType == PlantConditionEventTypes.lowLight ||
+        eventType == PlantConditionEventTypes.pestRisk ||
+        eventType == PlantConditionEventTypes.leafDamage ||
+        eventType == conditionKeyHealthWatch ||
         _containsAny(message, const ['health_watch', 'wilting', 'weak']);
   }
 
