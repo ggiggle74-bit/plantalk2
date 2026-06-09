@@ -167,6 +167,27 @@ class _ChatPanelState extends State<ChatPanel> {
           reply = fallbackReply;
         }
 
+        if (!usedDbReply) {
+          final conditionContext = DialogueEngine.photoConditionDialogueContext(
+            userMessage: text,
+            memoryMessage: _latestConditionMemory?.message,
+            memoryEventType: _latestConditionMemory?.eventType,
+            replyCount: _conditionMemoryReplyCount,
+          );
+          final conditionMemoryReply = conditionContext == null
+              ? null
+              : DialogueEngine.conditionMemoryReply(
+                  plantName: widget.plantName,
+                  waterDay: widget.waterDay,
+                  context: conditionContext,
+                );
+
+          if (conditionMemoryReply != null &&
+              conditionMemoryReply.trim().isNotEmpty) {
+            reply = conditionMemoryReply;
+          }
+        }
+
         _conditionMemoryReplyCount++;
       }
 
