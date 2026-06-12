@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../plant_identification/adapters/mock_plant_identification_adapter.dart';
+import '../plant_identification/models/plant_identification_candidate.dart';
+import '../plant_identification/models/plant_identification_input.dart';
+import '../plant_identification/services/plant_identification_service.dart';
+import '../plant_identification/widgets/plant_identification_candidate_dialog.dart';
 import '../photo/existing_plant_match_dialog.dart';
 import '../photo/mock_plant_photo_analysis.dart';
 import '../photo/photo_input_service.dart';
@@ -134,9 +139,35 @@ class PlantRegistrationActionCoordinator {
     required AppendNewPlantCallback onAppendNewPlant,
     required OpenFirstChatForNewPlantCallback onOpenFirstChatForNewPlant,
   }) async {
+    final identificationResult =
+        await const PlantIdentificationService(
+          adapter: MockPlantIdentificationAdapter(),
+        ).identify(
+          PlantIdentificationInput(
+            imageUrl: image.path,
+            locale: 'ko',
+            requestedAt: DateTime.now(),
+            source: 'first_registration',
+          ),
+        );
+
+    if (!context.mounted) return;
+
+    final candidateDialogResult = await showPlantIdentificationCandidateDialog(
+      context,
+      candidates: identificationResult.candidates,
+    );
+
+    if (candidateDialogResult == null || !context.mounted) return;
+
+    final suggestedSpecies = _speciesSuggestionsForIdentificationResult(
+      candidateDialogResult,
+      analysis.speciesSuggestions,
+    );
+
     final selectedSpecies = await showSpeciesSelectionDialog(
       context,
-      suggestedSpecies: analysis.speciesSuggestions,
+      suggestedSpecies: suggestedSpecies,
     );
 
     if (selectedSpecies == null || !context.mounted) return;
@@ -145,7 +176,7 @@ class PlantRegistrationActionCoordinator {
       context,
       image,
       selectedSpecies: selectedSpecies,
-      speciesGuess: analysis.speciesSuggestions
+      speciesGuess: suggestedSpecies
           .map((species) => species.displayName)
           .join(', '),
       isMounted: isMounted,
@@ -225,5 +256,62 @@ class PlantRegistrationActionCoordinator {
         );
       },
     );
+  }
+
+  List<SupportedSpecies> _speciesSuggestionsForIdentificationResult(
+    PlantIdentificationCandidateDialogResult dialogResult,
+    List<SupportedSpecies> fallbackSuggestions,
+  ) {
+    final selectedCandidate = dialogResult.candidate;
+    if (dialogResult.isManualEntry || selectedCandidate == null) {
+      return fallbackSuggestions;
+    }
+
+    final candidateSpecies = _supportedSpeciesFromCandidate(selectedCandidate);
+    return [
+      candidateSpecies,
+      ...fallbackSuggestions.where(
+        (species) =>
+            species.key != candidateSpecies.key &&
+            species.displayName != candidateSpecies.displayName,
+      ),
+    ];
+  }
+
+  SupportedSpecies _supportedSpeciesFromCandidate(
+    PlantIdentificationCandidate candidate,
+  ) {
+    return SupportedSpecies(
+      key: _candidateSpeciesKey(candidate),
+      displayName: candidate.displayName.trim(),
+      aliases: [
+        if (_hasText(candidate.scientificName))
+          candidate.scientificName!.trim(),
+        ...candidate.commonNames
+            .where(_hasText)
+            .map((commonName) => commonName.trim()),
+      ],
+    );
+  }
+
+  String _candidateSpeciesKey(PlantIdentificationCandidate candidate) {
+    final rawId = candidate.rawId?.trim();
+    if (_hasText(rawId)) {
+      return rawId!;
+    }
+
+    final scientificName = candidate.scientificName?.trim();
+    if (_hasText(scientificName)) {
+      return scientificName!.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
+    }
+
+    return candidate.displayName.trim().toLowerCase().replaceAll(
+      RegExp(r'\s+'),
+      '_',
+    );
+  }
+
+  bool _hasText(String? value) {
+    return value != null && value.trim().isNotEmpty;
   }
 }
