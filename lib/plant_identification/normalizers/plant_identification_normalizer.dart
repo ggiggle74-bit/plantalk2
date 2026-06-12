@@ -1,6 +1,7 @@
 import '../models/plant_identification_candidate.dart';
 import '../models/plant_identification_result.dart';
 
+/// Cleans and orders candidate options without orchestrating provider calls.
 class PlantIdentificationNormalizer {
   const PlantIdentificationNormalizer();
 
@@ -12,26 +13,25 @@ class PlantIdentificationNormalizer {
 
     final sortedCandidates = [...candidates]
       ..sort((left, right) {
-        final rankComparison = left.candidateRank.compareTo(
-          right.candidateRank,
-        );
-        if (rankComparison != 0) {
-          return rankComparison;
-        }
-
         final leftConfidence = left.confidence;
         final rightConfidence = right.confidence;
-        if (leftConfidence == null && rightConfidence == null) {
-          return 0;
-        }
-        if (leftConfidence == null) {
-          return 1;
-        }
-        if (rightConfidence == null) {
-          return -1;
+        if (leftConfidence != null || rightConfidence != null) {
+          if (leftConfidence == null) {
+            return 1;
+          }
+          if (rightConfidence == null) {
+            return -1;
+          }
+
+          final confidenceComparison = rightConfidence.compareTo(
+            leftConfidence,
+          );
+          if (confidenceComparison != 0) {
+            return confidenceComparison;
+          }
         }
 
-        return rightConfidence.compareTo(leftConfidence);
+        return left.candidateRank.compareTo(right.candidateRank);
       });
 
     return PlantIdentificationResult(

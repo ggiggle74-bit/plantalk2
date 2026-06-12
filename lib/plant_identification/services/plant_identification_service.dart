@@ -3,6 +3,7 @@ import '../models/plant_identification_input.dart';
 import '../models/plant_identification_result.dart';
 import '../normalizers/plant_identification_normalizer.dart';
 
+/// Orchestrates candidate identification only; user choice happens elsewhere.
 class PlantIdentificationService {
   const PlantIdentificationService({
     required PlantIdentificationAdapter adapter,
