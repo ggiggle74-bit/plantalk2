@@ -8,7 +8,7 @@ import 'plant_card_state_mapper.dart';
 class ConditionCheckActionCoordinator {
   const ConditionCheckActionCoordinator();
 
-  Future<void> handleConditionCheck({
+  Future<PlantConditionCheckFlowResult?> handleConditionCheck({
     required BuildContext context,
     required Map<String, dynamic> plant,
     required PhotoInputService photoInputService,
@@ -16,43 +16,56 @@ class ConditionCheckActionCoordinator {
   }) async {
     final plantId = plantIdOf(plant);
     if (plantId == null) {
-      if (!context.mounted) return;
+      if (!context.mounted) return null;
 
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('식물 id가 없어 상태 확인할 수 없어요')));
-      return;
+      return null;
     }
 
     final source = await showPhotoSourcePicker(context);
-    if (source == null) return;
+    if (source == null) return null;
 
     final image = await photoInputService.pickImage(source);
-    if (image == null) return;
+    if (image == null) return null;
 
-    final result = await plantConditionCheckFlowService.checkCondition(
-      image: image,
-      plantId: plantId,
-      speciesKey: plant['speciesKey']?.toString(),
-      speciesDisplayName: plant['speciesDisplayName']?.toString(),
-    );
+    late final PlantConditionCheckFlowResult result;
+    try {
+      result = await plantConditionCheckFlowService.checkCondition(
+        image: image,
+        plantId: plantId,
+        speciesKey: plant['speciesKey']?.toString(),
+        speciesDisplayName: plant['speciesDisplayName']?.toString(),
+      );
+    } catch (error) {
+      if (!context.mounted) return null;
 
-    if (!context.mounted) return;
+      debugPrint('Condition check failed: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('상태 확인에 실패했어요. 다시 시도해 주세요.')),
+      );
+      return null;
+    }
+
+    if (!context.mounted) return null;
 
     await showDialog(
       context: context,
-      builder: (_) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('상태 확인'),
           content: Text(result.analysisResult.conditionMessage),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('확인'),
             ),
           ],
         );
       },
     );
+
+    return result;
   }
 }

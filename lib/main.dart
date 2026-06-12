@@ -129,12 +129,24 @@ class _MyAppState extends State<MyApp> {
     BuildContext context,
     Map<String, dynamic> plant,
   ) async {
-    await conditionCheckActionCoordinator.handleConditionCheck(
+    final result = await conditionCheckActionCoordinator.handleConditionCheck(
       context: context,
       plant: plant,
       photoInputService: photoInputService,
       plantConditionCheckFlowService: plantConditionCheckFlowService,
     );
+    if (result == null || !mounted || !context.mounted) return;
+
+    final chatResult = await openChatPanel(
+      context,
+      plantId: plantIdOf(plant),
+      plantName: plant['name']?.toString() ?? '이름 없는 식물',
+      initialPlantMessage: result.analysisResult.conditionMessage,
+      waterDay: waterDayOf(plant),
+    );
+    if (chatResult != null) {
+      await updatePlantAfterChat(plant, chatResult);
+    }
   }
 
   Future<void> updatePlantWaterDayByPlant(
