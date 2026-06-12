@@ -13,6 +13,8 @@ class PlantIdentificationResult {
     this.metadata = const <String, dynamic>{},
   });
 
+  /// Provider/source that produced this result, such as mock, plant_id, or
+  /// plantnet. This must never contain API keys or secrets.
   final String providerKey;
   final List<PlantIdentificationCandidate> candidates;
   final bool isMock;

@@ -2,6 +2,10 @@ import '../models/plant_identification_candidate.dart';
 import '../models/plant_identification_result.dart';
 
 /// Cleans and orders candidate options without orchestrating provider calls.
+///
+/// Current policy strips candidate/result metadata to prevent raw provider
+/// payload leakage. Future adapters may retain metadata only through an
+/// explicit safe whitelist.
 class PlantIdentificationNormalizer {
   const PlantIdentificationNormalizer();
 
