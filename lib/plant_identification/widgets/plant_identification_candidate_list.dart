@@ -34,7 +34,7 @@ class PlantIdentificationCandidateList extends StatelessWidget {
           )
         else
           ...candidates.map((candidate) {
-            final isSelected = identical(candidate, selectedCandidate);
+            final isSelected = _isSelected(candidate, selectedCandidate);
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -54,6 +54,33 @@ class PlantIdentificationCandidateList extends StatelessWidget {
       ],
     );
   }
+
+  static bool _isSelected(
+    PlantIdentificationCandidate candidate,
+    PlantIdentificationCandidate? selectedCandidate,
+  ) {
+    if (selectedCandidate == null) {
+      return false;
+    }
+    if (identical(candidate, selectedCandidate)) {
+      return true;
+    }
+
+    final rawId = candidate.rawId?.trim();
+    final selectedRawId = selectedCandidate.rawId?.trim();
+    if (_hasText(rawId) && _hasText(selectedRawId)) {
+      return candidate.source == selectedCandidate.source &&
+          rawId == selectedRawId;
+    }
+
+    return candidate.source == selectedCandidate.source &&
+        candidate.candidateRank == selectedCandidate.candidateRank &&
+        candidate.displayName == selectedCandidate.displayName;
+  }
+
+  static bool _hasText(String? value) {
+    return value != null && value.trim().isNotEmpty;
+  }
 }
 
 class _CandidateDetails extends StatelessWidget {
@@ -63,13 +90,13 @@ class _CandidateDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final commonNames = candidate.commonNames
+        .where(_hasText)
+        .map((name) => name.trim())
+        .toList(growable: false);
     final details = <String>[
       if (_hasText(candidate.scientificName)) candidate.scientificName!.trim(),
-      if (candidate.commonNames.isNotEmpty)
-        candidate.commonNames
-            .where(_hasText)
-            .map((name) => name.trim())
-            .join(', '),
+      if (commonNames.isNotEmpty) commonNames.join(', '),
       if (candidate.confidence != null)
         '신뢰도 ${_formatConfidence(candidate.confidence!)}',
     ].where(_hasText).toList(growable: false);
@@ -86,7 +113,7 @@ class _CandidateDetails extends StatelessWidget {
   }
 
   static String _formatConfidence(double confidence) {
-    final percent = (confidence * 100).round();
+    final percent = (confidence.clamp(0.0, 1.0) * 100).round();
     return '$percent%';
   }
 }
