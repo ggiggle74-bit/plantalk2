@@ -160,25 +160,34 @@ class PlantRegistrationActionCoordinator {
 
     if (candidateDialogResult == null || !context.mounted) return;
 
-    final suggestedSpecies = _speciesSuggestionsForIdentificationResult(
-      candidateDialogResult,
-      analysis.speciesSuggestions,
-    );
+    late final SupportedSpecies selectedSpecies;
+    late final String speciesGuess;
 
-    final selectedSpecies = await showSpeciesSelectionDialog(
-      context,
-      suggestedSpecies: suggestedSpecies,
-    );
+    if (candidateDialogResult.isManualEntry) {
+      final manuallySelectedSpecies = await showSpeciesSelectionDialog(
+        context,
+        suggestedSpecies: analysis.speciesSuggestions,
+      );
 
-    if (selectedSpecies == null || !context.mounted) return;
+      if (manuallySelectedSpecies == null || !context.mounted) return;
+
+      selectedSpecies = manuallySelectedSpecies;
+      speciesGuess = analysis.speciesSuggestions
+          .map((species) => species.displayName)
+          .join(', ');
+    } else {
+      final selectedCandidate = candidateDialogResult.candidate;
+      if (selectedCandidate == null) return;
+
+      selectedSpecies = _supportedSpeciesFromCandidate(selectedCandidate);
+      speciesGuess = selectedCandidate.displayName;
+    }
 
     addPlantDialog(
       context,
       image,
       selectedSpecies: selectedSpecies,
-      speciesGuess: suggestedSpecies
-          .map((species) => species.displayName)
-          .join(', '),
+      speciesGuess: speciesGuess,
       isMounted: isMounted,
       onAddPlantToSupabase: onAddPlantToSupabase,
       onSaveRepresentativePlantPhoto: onSaveRepresentativePlantPhoto,
@@ -258,26 +267,6 @@ class PlantRegistrationActionCoordinator {
     );
   }
 
-  List<SupportedSpecies> _speciesSuggestionsForIdentificationResult(
-    PlantIdentificationCandidateDialogResult dialogResult,
-    List<SupportedSpecies> fallbackSuggestions,
-  ) {
-    final selectedCandidate = dialogResult.candidate;
-    if (dialogResult.isManualEntry || selectedCandidate == null) {
-      return fallbackSuggestions;
-    }
-
-    final candidateSpecies = _supportedSpeciesFromCandidate(selectedCandidate);
-    return [
-      candidateSpecies,
-      ...fallbackSuggestions.where(
-        (species) =>
-            species.key != candidateSpecies.key &&
-            species.displayName != candidateSpecies.displayName,
-      ),
-    ];
-  }
-
   SupportedSpecies _supportedSpeciesFromCandidate(
     PlantIdentificationCandidate candidate,
   ) {
@@ -295,14 +284,14 @@ class PlantRegistrationActionCoordinator {
   }
 
   String _candidateSpeciesKey(PlantIdentificationCandidate candidate) {
-    final rawId = candidate.rawId?.trim();
-    if (_hasText(rawId)) {
-      return rawId!;
-    }
-
     final scientificName = candidate.scientificName?.trim();
     if (_hasText(scientificName)) {
       return scientificName!.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
+    }
+
+    final rawId = candidate.rawId?.trim();
+    if (_hasText(rawId)) {
+      return rawId!;
     }
 
     return candidate.displayName.trim().toLowerCase().replaceAll(
