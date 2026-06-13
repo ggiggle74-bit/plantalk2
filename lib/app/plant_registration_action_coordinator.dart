@@ -142,9 +142,9 @@ class PlantRegistrationActionCoordinator {
     required AppendNewPlantCallback onAppendNewPlant,
     required OpenFirstChatForNewPlantCallback onOpenFirstChatForNewPlant,
   }) async {
-    final identificationInput = await _plantIdentificationInputFromImage(image);
-    final identificationResult = await _identifyPlantCandidates(
-      identificationInput,
+    final identificationResult = await _identifyPlantCandidatesWithLoading(
+      context,
+      image,
     );
 
     if (!context.mounted) return;
@@ -263,6 +263,59 @@ class PlantRegistrationActionCoordinator {
         );
       },
     );
+  }
+
+  Future<PlantIdentificationResult> _identifyPlantCandidatesWithLoading(
+    BuildContext context,
+    XFile image,
+  ) async {
+    BuildContext? loadingContext;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        loadingContext = dialogContext;
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: const Text(
+              '\uc2dd\ubb3c\uc744 \ud655\uc778\ud558\ub294 \uc911\uc774\uc5d0\uc694',
+            ),
+            content: const Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    '\uc0ac\uc9c4\uc744 \ubd84\uc11d\ud574\uc11c \ud6c4\ubcf4\ub97c \ucc3e\uace0 \uc788\uc5b4\uc694. \uc7a0\uc2dc\ub9cc \uae30\ub2e4\ub824 \uc8fc\uc138\uc694.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    try {
+      final identificationInput = await _plantIdentificationInputFromImage(
+        image,
+      );
+      return await _identifyPlantCandidates(identificationInput);
+    } finally {
+      final dialogContext = loadingContext;
+      if (dialogContext != null &&
+          dialogContext.mounted &&
+          Navigator.of(dialogContext).canPop()) {
+        Navigator.of(dialogContext).pop();
+      }
+    }
   }
 
   Future<PlantIdentificationInput> _plantIdentificationInputFromImage(
