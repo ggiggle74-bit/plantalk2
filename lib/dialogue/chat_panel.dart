@@ -116,6 +116,7 @@ class _ChatPanelState extends State<ChatPanel> {
       final decisionContext = _decisionContextBuilder.build(
         input: text,
         waterDay: widget.waterDay,
+        plantName: widget.plantName,
         previousUserMessage: prevUser,
         conditionMemoryContext: _latestConditionMemory,
         conditionMemoryReplyCount: _conditionMemoryReplyCount,
@@ -126,6 +127,7 @@ class _ChatPanelState extends State<ChatPanel> {
         plantName: widget.plantName,
         userMessage: text,
         waterDay: widget.waterDay,
+        situation: decisionContext.situationKey,
         previousUserMessage: prevUser,
       );
 
@@ -133,7 +135,7 @@ class _ChatPanelState extends State<ChatPanel> {
       var usedDbReply = false;
 
       debugPrint(
-        'chat input="$text" waterDay=${widget.waterDay} situation=${decisionContext.situationKey} conditionKey=${decisionContext.conditionKey} conditionSource=${decisionContext.conditionSource}',
+        'chat input="$text" plantName="${widget.plantName}" waterDay=${widget.waterDay} situation=${decisionContext.situationKey} conditionKey=${decisionContext.conditionKey} conditionSource=${decisionContext.conditionSource}',
       );
 
       if (decisionContext.hasDetectedSituation ||

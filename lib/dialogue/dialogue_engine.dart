@@ -79,10 +79,12 @@ class DialogueEngine {
   static String? detectSituation({
     required String userMessage,
     required int waterDay,
+    String? plantName,
     String? previousUserMessage,
   }) {
     final userIntent = _detectUserIntent(
       userMessage: userMessage,
+      plantName: plantName,
       previousUserMessage: previousUserMessage,
     );
 
@@ -99,10 +101,15 @@ class DialogueEngine {
 
   static String? _detectUserIntent({
     required String userMessage,
+    String? plantName,
     String? previousUserMessage,
   }) {
     final normalizedMessage = userMessage.toLowerCase().trim();
     final normalizedPreviousMessage = previousUserMessage?.toLowerCase().trim();
+
+    if (_isPlantNameQuestion(normalizedMessage)) {
+      return 'identity';
+    }
 
     if (normalizedPreviousMessage != null &&
         _containsAny(normalizedPreviousMessage, const ['joke', 'funny']) &&
@@ -249,6 +256,10 @@ class DialogueEngine {
       '투덜',
     ])) {
       return 'complain';
+    }
+
+    if (_directlyAddressesPlant(normalizedMessage, plantName)) {
+      return 'greeting';
     }
 
     return null;
@@ -419,10 +430,15 @@ class DialogueEngine {
     required String plantName,
     required String userMessage,
     required int waterDay,
+    String? situation,
     String? previousUserMessage,
   }) {
     final normalizedPlantName = plantName.toLowerCase();
     final normalizedMessage = userMessage.toLowerCase().trim();
+
+    if (situation == 'identity' || _isPlantNameQuestion(normalizedMessage)) {
+      return '나는 ${_plantDisplayName(plantName)}야.';
+    }
 
     if (waterDay >= 2) {
       if (_containsAny(normalizedMessage, const [
@@ -645,6 +661,48 @@ class DialogueEngine {
       }
     }
     return false;
+  }
+
+  static bool _isPlantNameQuestion(String message) {
+    final compactMessage = message.replaceAll(RegExp(r'\s+'), '');
+
+    return compactMessage.contains('이름이뭐') ||
+        compactMessage.contains('이름뭐') ||
+        compactMessage.contains('너누구') ||
+        compactMessage.contains('네누구') ||
+        compactMessage.contains('누구야') ||
+        compactMessage.contains('누구니');
+  }
+
+  static bool _directlyAddressesPlant(String message, String? plantName) {
+    final normalizedPlantName = plantName?.toLowerCase().trim();
+    if (normalizedPlantName == null || normalizedPlantName.isEmpty) {
+      return false;
+    }
+
+    if (message == normalizedPlantName) {
+      return true;
+    }
+
+    if (message.startsWith('$normalizedPlantName ') ||
+        message.startsWith('$normalizedPlantName,') ||
+        message.startsWith('$normalizedPlantName.') ||
+        message.startsWith('$normalizedPlantName!') ||
+        message.startsWith('$normalizedPlantName?')) {
+      return true;
+    }
+
+    final compactMessage = message.replaceAll(RegExp(r'\s+'), '');
+    final compactPlantName = normalizedPlantName.replaceAll(RegExp(r'\s+'), '');
+
+    return compactMessage == compactPlantName ||
+        compactMessage.startsWith('$compactPlantName아') ||
+        compactMessage.startsWith('$compactPlantName야');
+  }
+
+  static String _plantDisplayName(String plantName) {
+    final trimmedPlantName = plantName.trim();
+    return trimmedPlantName.isEmpty ? '이름 없는 식물' : trimmedPlantName;
   }
 
   static bool _containsAnyWord(String message, List<String> words) {

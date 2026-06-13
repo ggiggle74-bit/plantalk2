@@ -28,6 +28,7 @@ class DialogueDecisionContextBuilder {
   DialogueDecisionContext build({
     required String input,
     required int waterDay,
+    required String plantName,
     LatestConditionMemory? conditionMemoryContext,
     String? previousUserMessage,
     int conditionMemoryReplyCount = 0,
@@ -36,6 +37,7 @@ class DialogueDecisionContextBuilder {
     final detectedSituation = DialogueEngine.detectSituation(
       userMessage: input,
       waterDay: waterDay,
+      plantName: plantName,
       previousUserMessage: previousUserMessage,
     );
     final hasDetectedSituation =
