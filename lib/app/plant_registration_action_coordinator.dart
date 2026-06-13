@@ -3,9 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../plant_identification/adapters/mock_plant_identification_adapter.dart';
+import '../plant_identification/adapters/plant_identification_adapter_factory.dart';
 import '../plant_identification/bridges/plant_identification_species_bridge.dart';
 import '../plant_identification/models/plant_identification_input.dart';
+import '../plant_identification/models/plant_identification_result.dart';
 import '../plant_identification/services/plant_identification_service.dart';
 import '../plant_identification/widgets/plant_identification_candidate_dialog.dart';
 import '../photo/existing_plant_match_dialog.dart';
@@ -142,9 +143,9 @@ class PlantRegistrationActionCoordinator {
     required OpenFirstChatForNewPlantCallback onOpenFirstChatForNewPlant,
   }) async {
     final identificationInput = await _plantIdentificationInputFromImage(image);
-    final identificationResult = await const PlantIdentificationService(
-      adapter: MockPlantIdentificationAdapter(),
-    ).identify(identificationInput);
+    final identificationResult = await _identifyPlantCandidates(
+      identificationInput,
+    );
 
     if (!context.mounted) return;
 
@@ -278,6 +279,25 @@ class PlantRegistrationActionCoordinator {
       requestedAt: DateTime.now(),
       source: 'first_registration',
     );
+  }
+
+  Future<PlantIdentificationResult> _identifyPlantCandidates(
+    PlantIdentificationInput input,
+  ) async {
+    final adapter =
+        PlantIdentificationAdapterFactory.firstRegistrationAdapter();
+
+    try {
+      return await PlantIdentificationService(adapter: adapter).identify(input);
+    } catch (error) {
+      debugPrint(
+        'plant identification adapter failed; falling back to mock: $error',
+      );
+
+      return PlantIdentificationService(
+        adapter: PlantIdentificationAdapterFactory.mockAdapter(),
+      ).identify(input);
+    }
   }
 
   Future<Uint8List?> _safeReadImageBytes(XFile image) async {
