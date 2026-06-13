@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -139,17 +141,10 @@ class PlantRegistrationActionCoordinator {
     required AppendNewPlantCallback onAppendNewPlant,
     required OpenFirstChatForNewPlantCallback onOpenFirstChatForNewPlant,
   }) async {
-    final identificationResult =
-        await const PlantIdentificationService(
-          adapter: MockPlantIdentificationAdapter(),
-        ).identify(
-          PlantIdentificationInput(
-            imageUrl: image.path,
-            locale: 'ko',
-            requestedAt: DateTime.now(),
-            source: 'first_registration',
-          ),
-        );
+    final identificationInput = await _plantIdentificationInputFromImage(image);
+    final identificationResult = await const PlantIdentificationService(
+      adapter: MockPlantIdentificationAdapter(),
+    ).identify(identificationInput);
 
     if (!context.mounted) return;
 
@@ -267,5 +262,55 @@ class PlantRegistrationActionCoordinator {
         );
       },
     );
+  }
+
+  Future<PlantIdentificationInput> _plantIdentificationInputFromImage(
+    XFile image,
+  ) async {
+    final fileName = _trimmedOrNull(image.name);
+
+    return PlantIdentificationInput(
+      imageUrl: image.path,
+      imageBytes: await _safeReadImageBytes(image),
+      fileName: fileName,
+      mimeType: _inferImageMimeType(fileName ?? image.path),
+      locale: 'ko',
+      requestedAt: DateTime.now(),
+      source: 'first_registration',
+    );
+  }
+
+  Future<Uint8List?> _safeReadImageBytes(XFile image) async {
+    try {
+      return await image.readAsBytes();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _inferImageMimeType(String? fileNameOrPath) {
+    final value = _trimmedOrNull(fileNameOrPath);
+    if (value == null) return null;
+
+    final lowerValue = value.toLowerCase().split('?').first;
+    if (lowerValue.endsWith('.jpg') || lowerValue.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (lowerValue.endsWith('.png')) {
+      return 'image/png';
+    }
+    if (lowerValue.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    if (lowerValue.endsWith('.gif')) {
+      return 'image/gif';
+    }
+
+    return null;
+  }
+
+  String? _trimmedOrNull(String? value) {
+    final text = value?.trim();
+    return text == null || text.isEmpty ? null : text;
   }
 }
