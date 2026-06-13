@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../plant_identification/adapters/mock_plant_identification_adapter.dart';
-import '../plant_identification/models/plant_identification_candidate.dart';
+import '../plant_identification/bridges/plant_identification_species_bridge.dart';
 import '../plant_identification/models/plant_identification_input.dart';
 import '../plant_identification/services/plant_identification_service.dart';
 import '../plant_identification/widgets/plant_identification_candidate_dialog.dart';
@@ -179,7 +179,9 @@ class PlantRegistrationActionCoordinator {
       final selectedCandidate = candidateDialogResult.candidate;
       if (selectedCandidate == null) return;
 
-      selectedSpecies = _supportedSpeciesFromCandidate(selectedCandidate);
+      selectedSpecies = supportedSpeciesFromPlantIdentificationCandidate(
+        selectedCandidate,
+      );
       speciesGuess = selectedCandidate.displayName;
     }
 
@@ -265,42 +267,5 @@ class PlantRegistrationActionCoordinator {
         );
       },
     );
-  }
-
-  SupportedSpecies _supportedSpeciesFromCandidate(
-    PlantIdentificationCandidate candidate,
-  ) {
-    return SupportedSpecies(
-      key: _candidateSpeciesKey(candidate),
-      displayName: candidate.displayName.trim(),
-      aliases: [
-        if (_hasText(candidate.scientificName))
-          candidate.scientificName!.trim(),
-        ...candidate.commonNames
-            .where(_hasText)
-            .map((commonName) => commonName.trim()),
-      ],
-    );
-  }
-
-  String _candidateSpeciesKey(PlantIdentificationCandidate candidate) {
-    final scientificName = candidate.scientificName?.trim();
-    if (_hasText(scientificName)) {
-      return scientificName!.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
-    }
-
-    final rawId = candidate.rawId?.trim();
-    if (_hasText(rawId)) {
-      return rawId!;
-    }
-
-    return candidate.displayName.trim().toLowerCase().replaceAll(
-      RegExp(r'\s+'),
-      '_',
-    );
-  }
-
-  bool _hasText(String? value) {
-    return value != null && value.trim().isNotEmpty;
   }
 }
