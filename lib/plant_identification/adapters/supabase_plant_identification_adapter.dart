@@ -1,25 +1,21 @@
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
+import 'dart:convert';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/plant_identification_input.dart';
 import '../models/plant_identification_result.dart';
 import 'plant_identification_adapter.dart';
 import 'plantnet_identification_response_parser.dart';
 
-/// Dev-only direct Pl@ntNet adapter. Do not use in production Flutter Web.
-class PlantNetPlantIdentificationAdapter implements PlantIdentificationAdapter {
-  const PlantNetPlantIdentificationAdapter({
-    required this.apiKey,
+class SupabasePlantIdentificationAdapter implements PlantIdentificationAdapter {
+  const SupabasePlantIdentificationAdapter({
     this.project = 'all',
     this.maxResults = 5,
-    this.baseUrl = 'https://my-api.plantnet.org/v2',
     this.parser = const PlantNetIdentificationResponseParser(),
   });
 
-  final String apiKey;
   final String project;
   final int maxResults;
-  final String baseUrl;
   final PlantNetIdentificationResponseParser parser;
 
   @override
@@ -29,14 +25,9 @@ class PlantNetPlantIdentificationAdapter implements PlantIdentificationAdapter {
   Future<PlantIdentificationResult> identify(
     PlantIdentificationInput input,
   ) async {
-    final normalizedApiKey = apiKey.trim();
-    if (normalizedApiKey.isEmpty) {
-      throw StateError('Pl@ntNet API key is missing.');
-    }
-
     final imageBytes = input.imageBytes;
     if (imageBytes == null || imageBytes.isEmpty) {
-      throw StateError('Pl@ntNet identification requires image bytes.');
+      throw StateError('Plant identification proxy requires image bytes.');
     }
 
     final mimeType =
@@ -44,56 +35,45 @@ class PlantNetPlantIdentificationAdapter implements PlantIdentificationAdapter {
         _supportedMimeType(_inferMimeType(input.fileName ?? input.imageUrl));
     if (mimeType == null) {
       throw UnsupportedError(
-        'Pl@ntNet identification supports image/jpeg and image/png only.',
+        'Plant identification proxy supports image/jpeg and image/png only.',
       );
     }
 
-    final request = http.MultipartRequest('POST', _requestUri(input))
-      ..headers['accept'] = 'application/json'
-      ..files.add(
-        http.MultipartFile.fromBytes(
-          'images',
-          imageBytes,
-          filename: _fileNameFor(input, mimeType),
-          contentType: MediaType.parse(mimeType),
-        ),
-      );
-
-    final response = await request.send();
-    final body = await response.stream.bytesToString();
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError(
-        'Pl@ntNet identification failed with HTTP ${response.statusCode}: ${_shortBody(body)}',
-      );
-    }
-
-    return parser.resultFromJson(body, input, providerKey: providerKey);
-  }
-
-  String _shortBody(String body) {
-    final compact = body.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (compact.isEmpty) return '<empty body>';
-    if (compact.length <= 300) return compact;
-    return '${compact.substring(0, 300)}...';
-  }
-
-  Uri _requestUri(PlantIdentificationInput input) {
-    final base = Uri.parse(baseUrl);
-    final projectKey = project.trim().isEmpty ? 'all' : project.trim();
-    final pathSegments = [
-      ...base.pathSegments.where((segment) => segment.isNotEmpty),
-      'identify',
-      projectKey,
-    ];
-
-    return base.replace(
-      pathSegments: pathSegments,
-      queryParameters: {
-        'api-key': apiKey.trim(),
+    final response = await Supabase.instance.client.functions.invoke(
+      'plantnet-identify',
+      body: {
+        'imageBase64': base64Encode(imageBytes),
+        'filename': _fileNameFor(input, mimeType),
+        'contentType': mimeType,
+        'project': project,
         'lang': _plantNetLanguage(input.locale),
-        'nb-results': maxResults.toString(),
+        'nbResults': maxResults,
       },
     );
+
+    final responseData = response.data;
+    final decoded = _responseMap(responseData);
+    return parser.resultFromMap(decoded, input, providerKey: providerKey);
+  }
+
+  Map<String, dynamic> _responseMap(Object? responseData) {
+    if (responseData is Map<String, dynamic>) {
+      return responseData;
+    }
+    if (responseData is Map) {
+      return Map<String, dynamic>.from(responseData);
+    }
+    if (responseData is String) {
+      final decoded = jsonDecode(responseData);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    }
+
+    throw const FormatException('Unexpected plant identification proxy shape.');
   }
 
   String _fileNameFor(PlantIdentificationInput input, String mimeType) {
@@ -157,8 +137,8 @@ class PlantNetPlantIdentificationAdapter implements PlantIdentificationAdapter {
     return supportedLanguages.contains(language) ? language : 'en';
   }
 
-  String? _trimmedOrNull(Object? value) {
-    final text = value?.toString().trim();
+  String? _trimmedOrNull(String? value) {
+    final text = value?.trim();
     return text == null || text.isEmpty ? null : text;
   }
 }
