@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../bridges/plant_identification_korean_name_bridge.dart';
 import '../models/plant_identification_candidate.dart';
 
 class PlantIdentificationCandidateList extends StatelessWidget {
@@ -42,7 +43,9 @@ class PlantIdentificationCandidateList extends StatelessWidget {
                 margin: EdgeInsets.zero,
                 child: ListTile(
                   selected: isSelected,
-                  title: Text(candidate.displayName),
+                  title: Text(
+                    displayNameFromPlantIdentificationCandidate(candidate),
+                  ),
                   subtitle: _CandidateDetails(candidate: candidate),
                   trailing: Text('#${candidate.candidateRank}'),
                   onTap: () => onCandidateSelected(candidate),

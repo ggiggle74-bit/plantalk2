@@ -346,6 +346,5 @@ bool _matchesCatalogName(String catalogName, String normalizedValue) {
   if (normalizedCatalogName.isEmpty) return false;
 
   return normalizedValue == normalizedCatalogName ||
-      normalizedValue.startsWith("$normalizedCatalogName ") ||
-      normalizedCatalogName.startsWith("$normalizedValue ");
+      normalizedValue.startsWith("$normalizedCatalogName ");
 }

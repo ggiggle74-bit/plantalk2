@@ -1,12 +1,13 @@
 import '../../photo/supported_species.dart';
 import '../models/plant_identification_candidate.dart';
+import 'plant_identification_korean_name_bridge.dart';
 
 SupportedSpecies supportedSpeciesFromPlantIdentificationCandidate(
   PlantIdentificationCandidate candidate,
 ) {
   return SupportedSpecies(
     key: _candidateSpeciesKey(candidate),
-    displayName: candidate.displayName.trim(),
+    displayName: displayNameFromPlantIdentificationCandidate(candidate),
     aliases: [
       if (_hasText(candidate.scientificName)) candidate.scientificName!.trim(),
       ...candidate.commonNames
