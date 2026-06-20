@@ -5,6 +5,15 @@ import 'plant_condition_analysis_service.dart';
 import 'plant_service.dart';
 import 'plant_photo_flow_service.dart';
 
+typedef SaveConditionCheckPhotoCallback =
+    Future<String> Function({required XFile image, required String plantId});
+typedef AnalyzeConditionCallback =
+    Future<PlantConditionAnalysisResult> Function(
+      PlantConditionAnalysisRequest request,
+    );
+typedef InsertConditionCheckMemoryCallback =
+    Future<void> Function(ConditionCheckMemoryPayload payload);
+
 class PlantConditionCheckFlowResult {
   const PlantConditionCheckFlowResult({
     required this.photoUrl,
@@ -20,13 +29,32 @@ class PlantConditionCheckFlowService {
     required PlantPhotoFlowService plantPhotoFlowService,
     required PlantConditionAnalysisService conditionAnalysisService,
     required PlantService plantService,
-  }) : _plantPhotoFlowService = plantPhotoFlowService,
-       _conditionAnalysisService = conditionAnalysisService,
-       _plantService = plantService;
+  }) : this.withCallbacks(
+         saveConditionCheckPhoto: plantPhotoFlowService.saveConditionCheckPhoto,
+         analyzeCondition: conditionAnalysisService.analyzeCondition,
+         insertConditionCheckMemory: (payload) {
+           return plantService.insertPlantMemoryBestEffort(
+             plantId: payload.plantId,
+             memoryType: payload.memoryType,
+             eventType: payload.eventType,
+             message: payload.message,
+             photoUrl: payload.photoUrl,
+             isMock: payload.isMock,
+           );
+         },
+       );
 
-  final PlantPhotoFlowService _plantPhotoFlowService;
-  final PlantConditionAnalysisService _conditionAnalysisService;
-  final PlantService _plantService;
+  const PlantConditionCheckFlowService.withCallbacks({
+    required SaveConditionCheckPhotoCallback saveConditionCheckPhoto,
+    required AnalyzeConditionCallback analyzeCondition,
+    required InsertConditionCheckMemoryCallback insertConditionCheckMemory,
+  }) : _saveConditionCheckPhoto = saveConditionCheckPhoto,
+       _analyzeCondition = analyzeCondition,
+       _insertConditionCheckMemory = insertConditionCheckMemory;
+
+  final SaveConditionCheckPhotoCallback _saveConditionCheckPhoto;
+  final AnalyzeConditionCallback _analyzeCondition;
+  final InsertConditionCheckMemoryCallback _insertConditionCheckMemory;
 
   Future<PlantConditionCheckFlowResult> checkCondition({
     required XFile image,
@@ -34,12 +62,12 @@ class PlantConditionCheckFlowService {
     String? speciesKey,
     String? speciesDisplayName,
   }) async {
-    final photoUrl = await _plantPhotoFlowService.saveConditionCheckPhoto(
+    final photoUrl = await _saveConditionCheckPhoto(
       image: image,
       plantId: plantId,
     );
 
-    final analysisResult = await _conditionAnalysisService.analyzeCondition(
+    final analysisResult = await _analyzeCondition(
       PlantConditionAnalysisRequest(
         plantId: plantId,
         photoUrl: photoUrl,
@@ -54,14 +82,7 @@ class PlantConditionCheckFlowService {
           photoUrl: photoUrl,
         );
 
-    await _plantService.insertPlantMemoryBestEffort(
-      plantId: memoryPayload.plantId,
-      memoryType: memoryPayload.memoryType,
-      eventType: memoryPayload.eventType,
-      message: memoryPayload.message,
-      photoUrl: memoryPayload.photoUrl,
-      isMock: memoryPayload.isMock,
-    );
+    await _insertConditionCheckMemory(memoryPayload);
 
     return PlantConditionCheckFlowResult(
       photoUrl: photoUrl,
