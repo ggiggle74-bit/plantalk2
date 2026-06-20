@@ -1,4 +1,5 @@
 import '../models/normalized_plant_event.dart';
+import '../../services/plant_condition_analysis_service.dart';
 
 class ConditionCheckMemoryPayload {
   const ConditionCheckMemoryPayload({
@@ -22,11 +23,6 @@ class ConditionCheckMemoryPayloadBridge {
   const ConditionCheckMemoryPayloadBridge();
 
   static const conditionCheckMemoryType = 'condition_check';
-  static const _eventTypeNormal = 'normal';
-  static const _eventTypeNeedsWater = 'needs_water';
-  static const _eventTypeLowLight = 'low_light';
-  static const _eventTypePestRisk = 'pest_risk';
-  static const _eventTypeLeafDamage = 'leaf_damage';
 
   ConditionCheckMemoryPayload fromNormalizedEvent({
     required NormalizedPlantEvent event,
@@ -55,15 +51,17 @@ class ConditionCheckMemoryPayloadBridge {
     }
 
     switch (conditionEventType) {
-      case _eventTypeNeedsWater:
+      case PlantConditionEventTypes.needsWater:
         return '사진을 보니 물이 조금 필요해 보여요.';
-      case _eventTypeLowLight:
+      case PlantConditionEventTypes.lowLight:
         return '사진을 보니 빛이 조금 부족해 보여요.';
-      case _eventTypePestRisk:
+      case PlantConditionEventTypes.pestRisk:
         return '사진을 보니 잎 상태를 조금 더 살펴보는 게 좋겠어요.';
-      case _eventTypeLeafDamage:
+      case PlantConditionEventTypes.leafDamage:
         return '사진을 보니 잎에 스트레스 신호가 조금 보여요.';
-      case _eventTypeNormal:
+      case PlantConditionEventTypes.uncertain:
+        return '사진만으로는 상태를 확실히 판단하기 어려워요.';
+      case PlantConditionEventTypes.normal:
       default:
         return '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
     }
@@ -75,24 +73,25 @@ class ConditionCheckMemoryPayloadBridge {
       case PlantAnalysisEventTypes.growthPositive:
       case PlantAnalysisEventTypes.newLeafObserved:
       case PlantAnalysisEventTypes.floweringObserved:
+        return PlantConditionEventTypes.normal;
       case PlantAnalysisEventTypes.conditionUncertain:
-        return _eventTypeNormal;
+        return PlantConditionEventTypes.uncertain;
       case PlantAnalysisEventTypes.waterNeeded:
-        return _eventTypeNeedsWater;
+        return PlantConditionEventTypes.needsWater;
       case PlantAnalysisEventTypes.lightNeeded:
-        return _eventTypeLowLight;
+        return PlantConditionEventTypes.lowLight;
       case PlantAnalysisEventTypes.pestSuspected:
       case PlantAnalysisEventTypes.diseaseSuspected:
-        return _eventTypePestRisk;
+        return PlantConditionEventTypes.pestRisk;
       case PlantAnalysisEventTypes.overwaterSuspected:
       case PlantAnalysisEventTypes.tooMuchSunSuspected:
       case PlantAnalysisEventTypes.repottingSuggested:
       case PlantAnalysisEventTypes.soilCheckNeeded:
       case PlantAnalysisEventTypes.temperatureStressSuspected:
       case PlantAnalysisEventTypes.humidityIssueSuspected:
-        return _eventTypeLeafDamage;
+        return PlantConditionEventTypes.leafDamage;
       default:
-        return _eventTypeNormal;
+        return PlantConditionEventTypes.normal;
     }
   }
 }

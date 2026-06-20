@@ -366,6 +366,8 @@ class DialogueEngine {
         return '최근 상태 확인에서 잎 상태를 더 봐야 할 것 같았어. 뒷면도 확인해라.';
       case PlantConditionEventTypes.leafDamage:
         return '최근 사진에서 잎 손상이 신경 쓰였어. 더 번지는지 봐라.';
+      case PlantConditionEventTypes.uncertain:
+        return '최근 상태 확인에서는 확실히 판단하기 어려웠어. $memory';
       default:
         return '최근 상태 확인에서 $plantLabel은 이렇게 나왔어. $memory';
     }

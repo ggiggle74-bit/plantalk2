@@ -12,6 +12,7 @@ class PlantConditionEventTypes {
   static const lowLight = 'low_light';
   static const pestRisk = 'pest_risk';
   static const leafDamage = 'leaf_damage';
+  static const uncertain = 'condition_uncertain';
 
   static String? normalize(String? eventType) {
     final normalized = eventType?.trim().toLowerCase();
@@ -65,6 +66,8 @@ abstract class PlantConditionAnalysisService {
 class MockPlantConditionAnalysisService
     implements PlantConditionAnalysisService {
   static const _mockConditionMessage = '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
+  static const _mockUncertainConditionMessage =
+      '사진만으로는 상태를 확실히 판단하기 어려워요.';
 
   const MockPlantConditionAnalysisService({
     PlantAnalysisService plantAnalysisService = const PlantAnalysisService(
@@ -91,11 +94,12 @@ class MockPlantConditionAnalysisService
       ),
     );
     final normalizedEvent = analysisResult.normalizedEvents.first;
+    final conditionMessage = _conditionMessageFrom(normalizedEvent);
     final conditionEvent = NormalizedPlantEvent(
       eventType: normalizedEvent.eventType,
       sourceProvider: normalizedEvent.sourceProvider,
       confidence: normalizedEvent.confidence,
-      message: _mockConditionMessage,
+      message: conditionMessage,
       observedAt: normalizedEvent.observedAt,
       sourceResultId: normalizedEvent.sourceResultId,
       isMock: normalizedEvent.isMock,
@@ -104,16 +108,27 @@ class MockPlantConditionAnalysisService
 
     return PlantConditionAnalysisResult(
       conditionEventType: _conditionEventTypeFrom(conditionEvent),
-      conditionMessage: _mockConditionMessage,
+      conditionMessage: conditionMessage,
       normalizedEvent: conditionEvent,
       isMock: conditionEvent.isMock,
     );
+  }
+
+  String _conditionMessageFrom(NormalizedPlantEvent event) {
+    switch (PlantAnalysisEventTypes.normalize(event.eventType)) {
+      case PlantAnalysisEventTypes.conditionUncertain:
+        return _mockUncertainConditionMessage;
+      default:
+        return _mockConditionMessage;
+    }
   }
 
   String _conditionEventTypeFrom(NormalizedPlantEvent event) {
     switch (PlantAnalysisEventTypes.normalize(event.eventType)) {
       case PlantAnalysisEventTypes.healthOk:
         return PlantConditionEventTypes.normal;
+      case PlantAnalysisEventTypes.conditionUncertain:
+        return PlantConditionEventTypes.uncertain;
       case PlantAnalysisEventTypes.waterNeeded:
         return PlantConditionEventTypes.needsWater;
       case PlantAnalysisEventTypes.lightNeeded:
