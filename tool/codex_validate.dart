@@ -82,14 +82,22 @@ Future<_CommandResult> _runStep(
     runInShell: Platform.isWindows,
   );
 
-  final stdoutDone = process.stdout
+  final stdoutDone = Completer<void>();
+  final stdoutSubscription = process.stdout
       .transform(utf8.decoder)
-      .listen(stdout.write)
-      .asFuture<void>();
-  final stderrDone = process.stderr
+      .listen(
+        stdout.write,
+        onError: stdoutDone.completeError,
+        onDone: () => _completeIfNeeded(stdoutDone),
+      );
+  final stderrDone = Completer<void>();
+  final stderrSubscription = process.stderr
       .transform(utf8.decoder)
-      .listen(stderr.write)
-      .asFuture<void>();
+      .listen(
+        stderr.write,
+        onError: stderrDone.completeError,
+        onDone: () => _completeIfNeeded(stderrDone),
+      );
 
   var timedOut = false;
   final exitCode = await process.exitCode.timeout(
@@ -101,7 +109,15 @@ Future<_CommandResult> _runStep(
     },
   );
 
-  await Future.wait([stdoutDone, stderrDone]);
+  if (timedOut) {
+    await _waitForOutputOrCancel(
+      doneFutures: [stdoutDone.future, stderrDone.future],
+      subscriptions: [stdoutSubscription, stderrSubscription],
+      timeout: const Duration(seconds: 2),
+    );
+  } else {
+    await Future.wait([stdoutDone.future, stderrDone.future]);
+  }
   stopwatch.stop();
 
   return _CommandResult(
@@ -119,11 +135,35 @@ Future<void> _terminateProcess(Process process) async {
       '${process.pid}',
       '/T',
       '/F',
-    ], runInShell: true);
+    ], runInShell: true).timeout(
+      const Duration(seconds: 5),
+      onTimeout: () =>
+          ProcessResult(process.pid, 124, '', 'taskkill timed out'),
+    );
     return;
   }
 
   process.kill(ProcessSignal.sigkill);
+}
+
+void _completeIfNeeded(Completer<void> completer) {
+  if (!completer.isCompleted) {
+    completer.complete();
+  }
+}
+
+Future<void> _waitForOutputOrCancel({
+  required List<Future<void>> doneFutures,
+  required List<StreamSubscription<String>> subscriptions,
+  required Duration timeout,
+}) async {
+  try {
+    await Future.wait(doneFutures).timeout(timeout);
+  } on TimeoutException {
+    await Future.wait(
+      subscriptions.map((subscription) => subscription.cancel()),
+    ).timeout(const Duration(seconds: 1), onTimeout: () => <void>[]);
+  }
 }
 
 String _formatDuration(Duration duration) {
