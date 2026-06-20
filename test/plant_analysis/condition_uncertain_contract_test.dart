@@ -208,6 +208,44 @@ void main() {
   });
 
   test(
+    'selects actionable event over higher-confidence health event',
+    () async {
+      final result = await _analyzeEvents(
+        const [
+          ExternalPlantConditionEventHint(
+            eventType: PlantAnalysisEventTypes.healthOk,
+            confidence: 0.99,
+            note: '선택되면 안 되는 건강 메시지예요.',
+          ),
+          ExternalPlantConditionEventHint(
+            eventType: PlantAnalysisEventTypes.pestSuspected,
+            confidence: 0.40,
+            note: '잎 뒷면을 확인해야 할 수 있어요.',
+          ),
+        ],
+        providerResultId: 'multi-event-result',
+        observedAt: DateTime.utc(2026, 6, 20, 8),
+      );
+
+      expect(result.conditionEventType, PlantConditionEventTypes.pestRisk);
+      expect(result.conditionMessage, '잎 뒷면을 확인해야 할 수 있어요.');
+      expect(
+        result.normalizedEvent.eventType,
+        PlantAnalysisEventTypes.pestSuspected,
+      );
+      expect(result.normalizedEvent.message, result.conditionMessage);
+      expect(result.normalizedEvent.confidence, 0.40);
+      expect(result.normalizedEvent.sourceProvider, 'fake_provider');
+      expect(result.normalizedEvent.sourceResultId, 'multi-event-result');
+      expect(result.normalizedEvent.metadata, {
+        'analysisType': PlantAnalysisTypes.conditionCheck,
+      });
+      expect(result.conditionMessage, isNot('선택되면 안 되는 건강 메시지예요.'));
+      expect(result.normalizedEvent.confidence, isNot(0.99));
+    },
+  );
+
+  test(
     'condition uncertainty survives analysis, memory, and dialogue slots',
     () {
       const normalizer = PlantAnalysisNormalizer();
@@ -315,6 +353,26 @@ Future<PlantConditionAnalysisResult> _analyzeSingleEvent({
   String? providerResultId,
   bool isMock = true,
 }) {
+  return _analyzeEvents(
+    [
+      ExternalPlantConditionEventHint(
+        eventType: eventType,
+        confidence: confidence,
+        note: note,
+      ),
+    ],
+    providerResultId: providerResultId,
+    observedAt: observedAt,
+    isMock: isMock,
+  );
+}
+
+Future<PlantConditionAnalysisResult> _analyzeEvents(
+  List<ExternalPlantConditionEventHint> conditionEventHints, {
+  DateTime? observedAt,
+  String? providerResultId,
+  bool isMock = true,
+}) {
   final service = MockPlantConditionAnalysisService(
     plantAnalysisService: PlantAnalysisService(
       adapter: _FakePlantAnalysisAdapter(
@@ -322,13 +380,7 @@ Future<PlantConditionAnalysisResult> _analyzeSingleEvent({
           providerKey: 'fake_provider',
           analysisType: PlantAnalysisTypes.conditionCheck,
           providerResultId: providerResultId,
-          conditionEventHints: [
-            ExternalPlantConditionEventHint(
-              eventType: eventType,
-              confidence: confidence,
-              note: note,
-            ),
-          ],
+          conditionEventHints: conditionEventHints,
           isMock: isMock,
           createdAt: observedAt,
         ),

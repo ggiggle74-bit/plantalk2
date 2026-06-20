@@ -1,6 +1,7 @@
 import '../plant_analysis/adapters/mock_plant_analysis_adapter.dart';
 import '../plant_analysis/models/normalized_plant_event.dart';
 import '../plant_analysis/models/plant_analysis_input.dart';
+import '../plant_analysis/selectors/plant_condition_representative_event_selector.dart';
 import '../plant_analysis/services/plant_analysis_service.dart';
 
 class PlantConditionEventTypes {
@@ -74,9 +75,13 @@ class MockPlantConditionAnalysisService
         mockNote: _mockConditionMessage,
       ),
     ),
-  }) : _plantAnalysisService = plantAnalysisService;
+    PlantConditionRepresentativeEventSelector representativeEventSelector =
+        const PlantConditionRepresentativeEventSelector(),
+  }) : _plantAnalysisService = plantAnalysisService,
+       _representativeEventSelector = representativeEventSelector;
 
   final PlantAnalysisService _plantAnalysisService;
+  final PlantConditionRepresentativeEventSelector _representativeEventSelector;
 
   @override
   Future<PlantConditionAnalysisResult> analyzeCondition(
@@ -91,7 +96,9 @@ class MockPlantConditionAnalysisService
         imageUrl: request.photoUrl,
       ),
     );
-    final normalizedEvent = analysisResult.normalizedEvents.first;
+    final normalizedEvent = _representativeEventSelector.select(
+      analysisResult.normalizedEvents,
+    );
     final conditionMessage = _conditionMessageFrom(normalizedEvent);
     final conditionEvent = NormalizedPlantEvent(
       eventType: normalizedEvent.eventType,
