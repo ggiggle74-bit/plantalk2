@@ -6,6 +6,11 @@ import '../services/plant_service.dart';
 import 'dialogue_decision_context_builder.dart';
 import 'dialogue_engine.dart';
 
+typedef FetchLatestConditionMemoryCallback =
+    Future<LatestConditionMemory?> Function(String plantId);
+typedef FetchDialogueReplyCallback =
+    Future<String?> Function({String? situation, String? conditionKey});
+
 class ChatPanelResult {
   const ChatPanelResult({
     required this.latestPlantReply,
@@ -24,6 +29,9 @@ class ChatPanel extends StatefulWidget {
     required this.plantName,
     required this.initialPlantMessage,
     required this.waterDay,
+    this.initialConditionMemory,
+    this.fetchLatestConditionMemory,
+    this.fetchDialogueReply,
   });
 
   final String? plantId;
@@ -31,6 +39,9 @@ class ChatPanel extends StatefulWidget {
   final String plantName;
   final String initialPlantMessage;
   final int waterDay;
+  final LatestConditionMemory? initialConditionMemory;
+  final FetchLatestConditionMemoryCallback? fetchLatestConditionMemory;
+  final FetchDialogueReplyCallback? fetchDialogueReply;
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();
@@ -40,8 +51,8 @@ class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _controller = TextEditingController();
   final DialogueDecisionContextBuilder _decisionContextBuilder =
       const DialogueDecisionContextBuilder();
-  final DialogueService _dialogueService = DialogueService();
-  final PlantService _plantService = PlantService();
+  DialogueService? _dialogueService;
+  PlantService? _plantService;
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
   LatestConditionMemory? _latestConditionMemory;
@@ -52,6 +63,8 @@ class _ChatPanelState extends State<ChatPanel> {
   @override
   void initState() {
     super.initState();
+
+    _latestConditionMemory = widget.initialConditionMemory;
 
     final String firstMessage;
     final initialMessage = widget.initialPlantMessage.trim();
@@ -73,7 +86,9 @@ class _ChatPanelState extends State<ChatPanel> {
       _messages.add({'sender': 'plant', 'text': firstMessage});
     }
 
-    _loadLatestConditionMemory();
+    if (_latestConditionMemory == null) {
+      _loadLatestConditionMemory();
+    }
   }
 
   @override
@@ -142,7 +157,7 @@ class _ChatPanelState extends State<ChatPanel> {
           decisionContext.situationKey ==
               PhotoConditionDialogueSituations.conditionCheckRequest) {
         try {
-          final dbReply = await _dialogueService.fetchRandomReply(
+          final dbReply = await _fetchDialogueReply(
             situation: decisionContext.situationKey,
             conditionKey: decisionContext.conditionKey,
           );
@@ -156,7 +171,7 @@ class _ChatPanelState extends State<ChatPanel> {
         }
       } else if (decisionContext.usesConditionMemoryFallback) {
         try {
-          final dbReply = await _dialogueService.fetchRandomReply(
+          final dbReply = await _fetchDialogueReply(
             situation: decisionContext.situationKey,
             conditionKey: decisionContext.conditionKey,
           );
@@ -233,14 +248,40 @@ class _ChatPanelState extends State<ChatPanel> {
     final plantId = widget.plantId;
     if (plantId == null || plantId.isEmpty) return;
 
-    final memory = await _plantService.fetchLatestConditionMemoryBestEffort(
-      plantId: plantId,
-    );
-    if (memory == null || !mounted) return;
+    final memory = await _fetchLatestConditionMemory(plantId);
+    if (memory == null || !mounted || widget.initialConditionMemory != null) {
+      return;
+    }
 
     setState(() {
       _latestConditionMemory = memory;
     });
+  }
+
+  Future<LatestConditionMemory?> _fetchLatestConditionMemory(String plantId) {
+    final callback = widget.fetchLatestConditionMemory;
+    if (callback != null) {
+      return callback(plantId);
+    }
+
+    final plantService = _plantService ??= PlantService();
+    return plantService.fetchLatestConditionMemoryBestEffort(plantId: plantId);
+  }
+
+  Future<String?> _fetchDialogueReply({
+    String? situation,
+    String? conditionKey,
+  }) {
+    final callback = widget.fetchDialogueReply;
+    if (callback != null) {
+      return callback(situation: situation, conditionKey: conditionKey);
+    }
+
+    final dialogueService = _dialogueService ??= DialogueService();
+    return dialogueService.fetchRandomReply(
+      situation: situation,
+      conditionKey: conditionKey,
+    );
   }
 
   @override

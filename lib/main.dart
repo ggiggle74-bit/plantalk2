@@ -7,6 +7,7 @@ import 'app/plant_chat_result_handler.dart';
 import 'app/plant_registration_action_coordinator.dart';
 import 'app/plant_card_state_mapper.dart';
 import 'dialogue/chat_panel.dart';
+import 'models/latest_condition_memory.dart';
 import 'photo/mock_plant_photo_analysis.dart';
 import 'photo/photo_input_service.dart';
 import 'photo/photo_source_picker.dart';
@@ -142,6 +143,10 @@ class _MyAppState extends State<MyApp> {
       plantId: plantIdOf(plant),
       plantName: plant['name']?.toString() ?? '이름 없는 식물',
       initialPlantMessage: result.analysisResult.conditionMessage,
+      initialConditionMemory: LatestConditionMemory(
+        message: result.memoryPayload.message,
+        eventType: result.memoryPayload.eventType,
+      ),
       waterDay: waterDayOf(plant),
     );
     if (chatResult != null) {
@@ -353,6 +358,7 @@ class _MyAppState extends State<MyApp> {
     required String plantName,
     required String initialPlantMessage,
     required int waterDay,
+    LatestConditionMemory? initialConditionMemory,
   }) async {
     return Navigator.push<ChatPanelResult>(
       context,
@@ -364,6 +370,7 @@ class _MyAppState extends State<MyApp> {
             speciesDisplayName: speciesDisplayNameForChat(plantId, extraPlants),
             initialPlantMessage: initialPlantMessage,
             waterDay: waterDay,
+            initialConditionMemory: initialConditionMemory,
           );
         },
       ),

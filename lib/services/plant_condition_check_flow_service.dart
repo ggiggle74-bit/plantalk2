@@ -18,10 +18,12 @@ class PlantConditionCheckFlowResult {
   const PlantConditionCheckFlowResult({
     required this.photoUrl,
     required this.analysisResult,
+    required this.memoryPayload,
   });
 
   final String photoUrl;
   final PlantConditionAnalysisResult analysisResult;
+  final ConditionCheckMemoryPayload memoryPayload;
 }
 
 class PlantConditionCheckFlowService {
@@ -87,6 +89,7 @@ class PlantConditionCheckFlowService {
     return PlantConditionCheckFlowResult(
       photoUrl: photoUrl,
       analysisResult: analysisResult,
+      memoryPayload: memoryPayload,
     );
   }
 }

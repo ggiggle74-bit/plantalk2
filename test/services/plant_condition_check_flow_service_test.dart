@@ -61,6 +61,16 @@ void main() {
     expect(memoryPayload?.isMock, isFalse);
     expect(result.photoUrl, _remotePhotoUrl);
     expect(result.analysisResult, same(analysisResult));
+    expect(result.memoryPayload, same(memoryPayload));
+    expect(result.memoryPayload.plantId, _plantId);
+    expect(
+      result.memoryPayload.memoryType,
+      ConditionCheckMemoryPayloadBridge.conditionCheckMemoryType,
+    );
+    expect(result.memoryPayload.eventType, PlantConditionEventTypes.pestRisk);
+    expect(result.memoryPayload.message, _providerMessage);
+    expect(result.memoryPayload.photoUrl, _remotePhotoUrl);
+    expect(result.memoryPayload.isMock, isFalse);
   });
 
   test('awaits memory insertion before completing', () async {
