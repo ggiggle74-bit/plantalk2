@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../bridges/plant_identification_korean_name_bridge.dart';
 import '../models/plant_identification_candidate.dart';
 
+const double _lowConfidenceThreshold = 0.5;
+
 class PlantIdentificationCandidateList extends StatelessWidget {
   const PlantIdentificationCandidateList({
     super.key,
@@ -34,6 +36,22 @@ class PlantIdentificationCandidateList extends StatelessWidget {
             ),
           )
         else
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('가장 비슷한 후보예요', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  '사진과 비슷한 식물을 확인해 주세요.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+        if (candidates.isNotEmpty)
           ...candidates.map((candidate) {
             final isSelected = _isSelected(candidate, selectedCandidate);
 
@@ -97,11 +115,16 @@ class _CandidateDetails extends StatelessWidget {
         .where(_hasText)
         .map((name) => name.trim())
         .toList(growable: false);
+    final hasCatalogMatch =
+        koreanNameEntryFromPlantIdentificationCandidate(candidate) != null;
     final details = <String>[
       if (_hasText(candidate.scientificName)) candidate.scientificName!.trim(),
       if (commonNames.isNotEmpty) commonNames.join(', '),
       if (candidate.confidence != null)
         '신뢰도 ${_formatConfidence(candidate.confidence!)}',
+      if (!hasCatalogMatch) '아직 한국어 이름이 등록되지 않은 후보예요.',
+      if (_isLowConfidence(candidate.confidence))
+        '사진만으로는 확신이 낮아요. 가장 비슷한 후보를 보여드릴게요.',
     ].where(_hasText).toList(growable: false);
 
     if (details.isEmpty) {
@@ -118,5 +141,9 @@ class _CandidateDetails extends StatelessWidget {
   static String _formatConfidence(double confidence) {
     final percent = (confidence.clamp(0.0, 1.0) * 100).round();
     return '$percent%';
+  }
+
+  static bool _isLowConfidence(double? confidence) {
+    return confidence != null && confidence < _lowConfidenceThreshold;
   }
 }
