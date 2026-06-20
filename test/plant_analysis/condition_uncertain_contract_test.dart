@@ -83,6 +83,130 @@ void main() {
     },
   );
 
+  test('preserves non-empty provider message after trimming', () async {
+    final result = await _analyzeSingleEvent(
+      eventType: PlantAnalysisEventTypes.waterNeeded,
+      note: '  제공자가 판단한 물 부족 신호예요.  ',
+    );
+
+    expect(result.conditionEventType, PlantConditionEventTypes.needsWater);
+    expect(result.conditionMessage, '제공자가 판단한 물 부족 신호예요.');
+    expect(result.normalizedEvent.message, result.conditionMessage);
+  });
+
+  test('uses water-specific fallback for water_needed', () async {
+    final result = await _analyzeSingleEvent(
+      eventType: PlantAnalysisEventTypes.waterNeeded,
+    );
+
+    expect(result.conditionEventType, PlantConditionEventTypes.needsWater);
+    expect(result.conditionMessage, '사진을 보니 물이 조금 필요해 보여요.');
+    expect(result.normalizedEvent.message, result.conditionMessage);
+    expect(result.conditionMessage, isNot(contains('큰 이상이 없어 보여요')));
+  });
+
+  test('uses low-light fallback for light_needed', () async {
+    final result = await _analyzeSingleEvent(
+      eventType: PlantAnalysisEventTypes.lightNeeded,
+    );
+
+    expect(result.conditionEventType, PlantConditionEventTypes.lowLight);
+    expect(result.conditionMessage, '사진을 보니 빛이 조금 부족해 보여요.');
+    expect(result.normalizedEvent.message, result.conditionMessage);
+  });
+
+  test('maps pest and disease events to pest risk fallback', () async {
+    for (final eventType in const [
+      PlantAnalysisEventTypes.pestSuspected,
+      PlantAnalysisEventTypes.diseaseSuspected,
+    ]) {
+      final result = await _analyzeSingleEvent(eventType: eventType);
+
+      expect(result.conditionEventType, PlantConditionEventTypes.pestRisk);
+      expect(result.conditionMessage, '사진을 보니 잎 상태를 조금 더 살펴보는 게 좋겠어요.');
+      expect(result.normalizedEvent.message, result.conditionMessage);
+    }
+  });
+
+  test('maps leaf-damage events without healthy fallback', () async {
+    for (final eventType in const [
+      PlantAnalysisEventTypes.overwaterSuspected,
+      PlantAnalysisEventTypes.tooMuchSunSuspected,
+      PlantAnalysisEventTypes.repottingSuggested,
+      PlantAnalysisEventTypes.soilCheckNeeded,
+      PlantAnalysisEventTypes.temperatureStressSuspected,
+      PlantAnalysisEventTypes.humidityIssueSuspected,
+    ]) {
+      final result = await _analyzeSingleEvent(eventType: eventType);
+
+      expect(result.conditionEventType, PlantConditionEventTypes.leafDamage);
+      expect(result.normalizedEvent.message, result.conditionMessage);
+      expect(result.conditionMessage, isNot(contains('큰 이상이 없어 보여요')));
+      expect(result.conditionMessage.trim(), isNotEmpty);
+    }
+  });
+
+  test('keeps health_ok healthy fallback and normal type', () async {
+    final result = await _analyzeSingleEvent(
+      eventType: PlantAnalysisEventTypes.healthOk,
+    );
+
+    expect(result.conditionEventType, PlantConditionEventTypes.normal);
+    expect(result.conditionMessage, '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.');
+    expect(result.normalizedEvent.message, result.conditionMessage);
+  });
+
+  test('maps growth events to normal with growth fallback', () async {
+    for (final eventType in const [
+      PlantAnalysisEventTypes.growthPositive,
+      PlantAnalysisEventTypes.newLeafObserved,
+      PlantAnalysisEventTypes.floweringObserved,
+    ]) {
+      final result = await _analyzeSingleEvent(eventType: eventType);
+
+      expect(result.conditionEventType, PlantConditionEventTypes.normal);
+      expect(result.conditionMessage, '사진을 보니 새 성장 신호가 보여요. 상태는 계속 관찰해 주세요.');
+      expect(result.normalizedEvent.message, result.conditionMessage);
+      expect(result.conditionMessage, isNot(contains('큰 이상이 없어 보여요')));
+    }
+  });
+
+  test(
+    'keeps condition_uncertain cautious fallback and uncertain type',
+    () async {
+      final result = await _analyzeSingleEvent(
+        eventType: PlantAnalysisEventTypes.conditionUncertain,
+      );
+
+      expect(result.conditionEventType, PlantConditionEventTypes.uncertain);
+      expect(result.conditionMessage, '사진만으로는 상태를 확실히 판단하기 어려워요.');
+      expect(result.normalizedEvent.message, result.conditionMessage);
+      expect(result.conditionMessage, isNot(contains('큰 이상이 없어 보여요')));
+    },
+  );
+
+  test('preserves confidence and normalized provider metadata', () async {
+    final observedAt = DateTime.utc(2026, 6, 20, 7, 30);
+
+    final result = await _analyzeSingleEvent(
+      eventType: PlantAnalysisEventTypes.lightNeeded,
+      confidence: 0.84,
+      observedAt: observedAt,
+      providerResultId: 'provider-result-42',
+      isMock: false,
+    );
+
+    expect(result.normalizedEvent.confidence, 0.84);
+    expect(result.normalizedEvent.sourceProvider, 'fake_provider');
+    expect(result.normalizedEvent.observedAt, observedAt);
+    expect(result.normalizedEvent.sourceResultId, 'provider-result-42');
+    expect(result.normalizedEvent.isMock, isFalse);
+    expect(result.isMock, isFalse);
+    expect(result.normalizedEvent.metadata, {
+      'analysisType': PlantAnalysisTypes.conditionCheck,
+    });
+  });
+
   test(
     'condition uncertainty survives analysis, memory, and dialogue slots',
     () {
@@ -181,4 +305,41 @@ class _FakePlantAnalysisAdapter implements PlantAnalysisAdapter {
   Future<ExternalPlantAnalysisResult> analyze(PlantAnalysisInput input) async {
     return result;
   }
+}
+
+Future<PlantConditionAnalysisResult> _analyzeSingleEvent({
+  required String eventType,
+  String? note,
+  double? confidence,
+  DateTime? observedAt,
+  String? providerResultId,
+  bool isMock = true,
+}) {
+  final service = MockPlantConditionAnalysisService(
+    plantAnalysisService: PlantAnalysisService(
+      adapter: _FakePlantAnalysisAdapter(
+        ExternalPlantAnalysisResult(
+          providerKey: 'fake_provider',
+          analysisType: PlantAnalysisTypes.conditionCheck,
+          providerResultId: providerResultId,
+          conditionEventHints: [
+            ExternalPlantConditionEventHint(
+              eventType: eventType,
+              confidence: confidence,
+              note: note,
+            ),
+          ],
+          isMock: isMock,
+          createdAt: observedAt,
+        ),
+      ),
+    ),
+  );
+
+  return service.analyzeCondition(
+    const PlantConditionAnalysisRequest(
+      plantId: 'plant-1',
+      photoUrl: 'https://example.test/photo.jpg',
+    ),
+  );
 }

@@ -66,8 +66,6 @@ abstract class PlantConditionAnalysisService {
 class MockPlantConditionAnalysisService
     implements PlantConditionAnalysisService {
   static const _mockConditionMessage = '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
-  static const _mockUncertainConditionMessage =
-      '사진만으로는 상태를 확실히 판단하기 어려워요.';
 
   const MockPlantConditionAnalysisService({
     PlantAnalysisService plantAnalysisService = const PlantAnalysisService(
@@ -115,9 +113,37 @@ class MockPlantConditionAnalysisService
   }
 
   String _conditionMessageFrom(NormalizedPlantEvent event) {
+    final providerMessage = event.message?.trim();
+    if (providerMessage != null && providerMessage.isNotEmpty) {
+      return providerMessage;
+    }
+
     switch (PlantAnalysisEventTypes.normalize(event.eventType)) {
+      case PlantAnalysisEventTypes.healthOk:
+        return _mockConditionMessage;
+      case PlantAnalysisEventTypes.waterNeeded:
+        return '사진을 보니 물이 조금 필요해 보여요.';
+      case PlantAnalysisEventTypes.overwaterSuspected:
+        return '사진을 보니 물이 많은 신호가 있을 수 있어요. 흙 상태를 먼저 확인해 주세요.';
+      case PlantAnalysisEventTypes.lightNeeded:
+        return '사진을 보니 빛이 조금 부족해 보여요.';
+      case PlantAnalysisEventTypes.tooMuchSunSuspected:
+        return '사진을 보니 빛이 강해 잎 스트레스가 있을 수 있어요.';
+      case PlantAnalysisEventTypes.pestSuspected:
+      case PlantAnalysisEventTypes.diseaseSuspected:
+        return '사진을 보니 잎 상태를 조금 더 살펴보는 게 좋겠어요.';
+      case PlantAnalysisEventTypes.growthPositive:
+      case PlantAnalysisEventTypes.newLeafObserved:
+      case PlantAnalysisEventTypes.floweringObserved:
+        return '사진을 보니 새 성장 신호가 보여요. 상태는 계속 관찰해 주세요.';
+      case PlantAnalysisEventTypes.repottingSuggested:
+      case PlantAnalysisEventTypes.soilCheckNeeded:
+        return '사진을 보니 흙이나 뿌리 상태를 확인해 보는 게 좋겠어요.';
+      case PlantAnalysisEventTypes.temperatureStressSuspected:
+      case PlantAnalysisEventTypes.humidityIssueSuspected:
+        return '사진을 보니 주변 환경 스트레스가 있을 수 있어요.';
       case PlantAnalysisEventTypes.conditionUncertain:
-        return _mockUncertainConditionMessage;
+        return '사진만으로는 상태를 확실히 판단하기 어려워요.';
       default:
         return _mockConditionMessage;
     }
@@ -126,6 +152,9 @@ class MockPlantConditionAnalysisService
   String _conditionEventTypeFrom(NormalizedPlantEvent event) {
     switch (PlantAnalysisEventTypes.normalize(event.eventType)) {
       case PlantAnalysisEventTypes.healthOk:
+      case PlantAnalysisEventTypes.growthPositive:
+      case PlantAnalysisEventTypes.newLeafObserved:
+      case PlantAnalysisEventTypes.floweringObserved:
         return PlantConditionEventTypes.normal;
       case PlantAnalysisEventTypes.conditionUncertain:
         return PlantConditionEventTypes.uncertain;
@@ -136,13 +165,15 @@ class MockPlantConditionAnalysisService
       case PlantAnalysisEventTypes.pestSuspected:
       case PlantAnalysisEventTypes.diseaseSuspected:
         return PlantConditionEventTypes.pestRisk;
+      case PlantAnalysisEventTypes.overwaterSuspected:
       case PlantAnalysisEventTypes.tooMuchSunSuspected:
+      case PlantAnalysisEventTypes.repottingSuggested:
+      case PlantAnalysisEventTypes.soilCheckNeeded:
       case PlantAnalysisEventTypes.temperatureStressSuspected:
       case PlantAnalysisEventTypes.humidityIssueSuspected:
         return PlantConditionEventTypes.leafDamage;
       default:
-        return PlantConditionEventTypes.normalize(event.eventType) ??
-            PlantConditionEventTypes.normal;
+        return PlantConditionEventTypes.normal;
     }
   }
 }
