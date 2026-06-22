@@ -1,0 +1,39 @@
+{
+  "access_token": "fake-kindwise-health-healthy-token",
+  "model_version": "fake-health-model-2026-06",
+  "created": 1782057600,
+  "status": "COMPLETED",
+  "result": {
+    "is_healthy": {
+      "binary": true,
+      "probability": 0.94,
+      "threshold": 0.63
+    },
+    "disease": {
+      "suggestions": [
+        {
+          "id": "fake-candidate-fungi-low",
+          "name": "Fungi",
+          "probability": 0.04,
+          "redundant": false,
+          "details": {
+            "local_name": "곰팡이성 질환",
+            "classification": ["Fungi"],
+            "common_names": ["fungal issue"]
+          }
+        },
+        {
+          "id": "fake-candidate-animalia-low",
+          "name": "Animalia",
+          "probability": 0.02,
+          "redundant": true,
+          "details": {
+            "local_name": "해충 피해",
+            "classification": ["Animalia"],
+            "common_names": ["pest"]
+          }
+        }
+      ]
+    }
+  }
+}

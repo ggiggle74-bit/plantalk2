@@ -1,0 +1,50 @@
+{
+  "access_token": "fake-kindwise-health-unmapped-token",
+  "model_version": "fake-health-model-2026-06",
+  "created": "2026-06-21T00:00:02Z",
+  "status": "COMPLETED",
+  "result": {
+    "is_healthy": {
+      "binary": false,
+      "probability": 0.28,
+      "threshold": 0.63
+    },
+    "disease": {
+      "suggestions": [
+        {
+          "id": "fake-candidate-mechanical",
+          "name": "mechanical damage",
+          "probability": 0.73,
+          "redundant": false,
+          "details": {
+            "local_name": "물리적 손상",
+            "classification": ["Abiotic"],
+            "common_names": ["mechanical damage"]
+          }
+        },
+        {
+          "id": "fake-candidate-senescence",
+          "name": "senescence",
+          "probability": 0.66,
+          "redundant": true,
+          "details": {
+            "local_name": "노화",
+            "classification": ["Abiotic"],
+            "common_names": ["senescence"]
+          }
+        },
+        {
+          "id": "fake-candidate-abiotic",
+          "name": "generic abiotic",
+          "probability": 0.52,
+          "redundant": false,
+          "details": {
+            "local_name": "비생물성 문제",
+            "classification": ["Abiotic"],
+            "common_names": ["abiotic"]
+          }
+        }
+      ]
+    }
+  }
+}

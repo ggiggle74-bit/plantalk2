@@ -1,0 +1,28 @@
+{
+  "access_token": "fake-kindwise-health-malformed-token",
+  "model_version": "fake-health-model-2026-06",
+  "created": 1782057603,
+  "status": "COMPLETED",
+  "result": {
+    "is_healthy": {
+      "binary": "false",
+      "probability": 0.12,
+      "threshold": 0.63
+    },
+    "disease": {
+      "suggestions": [
+        {
+          "id": "fake-candidate-actionable-ignored",
+          "name": "Insecta",
+          "probability": 0.97,
+          "redundant": false,
+          "details": {
+            "local_name": "해충 피해",
+            "classification": ["Animalia", "Insecta"],
+            "common_names": ["pest"]
+          }
+        }
+      ]
+    }
+  }
+}
