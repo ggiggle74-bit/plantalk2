@@ -68,6 +68,7 @@ class PlantConditionRepresentativeEventSelector {
         return _eventGroupActionable;
       case PlantAnalysisEventTypes.conditionUncertain:
         return _eventGroupUncertain;
+      case PlantAnalysisEventTypes.appearanceStable:
       case PlantAnalysisEventTypes.healthOk:
       case PlantAnalysisEventTypes.growthPositive:
       case PlantAnalysisEventTypes.newLeafObserved:

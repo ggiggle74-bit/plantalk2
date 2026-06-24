@@ -23,6 +23,7 @@ class NormalizedPlantEvent {
 class PlantAnalysisEventTypes {
   const PlantAnalysisEventTypes._();
 
+  static const appearanceStable = 'appearance_stable';
   static const healthOk = 'health_ok';
   static const waterNeeded = 'water_needed';
   static const overwaterSuspected = 'overwater_suspected';
@@ -40,6 +41,7 @@ class PlantAnalysisEventTypes {
   static const conditionUncertain = 'condition_uncertain';
 
   static const all = <String>{
+    appearanceStable,
     healthOk,
     waterNeeded,
     overwaterSuspected,

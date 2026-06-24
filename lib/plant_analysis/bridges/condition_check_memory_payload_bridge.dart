@@ -50,6 +50,11 @@ class ConditionCheckMemoryPayloadBridge {
       return message;
     }
 
+    if (PlantAnalysisEventTypes.normalize(event.eventType) ==
+        PlantAnalysisEventTypes.appearanceStable) {
+      return '사진에서 겉으로 보이는 상태가 비교적 안정적으로 보여요. 건강 진단 결과는 아니에요.';
+    }
+
     switch (conditionEventType) {
       case PlantConditionEventTypes.needsWater:
         return '사진을 보니 물이 조금 필요해 보여요.';
@@ -69,6 +74,7 @@ class ConditionCheckMemoryPayloadBridge {
 
   String _conditionMemoryEventType(String eventType) {
     switch (PlantAnalysisEventTypes.normalize(eventType)) {
+      case PlantAnalysisEventTypes.appearanceStable:
       case PlantAnalysisEventTypes.healthOk:
       case PlantAnalysisEventTypes.growthPositive:
       case PlantAnalysisEventTypes.newLeafObserved:

@@ -26,6 +26,7 @@ class PlantAnalysisTypes {
   const PlantAnalysisTypes._();
 
   static const identification = 'identification';
+  static const defaultObservation = 'default_observation';
   static const conditionCheck = 'condition_check';
   static const combined = 'combined';
 }

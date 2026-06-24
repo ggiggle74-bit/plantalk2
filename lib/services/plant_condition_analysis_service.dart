@@ -126,6 +126,8 @@ class MockPlantConditionAnalysisService
     }
 
     switch (PlantAnalysisEventTypes.normalize(event.eventType)) {
+      case PlantAnalysisEventTypes.appearanceStable:
+        return '사진에서 겉으로 보이는 상태가 비교적 안정적으로 보여요. 건강 진단 결과는 아니에요.';
       case PlantAnalysisEventTypes.healthOk:
         return _mockConditionMessage;
       case PlantAnalysisEventTypes.waterNeeded:
@@ -158,6 +160,7 @@ class MockPlantConditionAnalysisService
 
   String _conditionEventTypeFrom(NormalizedPlantEvent event) {
     switch (PlantAnalysisEventTypes.normalize(event.eventType)) {
+      case PlantAnalysisEventTypes.appearanceStable:
       case PlantAnalysisEventTypes.healthOk:
       case PlantAnalysisEventTypes.growthPositive:
       case PlantAnalysisEventTypes.newLeafObserved:
