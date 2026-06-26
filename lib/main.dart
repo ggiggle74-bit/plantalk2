@@ -29,7 +29,19 @@ Future<void> main() async {
     anonKey: 'sb_publishable_vweok1t5SRu9iqLs7uGwZg_sq6vBLlb',
   );
 
+  await _ensureAnonymousAuthSession();
+
   runApp(const MyApp());
+}
+
+Future<void> _ensureAnonymousAuthSession() async {
+  final auth = Supabase.instance.client.auth;
+
+  if (auth.currentSession != null) {
+    return;
+  }
+
+  await auth.signInAnonymously();
 }
 
 class MyApp extends StatefulWidget {

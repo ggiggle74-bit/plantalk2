@@ -29,14 +29,19 @@ class PlantService {
     String speciesDisplayName = '알 수 없음',
     String? speciesGuess,
   }) async {
-    final data = await _client.from('plants').insert({
-      'name': plantName,
-      'message': '처음 만나서 반가워요 🌱',
-      'water_day': 0,
-      'species_key': speciesKey,
-      'species_display_name': speciesDisplayName,
-      'species_guess': speciesGuess,
-    }).select().single();
+    final data = await _client
+        .from('plants')
+        .insert({
+          'user_id': _client.auth.currentUser!.id,
+          'name': plantName,
+          'message': '처음 만나서 반가워요 🌱',
+          'water_day': 0,
+          'species_key': speciesKey,
+          'species_display_name': speciesDisplayName,
+          'species_guess': speciesGuess,
+        })
+        .select()
+        .single();
 
     return Map<String, dynamic>.from(data);
   }
@@ -67,10 +72,7 @@ class PlantService {
   }
 
   Future<void> updatePlantMessageById(String plantId, String message) async {
-    await _client
-        .from('plants')
-        .update({'message': message})
-        .eq('id', plantId);
+    await _client.from('plants').update({'message': message}).eq('id', plantId);
   }
 
   Future<void> updatePlantPhotoUrlById(String plantId, String photoUrl) async {
@@ -106,9 +108,9 @@ class PlantService {
           .order('created_at', ascending: false)
           .limit(limit);
 
-      return List<Map<String, dynamic>>.from(data)
-          .map(PlantPhotoHistoryItem.fromRow)
-          .toList();
+      return List<Map<String, dynamic>>.from(
+        data,
+      ).map(PlantPhotoHistoryItem.fromRow).toList();
     } catch (error) {
       debugPrint('plant_photos fetch failed: $error');
       return const [];
@@ -172,7 +174,8 @@ class PlantService {
     return LatestConditionMemory.fromRow(memory);
   }
 
-  Future<List<ConditionCheckMemoryItem>> fetchRecentConditionCheckMemoriesBestEffort({
+  Future<List<ConditionCheckMemoryItem>>
+  fetchRecentConditionCheckMemoriesBestEffort({
     required String plantId,
     int limit = 10,
   }) async {
@@ -187,9 +190,9 @@ class PlantService {
           .order('created_at', ascending: false)
           .limit(limit);
 
-      return List<Map<String, dynamic>>.from(data)
-          .map(ConditionCheckMemoryItem.fromRow)
-          .toList();
+      return List<Map<String, dynamic>>.from(
+        data,
+      ).map(ConditionCheckMemoryItem.fromRow).toList();
     } catch (error) {
       debugPrint('plant_memories condition_check fetch failed: $error');
       return const [];
