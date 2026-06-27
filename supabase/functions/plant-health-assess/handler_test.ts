@@ -110,10 +110,9 @@ Deno.test("downloads one Storage image and sends the minimal Kindwise request", 
             similar_images: [{ url: "private-similar-image" }],
             details: {
               local_name: "해충 피해",
-              classification: ["Animalia", "Insecta"],
-              common_names: ["pest"],
               description: "private-description",
               treatment: { chemical: ["private-treatment"] },
+              cause: "private-cause",
             },
           },
         ],
@@ -156,17 +155,17 @@ Deno.test("downloads one Storage image and sends the minimal Kindwise request", 
   assertEquals(kindwiseUrl.origin + kindwiseUrl.pathname, "https://api.plant.id/v3/health_assessment");
   assertEquals(
     kindwiseUrl.searchParams.get("details"),
-    "local_name,classification,common_names",
+    "local_name,description,treatment,cause",
   );
-  assertEquals(kindwiseUrl.searchParams.get("language"), "ko");
+  assertEquals(kindwiseUrl.searchParams.get("language"), null);
 
   const headers = new Headers(calls[1].init?.headers);
   assertEquals(headers.get("api-key"), "test-kindwise-key");
   const providerRequest = JSON.parse(String(calls[1].init?.body)) as Record<string, unknown>;
   assertEquals(providerRequest, {
     images: ["/9j/2Q=="],
-    similar_images: false,
   });
+  assert(!("similar_images" in providerRequest));
   assert(!("health" in providerRequest));
   assert(!("disease_level" in providerRequest));
 
@@ -186,8 +185,8 @@ Deno.test("downloads one Storage image and sends the minimal Kindwise request", 
             redundant: false,
             details: {
               local_name: "해충 피해",
-              classification: ["Animalia", "Insecta"],
-              common_names: ["pest"],
+              classification: [],
+              common_names: [],
             },
           },
         ],
@@ -200,6 +199,7 @@ Deno.test("downloads one Storage image and sends the minimal Kindwise request", 
   assert(!serialized.includes("private-similar-image"));
   assert(!serialized.includes("private-description"));
   assert(!serialized.includes("private-treatment"));
+  assert(!serialized.includes("private-cause"));
   assert(!serialized.includes("test-kindwise-key"));
   assertEquals(logs.length, 1);
 });
@@ -229,15 +229,24 @@ Deno.test("rejects empty, unsupported, and oversized image responses", async () 
   }
 });
 
-Deno.test("does not expose upstream error bodies", async () => {
+Deno.test("includes sanitized upstream error details for non-OK Kindwise responses", async () => {
   let callCount = 0;
   const handler = testHandler({
     fetcher: async () => {
       callCount += 1;
       if (callCount === 1) return new Response(jpegBytes);
-      return new Response(
-        JSON.stringify({ apiKey: "leaked-key", detail: "provider-private" }),
-        { status: 429 },
+      return Response.json(
+        {
+          message: "Invalid health assessment request.",
+          apiKey: "leaked-key",
+          headers: {
+            authorization: "Bearer test-kindwise-key",
+            "api-key": "test-kindwise-key",
+          },
+          image: `/9j/${"A".repeat(120)}`,
+          detail: "provider-private-debug-detail",
+        },
+        { status: 400 },
       );
     },
     logger: quietLogger,
@@ -245,14 +254,45 @@ Deno.test("does not expose upstream error bodies", async () => {
 
   const response = await handler(jsonRequest({ imageUrl }));
   const decoded = await responseJson(response);
+  const upstreamError = decoded.upstreamError as Record<string, unknown>;
   const serialized = JSON.stringify(decoded);
 
   assertEquals(response.status, 502);
-  assertEquals(decoded.status, 429);
+  assertEquals(decoded.status, 400);
+  assertEquals(decoded.error, "Kindwise plant health request failed.");
+  assertEquals(upstreamError.message, "Invalid health assessment request.");
+  assertEquals(upstreamError.apiKey, "[redacted]");
+  assertEquals(upstreamError.headers, "[redacted]");
+  assertEquals(upstreamError.image, "[redacted]");
+  assertEquals(upstreamError.detail, "provider-private-debug-detail");
+  assert(!serialized.includes("test-kindwise-key"));
   assert(!serialized.includes("leaked-key"));
-  assert(!serialized.includes("provider-private"));
+  assert(!serialized.includes("Bearer"));
+  assert(!serialized.includes("/9j/"));
 });
 
+Deno.test("truncates long upstream error text", async () => {
+  let callCount = 0;
+  const handler = testHandler({
+    fetcher: async () => {
+      callCount += 1;
+      if (callCount === 1) return new Response(jpegBytes);
+      return new Response(`provider-error ${".".repeat(2000)}`, {
+        status: 400,
+      });
+    },
+    logger: quietLogger,
+  });
+
+  const response = await handler(jsonRequest({ imageUrl }));
+  const decoded = await responseJson(response);
+
+  assertEquals(response.status, 502);
+  assertEquals(decoded.status, 400);
+  assert(typeof decoded.upstreamError === "string");
+  assertEquals(String(decoded.upstreamError).length, 1500);
+  assert(String(decoded.upstreamError).startsWith("provider-error "));
+});
 Deno.test("sanitizes malformed provider fields to safe nulls and empty lists", async () => {
   let callCount = 0;
   const handler = testHandler({

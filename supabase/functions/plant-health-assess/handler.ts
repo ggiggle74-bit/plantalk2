@@ -22,12 +22,14 @@ type PlantHealthAssessRequest = {
 const kindwiseEndpoint = "https://api.plant.id/v3/health_assessment";
 const requestedDetails = [
   "local_name",
-  "classification",
-  "common_names",
+  "description",
+  "treatment",
+  "cause",
 ] as const;
 const maxImageBytes = 10 * 1024 * 1024;
 const imageFetchTimeoutMs = 15_000;
 const kindwiseFetchTimeoutMs = 30_000;
+const maxUpstreamErrorChars = 1500;
 const publicStoragePathPrefix = "/storage/v1/object/public/";
 
 export function createPlantHealthAssessHandler(
@@ -141,7 +143,6 @@ export function createPlantHealthAssessHandler(
 
     const kindwiseUrl = new URL(kindwiseEndpoint);
     kindwiseUrl.searchParams.set("details", requestedDetails.join(","));
-    kindwiseUrl.searchParams.set("language", "ko");
 
     let kindwiseResponse: Response;
     try {
@@ -158,7 +159,6 @@ export function createPlantHealthAssessHandler(
           },
           body: JSON.stringify({
             images: [bytesToBase64(imageBytes)],
-            similar_images: false,
           }),
         },
         kindwiseFetchTimeoutMs,
@@ -171,8 +171,11 @@ export function createPlantHealthAssessHandler(
       );
     }
 
-    const responseText = await kindwiseResponse.text();
     if (!kindwiseResponse.ok) {
+      const upstreamErrorText = await readResponseTextSnippet(
+        kindwiseResponse,
+        maxUpstreamErrorChars,
+      );
       logger.warn("plant-health-assess upstream returned an error", {
         status: kindwiseResponse.status,
       });
@@ -180,11 +183,13 @@ export function createPlantHealthAssessHandler(
         {
           error: "Kindwise plant health request failed.",
           status: kindwiseResponse.status,
+          upstreamError: sanitizeUpstreamError(upstreamErrorText, [apiKey]),
         },
         502,
       );
     }
 
+    const responseText = await kindwiseResponse.text();
     let decoded: unknown;
     try {
       decoded = JSON.parse(responseText);
@@ -309,6 +314,112 @@ function normalizedOrigin(value: unknown): string | null {
   }
 }
 
+async function readResponseTextSnippet(
+  response: Response,
+  maxChars: number,
+): Promise<string> {
+  if (maxChars <= 0) return "";
+  if (!response.body) {
+    return truncateText(await response.text(), maxChars);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+
+  while (text.length < maxChars) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    text += decoder.decode(value, { stream: true });
+    if (text.length >= maxChars) {
+      await reader.cancel();
+      break;
+    }
+  }
+  text += decoder.decode();
+
+  return truncateText(text, maxChars);
+}
+
+function sanitizeUpstreamError(text: string, secrets: string[]): unknown {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  try {
+    return sanitizeUpstreamErrorValue(JSON.parse(trimmed), secrets);
+  } catch (_) {
+    return redactSensitiveText(truncateText(trimmed, maxUpstreamErrorChars), secrets);
+  }
+}
+
+function sanitizeUpstreamErrorValue(
+  value: unknown,
+  secrets: string[],
+  depth = 0,
+): unknown {
+  if (typeof value === "string") {
+    return redactSensitiveText(truncateText(value, maxUpstreamErrorChars), secrets);
+  }
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean" || value === null) return value;
+  if (depth >= 5) return "[truncated]";
+
+  if (Array.isArray(value)) {
+    const result = value.slice(0, 10).map((item) =>
+      sanitizeUpstreamErrorValue(item, secrets, depth + 1)
+    );
+    if (value.length > 10) result.push("[truncated]");
+    return result;
+  }
+
+  if (!isRecord(value)) return null;
+
+  const result: Record<string, unknown> = {};
+  let count = 0;
+  for (const [key, nestedValue] of Object.entries(value)) {
+    if (count >= 20) {
+      result.truncated = true;
+      break;
+    }
+    result[key] = isSensitiveUpstreamErrorKey(key)
+      ? "[redacted]"
+      : sanitizeUpstreamErrorValue(nestedValue, secrets, depth + 1);
+    count += 1;
+  }
+  return result;
+}
+
+function isSensitiveUpstreamErrorKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized.includes("apikey") ||
+    normalized.includes("authorization") ||
+    normalized.includes("bearer") ||
+    normalized.includes("token") ||
+    normalized.includes("secret") ||
+    normalized.includes("password") ||
+    normalized.includes("header") ||
+    normalized.includes("base64") ||
+    normalized.includes("image");
+}
+
+function redactSensitiveText(value: string, secrets: string[]): string {
+  let redacted = value;
+  for (const secret of secrets) {
+    if (secret) redacted = redacted.split(secret).join("[redacted]");
+  }
+  return redacted
+    .replace(/[A-Za-z0-9+/]{80,}={0,2}/g, "[redacted]")
+    .replace(
+      /(api[-_ ]?key|authorization|bearer)\s*[:=]\s*["']?[^"',\s}]+/gi,
+      "$1: [redacted]",
+    );
+}
+
+function truncateText(value: string, maxChars: number): string {
+  return value.length > maxChars ? value.slice(0, maxChars) : value;
+}
 async function fetchWithTimeout(
   fetcher: FetchLike,
   input: RequestInfo | URL,
