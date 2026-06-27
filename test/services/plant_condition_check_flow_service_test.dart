@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plantalk2/plant_analysis/bridges/condition_check_memory_payload_bridge.dart';
+import 'package:plantalk2/plant_analysis/factories/kindwise_plant_health_service_factory.dart';
 import 'package:plantalk2/plant_analysis/models/normalized_plant_event.dart';
 import 'package:plantalk2/services/plant_condition_analysis_service.dart';
 import 'package:plantalk2/services/plant_condition_check_flow_service.dart';
@@ -174,6 +175,105 @@ void main() {
     expect(analysisRequest?.speciesKey, isNull);
     expect(analysisRequest?.speciesDisplayName, isNull);
   });
+
+  test(
+    'uses fake Kindwise-backed condition analysis and preserves memory',
+    () async {
+      String? receivedImageUrl;
+      ConditionCheckMemoryPayload? memoryPayload;
+      final conditionAnalysisService = MockPlantConditionAnalysisService(
+        plantAnalysisService:
+            KindwisePlantHealthServiceFactory.withProxyCallback(
+              invokeProxy: ({required imageUrl}) async {
+                receivedImageUrl = imageUrl;
+                return _kindwiseHealthyPayload();
+              },
+            ).build(),
+      );
+
+      final service = PlantConditionCheckFlowService.withCallbacks(
+        saveConditionCheckPhoto: ({required image, required plantId}) async {
+          return _remotePhotoUrl;
+        },
+        analyzeCondition: conditionAnalysisService.analyzeCondition,
+        insertConditionCheckMemory: (payload) async {
+          memoryPayload = payload;
+        },
+      );
+
+      final result = await service.checkCondition(
+        image: _image(),
+        plantId: _plantId,
+        speciesKey: _speciesKey,
+        speciesDisplayName: _speciesDisplayName,
+      );
+
+      expect(receivedImageUrl, _remotePhotoUrl);
+      expect(result.photoUrl, _remotePhotoUrl);
+      expect(result.analysisResult.isMock, isFalse);
+      expect(result.analysisResult.normalizedEvent.isMock, isFalse);
+      expect(result.memoryPayload, same(memoryPayload));
+      expect(
+        result.memoryPayload.memoryType,
+        ConditionCheckMemoryPayloadBridge.conditionCheckMemoryType,
+      );
+      expect(result.memoryPayload.photoUrl, _remotePhotoUrl);
+      expect(result.memoryPayload.isMock, isFalse);
+    },
+  );
+
+  test(
+    'falls back explicitly to mock condition analysis when Kindwise fails',
+    () async {
+      final backendError = StateError('kindwise failed');
+      final logs = <Object>[];
+      ConditionCheckMemoryPayload? memoryPayload;
+      final primary = MockPlantConditionAnalysisService(
+        plantAnalysisService:
+            KindwisePlantHealthServiceFactory.withProxyCallback(
+              invokeProxy: ({required imageUrl}) async {
+                throw backendError;
+              },
+            ).build(),
+      );
+      final conditionAnalysisService = FallbackPlantConditionAnalysisService(
+        primary: primary,
+        fallback: const MockPlantConditionAnalysisService(),
+        onPrimaryFailure: (error, stackTrace) {
+          logs.add(error);
+          logs.add(stackTrace);
+        },
+      );
+
+      final service = PlantConditionCheckFlowService.withCallbacks(
+        saveConditionCheckPhoto: ({required image, required plantId}) async {
+          return _remotePhotoUrl;
+        },
+        analyzeCondition: conditionAnalysisService.analyzeCondition,
+        insertConditionCheckMemory: (payload) async {
+          memoryPayload = payload;
+        },
+      );
+
+      final result = await service.checkCondition(
+        image: _image(),
+        plantId: _plantId,
+      );
+
+      expect(logs.first, same(backendError));
+      expect(logs.last, isA<StackTrace>());
+      expect(result.photoUrl, _remotePhotoUrl);
+      expect(result.analysisResult.isMock, isTrue);
+      expect(result.analysisResult.normalizedEvent.isMock, isTrue);
+      expect(result.memoryPayload, same(memoryPayload));
+      expect(
+        result.memoryPayload.memoryType,
+        ConditionCheckMemoryPayloadBridge.conditionCheckMemoryType,
+      );
+      expect(result.memoryPayload.photoUrl, _remotePhotoUrl);
+      expect(result.memoryPayload.isMock, isTrue);
+    },
+  );
 }
 
 const _plantId = 'plant-1';
@@ -206,4 +306,16 @@ PlantConditionAnalysisResult _analysisResult() {
     normalizedEvent: normalizedEvent,
     isMock: false,
   );
+}
+
+Map<String, dynamic> _kindwiseHealthyPayload() {
+  return {
+    'access_token': 'fake-kindwise-token',
+    'created': 1782057600,
+    'status': 'COMPLETED',
+    'result': {
+      'is_healthy': {'binary': true, 'probability': 0.94, 'threshold': 0.63},
+      'disease': {'suggestions': const []},
+    },
+  };
 }

@@ -64,6 +64,36 @@ abstract class PlantConditionAnalysisService {
   );
 }
 
+typedef PlantConditionAnalysisFailureLogger =
+    void Function(Object error, StackTrace stackTrace);
+
+class FallbackPlantConditionAnalysisService
+    implements PlantConditionAnalysisService {
+  const FallbackPlantConditionAnalysisService({
+    required PlantConditionAnalysisService primary,
+    required PlantConditionAnalysisService fallback,
+    required PlantConditionAnalysisFailureLogger onPrimaryFailure,
+  }) : _primary = primary,
+       _fallback = fallback,
+       _onPrimaryFailure = onPrimaryFailure;
+
+  final PlantConditionAnalysisService _primary;
+  final PlantConditionAnalysisService _fallback;
+  final PlantConditionAnalysisFailureLogger _onPrimaryFailure;
+
+  @override
+  Future<PlantConditionAnalysisResult> analyzeCondition(
+    PlantConditionAnalysisRequest request,
+  ) async {
+    try {
+      return await _primary.analyzeCondition(request);
+    } catch (error, stackTrace) {
+      _onPrimaryFailure(error, stackTrace);
+      return _fallback.analyzeCondition(request);
+    }
+  }
+}
+
 class MockPlantConditionAnalysisService
     implements PlantConditionAnalysisService {
   static const _mockConditionMessage = '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
