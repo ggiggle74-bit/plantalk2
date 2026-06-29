@@ -4,8 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plantalk2/plant_analysis/bridges/condition_check_memory_payload_bridge.dart';
-import 'package:plantalk2/plant_analysis/factories/kindwise_plant_health_service_factory.dart';
+import 'package:plantalk2/plant_analysis/factories/gemini_default_observation_service_factory.dart';
 import 'package:plantalk2/plant_analysis/models/normalized_plant_event.dart';
+import 'package:plantalk2/plant_analysis/models/plant_analysis_input.dart';
 import 'package:plantalk2/services/plant_condition_analysis_service.dart';
 import 'package:plantalk2/services/plant_condition_check_flow_service.dart';
 
@@ -177,18 +178,19 @@ void main() {
   });
 
   test(
-    'uses fake Kindwise-backed condition analysis and preserves memory',
+    'uses fake Gemini-backed default observation and preserves memory',
     () async {
       String? receivedImageUrl;
       ConditionCheckMemoryPayload? memoryPayload;
       final conditionAnalysisService = MockPlantConditionAnalysisService(
         plantAnalysisService:
-            KindwisePlantHealthServiceFactory.withProxyCallback(
+            GeminiDefaultObservationServiceFactory.withProxyCallback(
               invokeProxy: ({required imageUrl}) async {
                 receivedImageUrl = imageUrl;
-                return _kindwiseHealthyPayload();
+                return _geminiStablePayload();
               },
             ).build(),
+        analysisType: PlantAnalysisTypes.defaultObservation,
       );
 
       final service = PlantConditionCheckFlowService.withCallbacks(
@@ -223,18 +225,19 @@ void main() {
   );
 
   test(
-    'falls back explicitly to mock condition analysis when Kindwise fails',
+    'falls back explicitly to mock condition analysis when Gemini fails',
     () async {
-      final backendError = StateError('kindwise failed');
+      final backendError = StateError('gemini failed');
       final logs = <Object>[];
       ConditionCheckMemoryPayload? memoryPayload;
       final primary = MockPlantConditionAnalysisService(
         plantAnalysisService:
-            KindwisePlantHealthServiceFactory.withProxyCallback(
+            GeminiDefaultObservationServiceFactory.withProxyCallback(
               invokeProxy: ({required imageUrl}) async {
                 throw backendError;
               },
             ).build(),
+        analysisType: PlantAnalysisTypes.defaultObservation,
       );
       final conditionAnalysisService = FallbackPlantConditionAnalysisService(
         primary: primary,
@@ -308,14 +311,13 @@ PlantConditionAnalysisResult _analysisResult() {
   );
 }
 
-Map<String, dynamic> _kindwiseHealthyPayload() {
+Map<String, dynamic> _geminiStablePayload() {
   return {
-    'access_token': 'fake-kindwise-token',
-    'created': 1782057600,
-    'status': 'COMPLETED',
-    'result': {
-      'is_healthy': {'binary': true, 'probability': 0.94, 'threshold': 0.63},
-      'disease': {'suggestions': const []},
-    },
+    'observation_id': 'observation-1',
+    'observed_at': '2026-06-24T01:02:03Z',
+    'image_quality': 'usable',
+    'observation_state': 'stable_appearance',
+    'evidence_tags': ['stable_foliage'],
+    'summary_ko': '사진에서 겉으로 보이는 상태가 비교적 안정적으로 보여요.',
   };
 }

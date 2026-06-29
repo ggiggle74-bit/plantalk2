@@ -105,12 +105,15 @@ class MockPlantConditionAnalysisService
         mockNote: _mockConditionMessage,
       ),
     ),
+    String analysisType = PlantAnalysisTypes.conditionCheck,
     PlantConditionRepresentativeEventSelector representativeEventSelector =
         const PlantConditionRepresentativeEventSelector(),
   }) : _plantAnalysisService = plantAnalysisService,
+       _analysisType = analysisType,
        _representativeEventSelector = representativeEventSelector;
 
   final PlantAnalysisService _plantAnalysisService;
+  final String _analysisType;
   final PlantConditionRepresentativeEventSelector _representativeEventSelector;
 
   @override
@@ -120,7 +123,7 @@ class MockPlantConditionAnalysisService
     final analysisResult = await _plantAnalysisService.analyze(
       PlantAnalysisInput(
         plantId: request.plantId,
-        analysisType: PlantAnalysisTypes.conditionCheck,
+        analysisType: _analysisType,
         speciesKey: request.speciesKey,
         speciesDisplayName: request.speciesDisplayName,
         imageUrl: request.photoUrl,
