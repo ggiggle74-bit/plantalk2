@@ -8,7 +8,6 @@ import 'app/plant_registration_action_coordinator.dart';
 import 'app/plant_card_state_mapper.dart';
 import 'dialogue/chat_panel.dart';
 import 'models/latest_condition_memory.dart';
-import 'plant_analysis/factories/kindwise_plant_health_service_factory.dart';
 import 'photo/mock_plant_photo_analysis.dart';
 import 'photo/photo_input_service.dart';
 import 'photo/photo_source_picker.dart';
@@ -45,14 +44,6 @@ Future<void> _ensureAnonymousAuthSession() async {
   await auth.signInAnonymously();
 }
 
-void _logKindwiseConditionCheckFailure(Object error, StackTrace stackTrace) {
-  debugPrint(
-    'Kindwise condition_check analysis failed; using explicit mock fallback. '
-    'Error: $error',
-  );
-  debugPrint('Kindwise condition_check stack trace: $stackTrace');
-}
-
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -65,14 +56,7 @@ class _MyAppState extends State<MyApp> {
   final PhotoService photoService = PhotoService();
   final PhotoInputService photoInputService = PhotoInputService();
   final PlantConditionAnalysisService conditionAnalysisService =
-      FallbackPlantConditionAnalysisService(
-        primary: MockPlantConditionAnalysisService(
-          plantAnalysisService: KindwisePlantHealthServiceFactory.supabase()
-              .build(),
-        ),
-        fallback: const MockPlantConditionAnalysisService(),
-        onPrimaryFailure: _logKindwiseConditionCheckFailure,
-      );
+      MockPlantConditionAnalysisService();
   final ConditionCheckActionCoordinator conditionCheckActionCoordinator =
       const ConditionCheckActionCoordinator();
   final PlantChatResultHandler plantChatResultHandler =
