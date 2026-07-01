@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../plant_identification/adapters/plant_identification_adapter.dart';
 import '../plant_identification/adapters/plant_identification_adapter_factory.dart';
 import '../plant_identification/bridges/plant_identification_species_bridge.dart';
 import '../plant_identification/models/plant_identification_input.dart';
@@ -36,7 +38,17 @@ typedef OpenFirstChatForNewPlantCallback =
     );
 
 class PlantRegistrationActionCoordinator {
-  const PlantRegistrationActionCoordinator();
+  const PlantRegistrationActionCoordinator({
+    PlantIdentificationAdapter? firstRegistrationAdapter,
+    PlantIdentificationAdapter? mockPlantIdentificationAdapter,
+    Duration primaryIdentificationTimeout = const Duration(seconds: 20),
+  }) : _firstRegistrationAdapter = firstRegistrationAdapter,
+       _mockPlantIdentificationAdapter = mockPlantIdentificationAdapter,
+       _primaryIdentificationTimeout = primaryIdentificationTimeout;
+
+  final PlantIdentificationAdapter? _firstRegistrationAdapter;
+  final PlantIdentificationAdapter? _mockPlantIdentificationAdapter;
+  final Duration _primaryIdentificationTimeout;
 
   Future<void> startPlantRegistration({
     required BuildContext context,
@@ -322,35 +334,87 @@ class PlantRegistrationActionCoordinator {
     XFile image,
   ) async {
     final fileName = _trimmedOrNull(image.name);
+    final imageBytes = await _safeReadImageBytes(image);
+    final mimeType = _inferImageMimeType(fileName ?? image.path);
 
-    return PlantIdentificationInput(
+    final input = PlantIdentificationInput(
       imageUrl: image.path,
-      imageBytes: await _safeReadImageBytes(image),
+      imageBytes: imageBytes,
       fileName: fileName,
-      mimeType: _inferImageMimeType(fileName ?? image.path),
+      mimeType: mimeType,
       locale: 'ko',
       requestedAt: DateTime.now(),
       source: 'first_registration',
     );
+
+    debugPrint(
+      'first-registration plant identification input created: '
+      'imageBytesNull=${input.imageBytes == null}, '
+      'imageBytesLength=${input.imageBytes?.length}, '
+      'fileName=${input.fileName}, '
+      'inferredMimeType=${input.mimeType}, '
+      'source=${input.source}',
+    );
+
+    return input;
   }
 
   Future<PlantIdentificationResult> _identifyPlantCandidates(
     PlantIdentificationInput input,
   ) async {
     final adapter =
+        _firstRegistrationAdapter ??
         PlantIdentificationAdapterFactory.firstRegistrationAdapter();
 
     try {
-      return await PlantIdentificationService(adapter: adapter).identify(input);
-    } catch (error) {
       debugPrint(
-        'plant identification adapter failed; falling back to mock: $error',
+        'calling primary plant identification adapter: '
+        'provider=${adapter.providerKey}, '
+        'timeout=${_primaryIdentificationTimeout.inMilliseconds}ms',
       );
 
-      return PlantIdentificationService(
-        adapter: PlantIdentificationAdapterFactory.mockAdapter(),
-      ).identify(input);
+      return await PlantIdentificationService(
+        adapter: adapter,
+      ).identify(input).timeout(_primaryIdentificationTimeout);
+    } on TimeoutException catch (error) {
+      debugPrint(
+        'primary plant identification adapter timed out; '
+        'falling back to mock: $error',
+      );
+
+      return _identifyPlantCandidatesWithMockFallback(input);
+    } catch (error) {
+      debugPrint(
+        'primary plant identification adapter failed; '
+        'falling back to mock: $error',
+      );
+
+      return _identifyPlantCandidatesWithMockFallback(input);
     }
+  }
+
+  Future<PlantIdentificationResult> _identifyPlantCandidatesWithMockFallback(
+    PlantIdentificationInput input,
+  ) async {
+    final adapter =
+        _mockPlantIdentificationAdapter ??
+        PlantIdentificationAdapterFactory.mockAdapter();
+
+    debugPrint(
+      'using mock plant identification fallback: '
+      'provider=${adapter.providerKey}',
+    );
+
+    final result = await PlantIdentificationService(
+      adapter: adapter,
+    ).identify(input);
+
+    debugPrint(
+      'mock plant identification fallback returned '
+      '${result.candidates.length} candidates',
+    );
+
+    return result;
   }
 
   Future<Uint8List?> _safeReadImageBytes(XFile image) async {
