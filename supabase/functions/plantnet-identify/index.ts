@@ -33,12 +33,6 @@ const supportedLanguages = new Set([
 ]);
 
 Deno.serve(async (request) => {
-  const requestStartedAt = performance.now();
-  console.info("plantnet-identify request received", {
-    method: request.method,
-    totalElapsedMs: 0,
-  });
-
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -56,20 +50,9 @@ Deno.serve(async (request) => {
   }
 
   let body: PlantNetIdentifyRequest;
-  const bodyParseStartedAt = performance.now();
   try {
-    console.info("plantnet-identify before request JSON", {
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
     body = await request.json();
-    console.info("plantnet-identify request JSON parsed", {
-      elapsedMs: elapsedMs(bodyParseStartedAt),
-    });
   } catch (_) {
-    console.warn("plantnet-identify request JSON parse failed", {
-      elapsedMs: elapsedMs(bodyParseStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
     return jsonResponse({ error: "Request body must be valid JSON." }, 400);
   }
 
@@ -86,41 +69,21 @@ Deno.serve(async (request) => {
     );
   }
 
-  const project = normalizeProject(body.project);
-  const lang = normalizeLanguage(body.lang);
-  const nbResults = clampNumber(body.nbResults, 1, 10, 5);
-  const filename = normalizeFilename(body.filename, contentType);
-  const diagnosticMetadata = {
-    imageBase64Length: imageBase64.length,
-    contentType,
-    filename,
-    project,
-    lang,
-    nbResults,
-  };
-
   let imageBytes: Uint8Array;
-  const base64DecodeStartedAt = performance.now();
   try {
     imageBytes = base64ToBytes(imageBase64);
-    console.info("plantnet-identify image base64 decoded", {
-      ...diagnosticMetadata,
-      imageBytesLength: imageBytes.length,
-      elapsedMs: elapsedMs(base64DecodeStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
   } catch (_) {
-    console.warn("plantnet-identify image base64 decode failed", {
-      ...diagnosticMetadata,
-      elapsedMs: elapsedMs(base64DecodeStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
     return jsonResponse({ error: "imageBase64 must be valid base64." }, 400);
   }
 
   if (imageBytes.length === 0) {
     return jsonResponse({ error: "imageBase64 is empty." }, 400);
   }
+
+  const project = normalizeProject(body.project);
+  const lang = normalizeLanguage(body.lang);
+  const nbResults = clampNumber(body.nbResults, 1, 10, 5);
+  const filename = normalizeFilename(body.filename, contentType);
 
   const plantNetUrl = new URL(
     `https://my-api.plantnet.org/v2/identify/${encodeURIComponent(project)}`,
@@ -130,80 +93,24 @@ Deno.serve(async (request) => {
   plantNetUrl.searchParams.set("nb-results", nbResults.toString());
   plantNetUrl.searchParams.set("include-related-images", "false");
 
-  const formDataStartedAt = performance.now();
-  let formData: FormData;
-  try {
-    formData = new FormData();
-    const imageBlobPart = imageBytes as unknown as BlobPart;
-    formData.append(
-      "images",
-      new File([imageBlobPart], filename, { type: contentType }),
-    );
-    formData.append("organs", "auto");
-    console.info("plantnet-identify form data created", {
-      ...diagnosticMetadata,
-      imageBytesLength: imageBytes.length,
-      elapsedMs: elapsedMs(formDataStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
-  } catch (error) {
-    console.warn("plantnet-identify form data creation failed", {
-      ...diagnosticMetadata,
-      imageBytesLength: imageBytes.length,
-      elapsedMs: elapsedMs(formDataStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
-    throw error;
-  }
+  const formData = new FormData();
+  const imageBlobPart = imageBytes as unknown as BlobPart;
+  formData.append(
+    "images",
+    new File([imageBlobPart], filename, { type: contentType }),
+  );
+  formData.append("organs", "auto");
 
-  const upstreamFetchStartedAt = performance.now();
-  let plantNetResponse: Response;
-  try {
-    console.info("plantnet-identify upstream fetch started", {
-      project,
-      lang,
-      nbResults,
-      imageBytesLength: imageBytes.length,
-      contentType,
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
-    plantNetResponse = await fetch(plantNetUrl, {
-      method: "POST",
-      body: formData,
-      headers: { accept: "application/json" },
-    });
-    console.info("plantnet-identify upstream fetch completed", {
-      ...diagnosticMetadata,
-      imageBytesLength: imageBytes.length,
-      status: plantNetResponse.status,
-      elapsedMs: elapsedMs(upstreamFetchStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
-  } catch (error) {
-    console.warn("plantnet-identify upstream fetch failed", {
-      ...diagnosticMetadata,
-      imageBytesLength: imageBytes.length,
-      elapsedMs: elapsedMs(upstreamFetchStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
-    throw error;
-  }
-
-  const responseTextStartedAt = performance.now();
-  const responseText = await plantNetResponse.text();
-  console.info("plantnet-identify upstream response body read", {
-    ...diagnosticMetadata,
-    imageBytesLength: imageBytes.length,
-    status: plantNetResponse.status,
-    elapsedMs: elapsedMs(responseTextStartedAt),
-    totalElapsedMs: elapsedMs(requestStartedAt),
+  const plantNetResponse = await fetch(plantNetUrl, {
+    method: "POST",
+    body: formData,
+    headers: { accept: "application/json" },
   });
+
+  const responseText = await plantNetResponse.text();
   if (!plantNetResponse.ok) {
     console.warn("plantnet-identify upstream failed", {
-      ...diagnosticMetadata,
-      imageBytesLength: imageBytes.length,
       status: plantNetResponse.status,
-      totalElapsedMs: elapsedMs(requestStartedAt),
     });
     return jsonResponse(
       {
@@ -215,22 +122,9 @@ Deno.serve(async (request) => {
   }
 
   let decoded: Record<string, unknown>;
-  const responseJsonParseStartedAt = performance.now();
   try {
     decoded = JSON.parse(responseText);
-    console.info("plantnet-identify upstream JSON parsed", {
-      ...diagnosticMetadata,
-      imageBytesLength: imageBytes.length,
-      elapsedMs: elapsedMs(responseJsonParseStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
   } catch (_) {
-    console.warn("plantnet-identify upstream JSON parse failed", {
-      ...diagnosticMetadata,
-      imageBytesLength: imageBytes.length,
-      elapsedMs: elapsedMs(responseJsonParseStartedAt),
-      totalElapsedMs: elapsedMs(requestStartedAt),
-    });
     return jsonResponse(
       { error: "Pl@ntNet returned invalid JSON." },
       502,
@@ -242,11 +136,8 @@ Deno.serve(async (request) => {
     : [];
 
   console.info("plantnet-identify succeeded", {
-    ...diagnosticMetadata,
-    imageBytesLength: imageBytes.length,
     status: plantNetResponse.status,
     resultCount: results.length,
-    totalElapsedMs: elapsedMs(requestStartedAt),
   });
 
   return jsonResponse({
@@ -255,10 +146,6 @@ Deno.serve(async (request) => {
     results,
   });
 });
-
-function elapsedMs(startedAt: number): number {
-  return Math.round(performance.now() - startedAt);
-}
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
