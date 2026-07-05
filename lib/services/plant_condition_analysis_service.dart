@@ -4,6 +4,8 @@ import '../plant_analysis/models/plant_analysis_input.dart';
 import '../plant_analysis/selectors/plant_condition_representative_event_selector.dart';
 import '../plant_analysis/services/plant_analysis_service.dart';
 
+const _defaultMockConditionMessage = '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
+
 class PlantConditionEventTypes {
   const PlantConditionEventTypes._();
 
@@ -94,18 +96,11 @@ class FallbackPlantConditionAnalysisService
   }
 }
 
-class MockPlantConditionAnalysisService
+class PlantAnalysisBackedConditionAnalysisService
     implements PlantConditionAnalysisService {
-  static const _mockConditionMessage = '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
-
-  const MockPlantConditionAnalysisService({
-    PlantAnalysisService plantAnalysisService = const PlantAnalysisService(
-      adapter: MockPlantAnalysisAdapter(
-        mockEventType: PlantAnalysisEventTypes.healthOk,
-        mockNote: _mockConditionMessage,
-      ),
-    ),
-    String analysisType = PlantAnalysisTypes.conditionCheck,
+  const PlantAnalysisBackedConditionAnalysisService({
+    required PlantAnalysisService plantAnalysisService,
+    required String analysisType,
     PlantConditionRepresentativeEventSelector representativeEventSelector =
         const PlantConditionRepresentativeEventSelector(),
   }) : _plantAnalysisService = plantAnalysisService,
@@ -162,7 +157,7 @@ class MockPlantConditionAnalysisService
       case PlantAnalysisEventTypes.appearanceStable:
         return '사진에서 겉으로 보이는 상태가 비교적 안정적으로 보여요. 건강 진단 결과는 아니에요.';
       case PlantAnalysisEventTypes.healthOk:
-        return _mockConditionMessage;
+        return _defaultMockConditionMessage;
       case PlantAnalysisEventTypes.waterNeeded:
         return '사진을 보니 물이 조금 필요해 보여요.';
       case PlantAnalysisEventTypes.overwaterSuspected:
@@ -187,7 +182,7 @@ class MockPlantConditionAnalysisService
       case PlantAnalysisEventTypes.conditionUncertain:
         return '사진만으로는 상태를 확실히 판단하기 어려워요.';
       default:
-        return _mockConditionMessage;
+        return _defaultMockConditionMessage;
     }
   }
 
@@ -219,4 +214,19 @@ class MockPlantConditionAnalysisService
         return PlantConditionEventTypes.normal;
     }
   }
+}
+
+class MockPlantConditionAnalysisService
+    extends PlantAnalysisBackedConditionAnalysisService {
+  const MockPlantConditionAnalysisService({
+    super.plantAnalysisService = const PlantAnalysisService(
+      adapter: MockPlantAnalysisAdapter(
+        mockEventType: PlantAnalysisEventTypes.healthOk,
+        mockNote: _defaultMockConditionMessage,
+      ),
+    ),
+    super.analysisType = PlantAnalysisTypes.conditionCheck,
+    super.representativeEventSelector =
+        const PlantConditionRepresentativeEventSelector(),
+  });
 }

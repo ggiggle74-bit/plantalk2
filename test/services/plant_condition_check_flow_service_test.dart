@@ -178,20 +178,21 @@ void main() {
   });
 
   test(
-    'uses fake Gemini-backed default observation and preserves memory',
+    'ordinary flow uses fake Gemini default observation first and preserves memory',
     () async {
       String? receivedImageUrl;
       ConditionCheckMemoryPayload? memoryPayload;
-      final conditionAnalysisService = MockPlantConditionAnalysisService(
-        plantAnalysisService:
-            GeminiDefaultObservationServiceFactory.withProxyCallback(
-              invokeProxy: ({required imageUrl}) async {
-                receivedImageUrl = imageUrl;
-                return _geminiStablePayload();
-              },
-            ).build(),
-        analysisType: PlantAnalysisTypes.defaultObservation,
-      );
+      final conditionAnalysisService =
+          PlantAnalysisBackedConditionAnalysisService(
+            plantAnalysisService:
+                GeminiDefaultObservationServiceFactory.withProxyCallback(
+                  invokeProxy: ({required imageUrl}) async {
+                    receivedImageUrl = imageUrl;
+                    return _geminiStablePayload();
+                  },
+                ).build(),
+            analysisType: PlantAnalysisTypes.defaultObservation,
+          );
 
       final service = PlantConditionCheckFlowService.withCallbacks(
         saveConditionCheckPhoto: ({required image, required plantId}) async {
@@ -225,12 +226,12 @@ void main() {
   );
 
   test(
-    'falls back explicitly to mock condition analysis when Gemini fails',
+    'ordinary flow falls back explicitly to mock when Gemini first-line observation fails',
     () async {
       final backendError = StateError('gemini failed');
       final logs = <Object>[];
       ConditionCheckMemoryPayload? memoryPayload;
-      final primary = MockPlantConditionAnalysisService(
+      final primary = PlantAnalysisBackedConditionAnalysisService(
         plantAnalysisService:
             GeminiDefaultObservationServiceFactory.withProxyCallback(
               invokeProxy: ({required imageUrl}) async {
