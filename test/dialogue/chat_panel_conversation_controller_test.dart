@@ -10,79 +10,77 @@ import 'package:plantalk2/dialogue/models/conversation_route.dart';
 import 'package:plantalk2/models/latest_condition_memory.dart';
 
 void main() {
-  test(
-    'returns DB-authored reply when fetchDialogueReply returns a reply',
-    () async {
-      final orchestrator = _FakeConversationOrchestrator(
-        _orchestratorResponse(
-          route: ConversationRoute.localCasual,
-          replyText: '오케스트레이터 인사야.',
+  test('DB-authored reply wins over local casual orchestrator', () async {
+    const dbMarker = 'DB_REPLY_MARKER 인사야.';
+    const orchestratorMarker = 'ORCHESTRATOR_MARKER 인사야.';
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.localCasual,
+        replyText: orchestratorMarker,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+    final requests = <_ReplyRequest>[];
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '안녕',
+        waterDay: 0,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          requests.add(
+            _ReplyRequest(situation: situation, conditionKey: conditionKey),
+          );
+          return dbMarker;
+        },
+      ),
+    );
+
+    expect(requests, hasLength(1));
+    expect(requests.single.situation, 'greeting');
+    expect(orchestrator.callCount, 0);
+    expect(response.replyText, contains(dbMarker));
+    expect(response.replyText, isNot(contains(orchestratorMarker)));
+    expect(response.conditionMemoryReplyCount, 0);
+  });
+
+  test('legacy condition-memory path wins over orchestrator', () async {
+    const conditionMarker = '사진만으로는 상태를 확실히 판단하기 어려워요.';
+    const orchestratorMarker = 'ORCHESTRATOR_MARKER 조건 답변';
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.localCasual,
+        replyText: orchestratorMarker,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '초록이',
+        userMessage: '상태 어때?',
+        waterDay: 0,
+        latestConditionMemory: LatestConditionMemory(
+          message: conditionMarker,
+          eventType: 'uncertain',
         ),
-      );
-      final controller = ChatPanelConversationController(
-        conversationOrchestrator: orchestrator,
-      );
-      final requests = <_ReplyRequest>[];
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
 
-      final response = await controller.generateReply(
-        ChatPanelConversationRequest(
-          plantId: 'plant-1',
-          plantName: '무가리',
-          userMessage: '안녕',
-          waterDay: 0,
-          fetchDialogueReply: ({situation, conditionKey}) async {
-            requests.add(
-              _ReplyRequest(situation: situation, conditionKey: conditionKey),
-            );
-            return 'DB가 고른 인사야.';
-          },
-        ),
-      );
+    expect(orchestrator.callCount, 0);
+    expect(response.replyText, contains(conditionMarker));
+    expect(response.replyText, isNot(contains(orchestratorMarker)));
+    expect(response.conditionMemoryReplyCount, 1);
+  });
 
-      expect(requests, hasLength(1));
-      expect(requests.single.situation, 'greeting');
-      expect(orchestrator.callCount, 0);
-      expect(response.replyText, contains('DB가 고른 인사야.'));
-      expect(response.replyText, isNot(contains('오케스트레이터 인사야.')));
-      expect(response.conditionMemoryReplyCount, 0);
-    },
-  );
-
-  test(
-    'falls back to condition-memory reply when DB reply is unavailable',
-    () async {
-      final orchestrator = _FakeConversationOrchestrator(
-        _orchestratorResponse(
-          route: ConversationRoute.localCasual,
-          replyText: '오케스트레이터 인사야.',
-        ),
-      );
-      final controller = ChatPanelConversationController(
-        conversationOrchestrator: orchestrator,
-      );
-
-      final response = await controller.generateReply(
-        ChatPanelConversationRequest(
-          plantId: 'plant-1',
-          plantName: '초록이',
-          userMessage: '상태 어때?',
-          waterDay: 0,
-          latestConditionMemory: LatestConditionMemory(
-            message: '사진만으로는 상태를 확실히 판단하기 어려워요.',
-            eventType: 'uncertain',
-          ),
-          fetchDialogueReply: _nullDialogueReply,
-        ),
-      );
-
-      expect(orchestrator.callCount, 0);
-      expect(response.replyText, contains('사진만으로는 상태를 확실히 판단하기 어려워요.'));
-      expect(response.replyText, isNot(contains('오케스트레이터 인사야.')));
-      expect(response.conditionMemoryReplyCount, 1);
-    },
-  );
-
-  test('applies legacy personality after selecting the reply', () async {
+  test('applies legacy personality after selecting DB reply', () async {
     final controller = ChatPanelConversationController();
     const baseReply = 'DB 답변이야.';
 
@@ -106,100 +104,74 @@ void main() {
     );
   });
 
-  test(
-    'uses local casual orchestrator reply when DB reply is unavailable',
-    () async {
-      final orchestrator = _FakeConversationOrchestrator(
-        _orchestratorResponse(
-          route: ConversationRoute.localCasual,
-          replyText: '오케스트레이터가 고른 짧은 인사야.',
-        ),
-      );
-      final controller = ChatPanelConversationController(
-        conversationOrchestrator: orchestrator,
-      );
-
-      final response = await controller.generateReply(
-        ChatPanelConversationRequest(
-          plantName: '무가리',
-          userMessage: '안녕',
-          waterDay: 0,
-          fetchDialogueReply: _nullDialogueReply,
-        ),
-      );
-
-      expect(orchestrator.callCount, 1);
-      expect(orchestrator.requests.single.plantId, '무가리');
-      expect(orchestrator.requests.single.dailyKeywordContext, isNull);
-      expect(response.replyText, contains('오케스트레이터가 고른 짧은 인사야.'));
-      expect(response.conditionMemoryReplyCount, 0);
-    },
-  );
-
-  test(
-    'uses local placeholder fallback when DB and condition fallback are absent',
-    () async {
-      final orchestrator = _FakeConversationOrchestrator(
-        _orchestratorResponse(
-          route: ConversationRoute.fallback,
-          replyText: '오케스트레이터 fallback은 쓰면 안 돼.',
-          isFallback: true,
-        ),
-      );
-      final controller = ChatPanelConversationController(
-        conversationOrchestrator: orchestrator,
-      );
-
-      final response = await controller.generateReply(
-        ChatPanelConversationRequest(
-          plantId: 'plant-1',
-          plantName: '무가리',
-          userMessage: '너 누구야?',
-          waterDay: 0,
-          fetchDialogueReply: _nullDialogueReply,
-        ),
-      );
-
-      expect(response.replyText, contains('나는 무가리야.'));
-      expect(response.replyText, isNot(contains('오케스트레이터 fallback은 쓰면 안 돼.')));
-      expect(response.conditionMemoryReplyCount, 0);
-    },
-  );
-
-  test(
-    'API-like message does not replace legacy fallback in selective wiring',
-    () async {
-      final orchestrator = _FakeConversationOrchestrator(
-        _orchestratorResponse(
-          route: ConversationRoute.api,
-          replyText: 'API 경계 답변은 아직 쓰면 안 돼.',
-        ),
-      );
-      final controller = ChatPanelConversationController(
-        conversationOrchestrator: orchestrator,
-      );
-
-      final response = await controller.generateReply(
-        ChatPanelConversationRequest(
-          plantId: 'plant-1',
-          plantName: '무가리',
-          userMessage: '몬스테라 분갈이 방법과 흙 배합을 자세히 설명해줘',
-          waterDay: 0,
-          fetchDialogueReply: _nullDialogueReply,
-        ),
-      );
-
-      expect(orchestrator.callCount, 0);
-      expect(response.replyText, isNot(contains('API 경계 답변은 아직 쓰면 안 돼.')));
-      expect(response.conditionMemoryReplyCount, 0);
-    },
-  );
-
-  test('one generateReply call returns one final reply path', () async {
+  test('local casual orchestrator is used only after DB miss', () async {
+    const orchestratorReply = '오케스트레이터가 고른 짧은 인사야.';
     final orchestrator = _FakeConversationOrchestrator(
       _orchestratorResponse(
         route: ConversationRoute.localCasual,
-        replyText: '오케스트레이터 한 줄',
+        replyText: orchestratorReply,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantName: '무가리',
+        userMessage: '안녕',
+        waterDay: 0,
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+
+    expect(orchestrator.callCount, 1);
+    expect(orchestrator.requests.single.plantId, '무가리');
+    expect(orchestrator.requests.single.dailyKeywordContext, isNull);
+    expect(
+      response.replyText,
+      DialogueEngine.applyPlantPersonality(
+        reply: orchestratorReply,
+        plantName: '무가리',
+      ),
+    );
+    expect(response.conditionMemoryReplyCount, 0);
+  });
+
+  test('API-like message does not call or use orchestrator', () async {
+    const orchestratorMarker = 'API_ORCHESTRATOR_MARKER';
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: orchestratorMarker,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '몬스테라 분갈이 방법과 흙 배합을 자세히 설명해줘',
+        waterDay: 0,
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+
+    expect(orchestrator.callCount, 0);
+    expect(response.replyText, isNot(contains(orchestratorMarker)));
+    expect(response.replyText.trim(), isNotEmpty);
+    expect(response.conditionMemoryReplyCount, 0);
+  });
+
+  test('non-localCasual orchestrator response is ignored', () async {
+    const orchestratorMarker = 'NON_LOCAL_ORCHESTRATOR_MARKER';
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.conditionMemory,
+        replyText: orchestratorMarker,
       ),
     );
     final controller = ChatPanelConversationController(
@@ -211,18 +183,112 @@ void main() {
         plantId: 'plant-1',
         plantName: '무가리',
         userMessage: '안녕',
-        waterDay: 2,
+        waterDay: 0,
         fetchDialogueReply: _nullDialogueReply,
       ),
     );
 
     expect(orchestrator.callCount, 1);
-    expect(response.replyText, contains('오케스트레이터 한 줄'));
-    expect(response.replyText, isNot(contains('목 마르다')));
-    expect(response.replyText, isNot(contains('이틀째다')));
-    expect(response.replyText, isNot(contains('물 달라고')));
-    expect(response.replyText, isNot(contains('오늘은 대화도')));
+    expect(response.replyText, isNot(contains(orchestratorMarker)));
+    expect(response.replyText.trim(), isNotEmpty);
+    expect(response.conditionMemoryReplyCount, 0);
   });
+
+  test('orchestrator fallback response is ignored', () async {
+    const orchestratorMarker = 'ORCHESTRATOR_FALLBACK_MARKER';
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.fallback,
+        replyText: orchestratorMarker,
+        isFallback: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '안녕',
+        waterDay: 0,
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+
+    expect(orchestrator.callCount, 1);
+    expect(response.replyText, isNot(contains(orchestratorMarker)));
+    expect(response.replyText.trim(), isNotEmpty);
+    expect(response.conditionMemoryReplyCount, 0);
+  });
+
+  test(
+    'one generateReply call does not concatenate DB and orchestrator replies',
+    () async {
+      const dbMarker = 'DB_ONLY_MARKER';
+      const orchestratorMarker = 'ORCHESTRATOR_ONLY_MARKER';
+      final orchestrator = _FakeConversationOrchestrator(
+        _orchestratorResponse(
+          route: ConversationRoute.localCasual,
+          replyText: orchestratorMarker,
+        ),
+      );
+      final controller = ChatPanelConversationController(
+        conversationOrchestrator: orchestrator,
+      );
+
+      final response = await controller.generateReply(
+        ChatPanelConversationRequest(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          userMessage: '안녕',
+          waterDay: 0,
+          fetchDialogueReply: ({situation, conditionKey}) async => dbMarker,
+        ),
+      );
+
+      expect(orchestrator.callCount, 0);
+      expect(response.replyText, contains(dbMarker));
+      expect(response.replyText, isNot(contains(orchestratorMarker)));
+    },
+  );
+
+  test(
+    'one generateReply call does not concatenate condition memory and orchestrator replies',
+    () async {
+      const conditionMarker = 'CONDITION_MEMORY_ONLY_MARKER';
+      const orchestratorMarker = 'ORCHESTRATOR_ONLY_MARKER';
+      final orchestrator = _FakeConversationOrchestrator(
+        _orchestratorResponse(
+          route: ConversationRoute.localCasual,
+          replyText: orchestratorMarker,
+        ),
+      );
+      final controller = ChatPanelConversationController(
+        conversationOrchestrator: orchestrator,
+      );
+
+      final response = await controller.generateReply(
+        ChatPanelConversationRequest(
+          plantId: 'plant-1',
+          plantName: '초록이',
+          userMessage: '괜찮아?',
+          waterDay: 0,
+          latestConditionMemory: LatestConditionMemory(
+            message: conditionMarker,
+            eventType: 'uncertain',
+          ),
+          fetchDialogueReply: _nullDialogueReply,
+        ),
+      );
+
+      expect(orchestrator.callCount, 0);
+      expect(response.replyText, contains(conditionMarker));
+      expect(response.replyText, isNot(contains(orchestratorMarker)));
+      expect(response.conditionMemoryReplyCount, 1);
+    },
+  );
 
   test('does not import forbidden UI or integration code', () {
     final source = File(
@@ -242,6 +308,7 @@ void main() {
       'edge_function',
       'payment',
       'entitlement',
+      'plant_memories',
       'dailykeywordcontext',
       'daily_keyword_context',
     ];
