@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../models/latest_condition_memory.dart';
-import '../services/dialogue_service.dart';
 import '../services/plant_service.dart';
-import 'dialogue_decision_context_builder.dart';
-import 'dialogue_engine.dart';
+import 'chat_panel_conversation_controller.dart';
 
 typedef FetchLatestConditionMemoryCallback =
     Future<LatestConditionMemory?> Function(String plantId);
-typedef FetchDialogueReplyCallback =
-    Future<String?> Function({String? situation, String? conditionKey});
+typedef FetchDialogueReplyCallback = ChatPanelDialogueReplyFetcher;
 
 class ChatPanelResult {
   const ChatPanelResult({
@@ -32,6 +29,7 @@ class ChatPanel extends StatefulWidget {
     this.initialConditionMemory,
     this.fetchLatestConditionMemory,
     this.fetchDialogueReply,
+    this.conversationController,
   });
 
   final String? plantId;
@@ -42,6 +40,7 @@ class ChatPanel extends StatefulWidget {
   final LatestConditionMemory? initialConditionMemory;
   final FetchLatestConditionMemoryCallback? fetchLatestConditionMemory;
   final FetchDialogueReplyCallback? fetchDialogueReply;
+  final ChatPanelConversationController? conversationController;
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();
@@ -49,10 +48,8 @@ class ChatPanel extends StatefulWidget {
 
 class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _controller = TextEditingController();
-  final DialogueDecisionContextBuilder _decisionContextBuilder =
-      const DialogueDecisionContextBuilder();
-  DialogueService? _dialogueService;
   PlantService? _plantService;
+  late final ChatPanelConversationController _conversationController;
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
   LatestConditionMemory? _latestConditionMemory;
@@ -64,6 +61,8 @@ class _ChatPanelState extends State<ChatPanel> {
   void initState() {
     super.initState();
 
+    _conversationController =
+        widget.conversationController ?? ChatPanelConversationController();
     _latestConditionMemory = widget.initialConditionMemory;
 
     final String firstMessage;
@@ -128,92 +127,18 @@ class _ChatPanelState extends State<ChatPanel> {
 
       _controller.clear();
 
-      final decisionContext = _decisionContextBuilder.build(
-        input: text,
-        waterDay: widget.waterDay,
-        plantName: widget.plantName,
-        previousUserMessage: prevUser,
-        conditionMemoryContext: _latestConditionMemory,
-        conditionMemoryReplyCount: _conditionMemoryReplyCount,
-        allowConditionMemoryFallback: _conditionMemoryReplyCount < 2,
-      );
-
-      final fallbackReply = DialogueEngine.placeholderReply(
-        plantName: widget.plantName,
-        userMessage: text,
-        waterDay: widget.waterDay,
-        situation: decisionContext.situationKey,
-        previousUserMessage: prevUser,
-      );
-
-      var reply = fallbackReply;
-      var usedDbReply = false;
-
-      debugPrint(
-        'chat input="$text" plantName="${widget.plantName}" waterDay=${widget.waterDay} situation=${decisionContext.situationKey} conditionKey=${decisionContext.conditionKey} conditionSource=${decisionContext.conditionSource}',
-      );
-
-      if (decisionContext.hasDetectedSituation ||
-          decisionContext.situationKey ==
-              PhotoConditionDialogueSituations.conditionCheckRequest) {
-        try {
-          final dbReply = await _fetchDialogueReply(
-            situation: decisionContext.situationKey,
-            conditionKey: decisionContext.conditionKey,
-          );
-
-          if (dbReply != null) {
-            reply = dbReply;
-            usedDbReply = true;
-          }
-        } catch (_) {
-          reply = fallbackReply;
-        }
-      } else if (decisionContext.usesConditionMemoryFallback) {
-        try {
-          final dbReply = await _fetchDialogueReply(
-            situation: decisionContext.situationKey,
-            conditionKey: decisionContext.conditionKey,
-          );
-
-          if (dbReply != null) {
-            reply = dbReply;
-            usedDbReply = true;
-          }
-        } catch (_) {
-          reply = fallbackReply;
-        }
-
-        if (!usedDbReply) {
-          final conditionContext = DialogueEngine.photoConditionDialogueContext(
-            userMessage: text,
-            memoryMessage: _latestConditionMemory?.message,
-            memoryEventType: _latestConditionMemory?.eventType,
-            replyCount: _conditionMemoryReplyCount,
-          );
-          final conditionMemoryReply = conditionContext == null
-              ? null
-              : DialogueEngine.conditionMemoryReply(
-                  plantName: widget.plantName,
-                  waterDay: widget.waterDay,
-                  context: conditionContext,
-                );
-
-          if (conditionMemoryReply != null &&
-              conditionMemoryReply.trim().isNotEmpty) {
-            reply = conditionMemoryReply;
-          }
-        }
-
-        _conditionMemoryReplyCount++;
-      }
-
-      debugPrint('chat dbReplyUsed=$usedDbReply');
-
-      reply = DialogueEngine.applyPlantPersonality(
-        reply: reply,
-        plantId: widget.plantId,
-        plantName: widget.plantName,
+      final response = await _conversationController.generateReply(
+        ChatPanelConversationRequest(
+          plantId: widget.plantId,
+          speciesDisplayName: widget.speciesDisplayName,
+          plantName: widget.plantName,
+          userMessage: text,
+          waterDay: widget.waterDay,
+          previousUserMessage: prevUser,
+          latestConditionMemory: _latestConditionMemory,
+          conditionMemoryReplyCount: _conditionMemoryReplyCount,
+          fetchDialogueReply: widget.fetchDialogueReply,
+        ),
       );
 
       if (!mounted) {
@@ -221,8 +146,9 @@ class _ChatPanelState extends State<ChatPanel> {
       }
 
       setState(() {
-        _latestPlantReply = reply;
-        _messages.add({'sender': 'plant', 'text': reply});
+        _conditionMemoryReplyCount = response.conditionMemoryReplyCount;
+        _latestPlantReply = response.replyText;
+        _messages.add({'sender': 'plant', 'text': response.replyText});
       });
     } finally {
       if (mounted) {
@@ -266,22 +192,6 @@ class _ChatPanelState extends State<ChatPanel> {
 
     final plantService = _plantService ??= PlantService();
     return plantService.fetchLatestConditionMemoryBestEffort(plantId: plantId);
-  }
-
-  Future<String?> _fetchDialogueReply({
-    String? situation,
-    String? conditionKey,
-  }) {
-    final callback = widget.fetchDialogueReply;
-    if (callback != null) {
-      return callback(situation: situation, conditionKey: conditionKey);
-    }
-
-    final dialogueService = _dialogueService ??= DialogueService();
-    return dialogueService.fetchRandomReply(
-      situation: situation,
-      conditionKey: conditionKey,
-    );
   }
 
   @override
