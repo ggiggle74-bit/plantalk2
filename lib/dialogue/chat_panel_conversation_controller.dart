@@ -1,7 +1,10 @@
 import '../models/latest_condition_memory.dart';
 import '../services/dialogue_service.dart';
+import 'conversation_orchestrator.dart';
 import 'dialogue_decision_context_builder.dart';
 import 'dialogue_engine.dart';
+import 'models/conversation_request.dart';
+import 'models/conversation_route.dart';
 
 typedef ChatPanelDialogueReplyFetcher =
     Future<String?> Function({String? situation, String? conditionKey});
@@ -49,11 +52,15 @@ class ChatPanelConversationController {
     DialogueDecisionContextBuilder decisionContextBuilder =
         const DialogueDecisionContextBuilder(),
     DialogueService? dialogueService,
+    ConversationOrchestrator? conversationOrchestrator,
   }) : _decisionContextBuilder = decisionContextBuilder,
-       _dialogueService = dialogueService;
+       _dialogueService = dialogueService,
+       _conversationOrchestrator =
+           conversationOrchestrator ?? const ConversationOrchestrator();
 
   final DialogueDecisionContextBuilder _decisionContextBuilder;
   DialogueService? _dialogueService;
+  final ConversationOrchestrator _conversationOrchestrator;
 
   Future<ChatPanelConversationResponse> generateReply(
     ChatPanelConversationRequest request,
@@ -137,6 +144,13 @@ class ChatPanelConversationController {
       nextConditionMemoryReplyCount++;
     }
 
+    if (!usedDbReply && !decisionContext.usesConditionMemoryFallback) {
+      final orchestratorReply = await _localCasualOrchestratorReply(request);
+      if (orchestratorReply != null) {
+        reply = orchestratorReply;
+      }
+    }
+
     reply = DialogueEngine.applyPlantPersonality(
       reply: reply,
       plantId: request.plantId,
@@ -164,5 +178,46 @@ class ChatPanelConversationController {
       situation: situation,
       conditionKey: conditionKey,
     );
+  }
+
+  Future<String?> _localCasualOrchestratorReply(
+    ChatPanelConversationRequest request,
+  ) async {
+    final conversationRequest = ConversationRequest(
+      plantId: _conversationPlantId(request),
+      plantName: request.plantName,
+      userMessage: request.userMessage,
+      species: request.speciesDisplayName,
+      mood: request.mood,
+      friendship: request.friendship,
+      latestConditionMemory: request.latestConditionMemory,
+    );
+
+    final route = _conversationOrchestrator.router.route(conversationRequest);
+    if (route != ConversationRoute.localCasual) {
+      return null;
+    }
+
+    final response = await _conversationOrchestrator.respond(
+      conversationRequest,
+    );
+
+    if (response.route != ConversationRoute.localCasual ||
+        response.isFallback ||
+        response.replyText.trim().isEmpty) {
+      return null;
+    }
+
+    return response.replyText;
+  }
+
+  String _conversationPlantId(ChatPanelConversationRequest request) {
+    final plantId = request.plantId?.trim();
+    if (plantId != null && plantId.isNotEmpty) {
+      return plantId;
+    }
+
+    final plantName = request.plantName.trim();
+    return plantName.isEmpty ? 'local-chat-panel-plant' : plantName;
   }
 }
