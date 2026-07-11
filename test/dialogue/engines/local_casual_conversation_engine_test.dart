@@ -32,4 +32,34 @@ void main() {
     expect(response.replyText, contains('장맛비'));
     expect(response.replyText, contains('무가리'));
   });
+
+  test(
+    'uses the plain local reply for null or empty daily keyword context',
+    () {
+      final engine = LocalCasualConversationEngine();
+      final nullContextResponse = engine.generate(
+        const ConversationRequest(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          userMessage: '안녕',
+        ),
+      );
+      final emptyContextResponse = engine.generate(
+        ConversationRequest(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          userMessage: '안녕',
+          dailyKeywordContext: DailyKeywordContext(
+            date: DateTime.utc(2026, 1, 1),
+            locale: 'ko-KR',
+            keywords: const [],
+          ),
+        ),
+      );
+
+      expect(nullContextResponse.usedDailyKeyword, isFalse);
+      expect(emptyContextResponse.usedDailyKeyword, isFalse);
+      expect(nullContextResponse.replyText, emptyContextResponse.replyText);
+    },
+  );
 }

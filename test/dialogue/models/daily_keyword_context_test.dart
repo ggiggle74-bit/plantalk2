@@ -35,4 +35,27 @@ void main() {
     expect(source, isNot(contains('plantid')));
     expect(source, isNot(contains('plant_id')));
   });
+
+  test('daily keyword entry metadata remains optional', () {
+    const legacyEntry = DailyKeywordEntry(
+      type: 'weather',
+      keyword: '비',
+      hint: '비가 내리는 날',
+    );
+    const metadataEntry = DailyKeywordEntry(
+      type: 'weather',
+      keyword: '장맛비',
+      hint: '비가 이어지는 때',
+      plantHint: '실내 공기 흐름을 살피기',
+      tone: 'cautious',
+      fitScore: 0.82,
+    );
+
+    expect(legacyEntry.plantHint, isNull);
+    expect(legacyEntry.tone, isNull);
+    expect(legacyEntry.fitScore, isNull);
+    expect(metadataEntry.plantHint, '실내 공기 흐름을 살피기');
+    expect(metadataEntry.tone, 'cautious');
+    expect(metadataEntry.fitScore, 0.82);
+  });
 }

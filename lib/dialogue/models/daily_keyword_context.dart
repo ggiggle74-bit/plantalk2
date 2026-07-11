@@ -32,6 +32,9 @@ class DailyKeywordEntry {
     required this.hint,
     this.category,
     this.relevanceScore,
+    this.plantHint,
+    this.tone,
+    this.fitScore,
   });
 
   final String type;
@@ -39,4 +42,7 @@ class DailyKeywordEntry {
   final String hint;
   final String? category;
   final double? relevanceScore;
+  final String? plantHint;
+  final String? tone;
+  final double? fitScore;
 }
