@@ -20,6 +20,14 @@ void main() {
         'supabase',
         'gemini',
         'kindwise',
+        'conversationrequest',
+        'conversationresponse',
+        'conversationorchestrator',
+        'chatpanelconversationcontroller',
+        'dialogueengine',
+        'dialogueservice',
+        'apiconversationengine',
+        'userregioncontext',
       ];
 
       for (final file in files) {
@@ -41,6 +49,7 @@ void main() {
       const files = [
         'lib/dialogue/chat_panel_conversation_controller.dart',
         'lib/dialogue/conversation_orchestrator.dart',
+        'lib/dialogue/models/conversation_request.dart',
         'lib/main.dart',
       ];
 
@@ -48,6 +57,17 @@ void main() {
         final source = File(path).readAsStringSync().toLowerCase();
         expect(source, isNot(contains('localdailykeywordsource')));
         expect(source, isNot(contains('local_daily_keyword_source')));
+        for (final snippet in [
+          'dailykeywordsource',
+          'dailykeywordsourcerequest',
+          'localdailykeywordsourceadapter',
+          'fallbackdailykeywordsource',
+          'local_daily_keyword_source_adapter',
+          'fallback_daily_keyword_source',
+          'daily_keyword_source.dart',
+        ]) {
+          expect(source, isNot(contains(snippet)));
+        }
       }
     },
   );
