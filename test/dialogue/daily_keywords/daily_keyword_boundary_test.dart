@@ -71,4 +71,20 @@ void main() {
       }
     },
   );
+
+  test('safe issue catalog stays outside source and runtime wiring', () {
+    const files = [
+      'lib/dialogue/daily_keywords/local_daily_keyword_source.dart',
+      'lib/dialogue/chat_panel_conversation_controller.dart',
+      'lib/dialogue/conversation_orchestrator.dart',
+      'lib/dialogue/models/conversation_request.dart',
+      'lib/main.dart',
+    ];
+
+    for (final path in files) {
+      final source = File(path).readAsStringSync().toLowerCase();
+      expect(source, isNot(contains('safeissuekeywordcatalog')));
+      expect(source, isNot(contains('safe_issue_keyword_catalog')));
+    }
+  });
 }

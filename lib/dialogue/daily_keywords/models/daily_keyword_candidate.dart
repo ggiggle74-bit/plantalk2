@@ -4,8 +4,9 @@ class DailyKeywordTypes {
   static const weather = 'weather';
   static const calendar = 'calendar';
   static const seasonal = 'seasonal';
+  static const safeIssue = 'safe_issue';
 
-  static const allowed = {weather, calendar, seasonal};
+  static const allowed = {weather, calendar, seasonal, safeIssue};
 }
 
 class DailyKeywordTones {
