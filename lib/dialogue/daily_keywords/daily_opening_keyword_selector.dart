@@ -1,11 +1,31 @@
 import '../models/daily_keyword_context.dart';
 import 'catalogs/blocked_keyword_catalog.dart';
 import 'models/daily_keyword_candidate.dart';
+import 'models/daily_opening_context.dart';
 
 class DailyOpeningKeywordSelector {
   const DailyOpeningKeywordSelector({this.minimumFitScore = 0.60});
 
   final double minimumFitScore;
+
+  DailyOpeningContext? project({
+    required DailyKeywordContext? context,
+    required DateTime now,
+    required bool isOpeningTurn,
+    required int seed,
+  }) {
+    final selectedCandidate = select(
+      context: context,
+      now: now,
+      isOpeningTurn: isOpeningTurn,
+      seed: seed,
+    );
+    if (selectedCandidate == null) {
+      return null;
+    }
+
+    return DailyOpeningContext(selectedCandidate: selectedCandidate);
+  }
 
   DailyKeywordEntry? select({
     required DailyKeywordContext? context,
