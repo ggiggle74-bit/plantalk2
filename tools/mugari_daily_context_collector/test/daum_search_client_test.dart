@@ -77,21 +77,21 @@ void main() {
       );
     });
 
-    test('rejects page, size, and sort values outside provider limits', () {
+    test('rejects page, size, and sort values outside provider limits', () async {
       final client = _client((_) async {
         fail('transport must not be called');
       });
 
-      expect(
-        () => client.searchWeb(_query(), page: 0),
+      await expectLater(
+        client.searchWeb(_query(), page: 0),
         throwsArgumentError,
       );
-      expect(
-        () => client.searchWeb(_query(), size: 51),
+      await expectLater(
+        client.searchWeb(_query(), size: 51),
         throwsArgumentError,
       );
-      expect(
-        () => client.searchWeb(_query(), sort: 'popular'),
+      await expectLater(
+        client.searchWeb(_query(), sort: 'popular'),
         throwsArgumentError,
       );
     });
