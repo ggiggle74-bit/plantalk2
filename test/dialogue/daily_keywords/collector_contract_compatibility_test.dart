@@ -33,10 +33,14 @@ void main() {
         plantHint: keyword['plantHint']! as String,
         tone: keyword['tone']! as String,
         fitScore: (keyword['fitScore']! as num).toDouble(),
+        targetAgeBands: _optionalStringList(keyword, 'targetAgeBands'),
       );
     }).toList();
 
     expect(entries, isNotEmpty);
+    expect(entries.any((entry) => entry.targetAgeBands.isEmpty), isTrue);
+    expect(entries.any((entry) => entry.targetAgeBands.isNotEmpty), isTrue);
+
     for (final entry in entries) {
       expect(DailyKeywordTypes.allowed, contains(entry.type));
       expect(DailyKeywordTones.allowed, contains(entry.tone));
@@ -45,6 +49,9 @@ void main() {
       expect(entry.plantHint?.trim(), isNotEmpty);
       expect(entry.fitScore, greaterThanOrEqualTo(0.60));
       expect(entry.fitScore, lessThanOrEqualTo(1.0));
+      for (final ageBand in entry.targetAgeBands) {
+        expect(DailyKeywordAgeBands.allowed, contains(ageBand));
+      }
     }
   });
 }
@@ -61,4 +68,17 @@ Map<String, Object?> _stringKeyedMap(Object? value) {
   }
 
   return result;
+}
+
+List<String> _optionalStringList(Map<String, Object?> json, String key) {
+  final value = json[key];
+  if (value == null) {
+    return const [];
+  }
+
+  expect(value, isA<List<Object?>>());
+  return (value! as List<Object?>).map((item) {
+    expect(item, isA<String>());
+    return item! as String;
+  }).toList(growable: false);
 }
