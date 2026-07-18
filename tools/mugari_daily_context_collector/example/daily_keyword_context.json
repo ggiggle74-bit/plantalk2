@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "daily-keyword-context/v1",
+  "date": "2026-07-18",
+  "locale": "ko-KR",
+  "regionCode": "global",
+  "generatedAt": "2026-07-18T05:30:00.000Z",
+  "sourceVersion": "collector-contract-v1",
+  "keywords": [
+    {
+      "type": "weather",
+      "keyword": "장맛비",
+      "hint": "비가 오래 이어지는 날",
+      "category": "rain",
+      "relevanceScore": 0.92,
+      "plantHint": "화분 흙이 너무 젖어 있지 않은지 살펴보기",
+      "tone": "gentle",
+      "fitScore": 0.88,
+      "conversationAngles": [
+        "비 오는 날의 기분",
+        "창밖 풍경",
+        "식물의 과습 걱정"
+      ]
+    },
+    {
+      "type": "seasonal",
+      "keyword": "한여름",
+      "hint": "햇빛과 더위가 강해지는 시기",
+      "category": "summer",
+      "relevanceScore": 0.83,
+      "plantHint": "한낮의 강한 직사광선을 피할지 살펴보기",
+      "tone": "calm",
+      "fitScore": 0.81,
+      "conversationAngles": [
+        "시원하게 쉬는 방법",
+        "여름 햇빛",
+        "식물이 더위를 보내는 방법"
+      ]
+    },
+    {
+      "type": "safe_issue",
+      "keyword": "플로깅",
+      "hint": "산책하며 주변을 정리하는 가벼운 환경 활동",
+      "category": "environment",
+      "relevanceScore": 0.78,
+      "plantHint": "주변의 작은 자연을 천천히 살펴보기",
+      "tone": "bright",
+      "fitScore": 0.76,
+      "conversationAngles": [
+        "공원 산책",
+        "작은 환경 습관",
+        "주변 자연 관찰"
+      ]
+    }
+  ]
+}
