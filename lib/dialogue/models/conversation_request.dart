@@ -1,4 +1,5 @@
 import '../../models/latest_condition_memory.dart';
+import '../daily_keywords/models/daily_opening_context.dart';
 import 'daily_keyword_context.dart';
 import 'user_region_context.dart';
 
@@ -15,6 +16,8 @@ class ConversationRequest {
     this.locale = 'ko',
     this.latestConditionMemory,
     this.dailyKeywordContext,
+    this.dailyOpeningContext,
+    this.isOpeningTurn = false,
     this.userRegionContext,
   });
 
@@ -29,5 +32,7 @@ class ConversationRequest {
   final String locale;
   final LatestConditionMemory? latestConditionMemory;
   final DailyKeywordContext? dailyKeywordContext;
+  final DailyOpeningContext? dailyOpeningContext;
+  final bool isOpeningTurn;
   final UserRegionContext? userRegionContext;
 }
