@@ -8,47 +8,43 @@ application runtime.
 
 ### CR-2A — app-facing context contract
 
-CR-2A defines `daily-keyword-context/v1` before any search API, storage, or
-scheduler is connected.
-
-Included:
-
-- `DailyKeywordCandidate`
-- optional `targetAgeBands`
-- `DailyKeywordContextDocument`
-- deterministic JSON encoding and decoding
-- executable contract validation
-- JSON Schema
-- a checked-in valid payload
-- a CLI that validates a future collector output file
+CR-2A defines `daily-keyword-context/v1`, deterministic JSON models,
+validation, JSON Schema, age-band metadata, and a checked-in valid payload.
 
 ### CR-2B — deterministic search planning
 
-CR-2B adds the provider-neutral planning layer used before a future search
-client is called.
+CR-2B adds `DailyQueryPlanner`, bounded safe query plans, optional region and
+age-band discovery queries, and the normalized `SearchDocument` model.
+
+The planner creates six general searches for weather, nature, season, parks,
+environment, and culture. A local context may add one region query. At most two
+neutral age-band queries rotate by date. Broad news, real-time issues, politics,
+crime, accidents, and war are not searched.
+
+### CR-2C — injectable Kakao/Daum search boundary
+
+CR-2C adds `DaumSearchClient` for the documented web and blog search request
+and response shapes.
 
 Included:
 
-- `DailyQueryPlanRequest`
-- `DailySearchQuery`
-- `DailyQueryPlan`
-- `DailyQueryPlanner`
-- `SearchDocument`
-- a query-plan preview CLI
+- `/v2/search/web` and `/v2/search/blog` request construction
+- injected REST API key and injected HTTP transport
+- `KakaoAK` authorization header construction
+- provider page, size, and sort validation
+- response metadata and document parsing
+- conversion into provider-neutral `SearchDocument` values
+- URL de-duplication
+- sanitized provider errors
+- checked-in web and blog fixtures
 
-The planner always creates six safe general searches for weather, nature,
-season, parks, environment, and culture. A local context may add one region
-query. When age bands are explicitly requested, at most two neutral audience
-discovery searches are selected deterministically by date. This keeps the
-daily request count bounded while rotating coverage across age bands.
-
-The planner does not search broad news, real-time issues, politics, crime,
-accidents, or war. It creates query instructions only; it performs no network
-request.
+The client does not read environment variables, own an HTTP package, print or
+store the key, or make a live request by itself. A later server-side adapter
+will inject the production transport and secret.
 
 ## Not included yet
 
-- Kakao/Daum Search API calls
+- live HTTP transport or production Kakao key
 - weather or public-data API calls
 - RSS or HTML crawling
 - keyword extraction or scoring from search documents
@@ -65,27 +61,12 @@ A ready-to-store document uses schema version:
 daily-keyword-context/v1
 ```
 
-The top-level document contains:
+The top-level document contains date, locale, region code, generated timestamp,
+collector source version, and zero to eight keyword candidates.
 
-- date
-- locale
-- region code
-- generated timestamp
-- collector source version
-- zero to eight keyword candidates
-
-Each accepted candidate contains the fields already expected by Plantalk:
-
-- `type`
-- `keyword`
-- `hint`
-- optional `category`
-- optional `relevanceScore`
-- `plantHint`
-- `tone`
-- `fitScore`
-- one to four `conversationAngles`
-- optional `targetAgeBands`
+Each candidate contains `type`, `keyword`, `hint`, optional `category`,
+optional `relevanceScore`, `plantHint`, `tone`, `fitScore`, one to four
+`conversationAngles`, and optional `targetAgeBands`.
 
 `conversationAngles` are reusable discussion directions, not final Mugari
 lines. The Plantalk conversation engine remains responsible for character
@@ -102,30 +83,14 @@ Allowed age bands:
 60s_plus
 ```
 
-An absent or empty `targetAgeBands` list means the material is suitable for all
-age bands. Age suitability is ranking metadata, not a hard stereotype. The
+An absent or empty `targetAgeBands` list means the material is suitable for
+all age bands. Age suitability is ranking metadata, not a hard stereotype. The
 collector does not store birth dates or exact ages, and Plantalk must not infer
 age from conversation text.
 
-Allowed candidate types:
-
-```text
-weather
-calendar
-seasonal
-safe_issue
-```
-
-Allowed tones:
-
-```text
-gentle
-calm
-bright
-cautious
-```
-
-A ready-to-store candidate must have `fitScore >= 0.60`.
+Allowed candidate types are `weather`, `calendar`, `seasonal`, and
+`safe_issue`. Allowed tones are `gentle`, `calm`, `bright`, and
+`cautious`. A ready-to-store candidate must have `fitScore >= 0.60`.
 
 ## Commands
 
@@ -140,10 +105,6 @@ dart run bin/plan_daily_queries.dart 2026-07-18 ko-KR `
   --region-code=KR-11 --region-label=서울 `
   --age-bands=10s,20s,30s,40s,50s,60s_plus
 ```
-
-The validator CLI reports the schema version, candidate count, locale, and
-region. The planner CLI prints deterministic JSON containing the bounded query
-plan.
 
 ## Planned sequence
 

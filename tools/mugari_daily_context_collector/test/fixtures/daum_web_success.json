@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "total_count": 2,
+    "pageable_count": 2,
+    "is_end": true
+  },
+  "documents": [
+    {
+      "title": "<b>서울숲</b> 여름 산책",
+      "contents": "나무 그늘과 식물을 천천히 관찰해요.",
+      "url": "https://example.com/web/seoul-forest",
+      "datetime": "2026-07-18T09:30:00.000+09:00"
+    },
+    {
+      "title": "도심 공원에서 만나는 식물",
+      "contents": "가벼운 산책과 자연 관찰 이야기입니다.",
+      "url": "https://example.com/web/city-park",
+      "datetime": "2026-07-17T12:00:00.000+09:00"
+    }
+  ]
+}

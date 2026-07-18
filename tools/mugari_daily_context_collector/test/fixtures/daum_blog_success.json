@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "total_count": 2,
+    "pageable_count": 2,
+    "is_end": true
+  },
+  "documents": [
+    {
+      "title": "비 오는 날 반려식물 돌보기",
+      "contents": "습도가 높은 날에는 흙 상태를 먼저 살펴봐요.",
+      "url": "https://example.com/blog/rainy-plant-care",
+      "blogname": "초록 생활",
+      "thumbnail": "",
+      "datetime": "2026-07-18T08:10:00.000+09:00"
+    },
+    {
+      "title": "주말 공원 산책 기록",
+      "contents": "천천히 걸으며 여름 나무를 관찰했습니다.",
+      "url": "https://example.com/blog/park-walk",
+      "blogname": "가벼운 하루",
+      "thumbnail": "",
+      "datetime": "2026-07-16T15:00:00.000+09:00"
+    }
+  ]
+}
