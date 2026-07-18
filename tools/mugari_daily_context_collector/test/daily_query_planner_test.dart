@@ -24,7 +24,9 @@ void main() {
         'culture-weekly',
       ]);
       expect(
-        first.queries.singleWhere((query) => query.id == 'seasonal-monthly').text,
+        first.queries
+            .singleWhere((query) => query.id == 'seasonal-monthly')
+            .text,
         '7월 여름 계절 식물',
       );
       expect(first.toJson()['date'], '2026-07-18');
@@ -136,10 +138,15 @@ void main() {
       );
 
       expect(
-        plan.queries.where((query) => query.intent == DailyQueryIntents.audience),
+        plan.queries.where(
+          (query) => query.intent == DailyQueryIntents.audience,
+        ),
         isEmpty,
       );
-      expect(plan.queries.every((query) => query.targetAgeBands.isEmpty), isTrue);
+      expect(
+        plan.queries.every((query) => query.targetAgeBands.isEmpty),
+        isTrue,
+      );
     });
 
     test('rejects unsupported age bands and ambiguous region metadata', () {
@@ -171,7 +178,9 @@ void main() {
 
       expect(plan.queries.first.text, 'today weather daily life');
       expect(
-        plan.queries.singleWhere((query) => query.id == 'seasonal-monthly').text,
+        plan.queries
+            .singleWhere((query) => query.id == 'seasonal-monthly')
+            .text,
         'December winter seasonal plants',
       );
     });
@@ -196,32 +205,41 @@ void main() {
         isTrue,
       );
       expect(
-        plan.queries.where((query) => query.intent == DailyQueryIntents.audience),
+        plan.queries.where(
+          (query) => query.intent == DailyQueryIntents.audience,
+        ),
         isEmpty,
       );
     });
   });
 
   group('SearchDocument', () {
-    test('round-trips normalized search-result metadata', () {
-      final document = SearchDocument(
-        source: SearchDocumentSources.web,
-        queryId: 'nature-daily',
-        queryIntent: DailyQueryIntents.nature,
-        queryText: '  오늘   자연 식물  ',
-        title: '<b>공원</b> 산책',
-        snippet: '비 &amp; 바람 속 자연 관찰',
-        url: Uri.parse('https://example.com/material/1'),
-        publishedAt: DateTime.parse('2026-07-18T14:00:00+09:00'),
+    test('round-trips normalized search-result and query metadata', () {
+      final query = DailySearchQuery(
+        id: 'nature-daily',
+        text: '  오늘   자연 식물  ',
+        intent: DailyQueryIntents.nature,
+        priority: 95,
+        freshnessWindowDays: 7,
         targetAgeBands: const [
           DailyKeywordAgeBands.thirties,
           DailyKeywordAgeBands.twenties,
         ],
       );
+      final document = SearchDocument.fromQuery(
+        source: SearchDocumentSources.web,
+        query: query,
+        title: '<b>공원</b> 산책',
+        snippet: '비 &amp; 바람 속 자연 관찰',
+        url: Uri.parse('https://example.com/material/1'),
+        publishedAt: DateTime.parse('2026-07-18T14:00:00+09:00'),
+      );
 
       final decoded = SearchDocument.fromJson(document.toJson());
 
       expect(document.queryText, '오늘 자연 식물');
+      expect(document.queryPriority, 95);
+      expect(document.freshnessWindowDays, 7);
       expect(document.title, '공원 산책');
       expect(document.snippet, '비 바람 속 자연 관찰');
       expect(document.publishedAt, DateTime.utc(2026, 7, 18, 5));
@@ -234,41 +252,36 @@ void main() {
 
     test('rejects unsupported sources, unsafe URLs, and empty documents', () {
       expect(
-        () => SearchDocument(
-          source: 'social',
-          queryId: 'nature-daily',
-          queryIntent: DailyQueryIntents.nature,
-          queryText: '오늘 자연 식물',
-          title: '제목',
-          snippet: '',
-          url: Uri.parse('https://example.com'),
-        ),
+        () => _searchDocument(source: 'social'),
         throwsArgumentError,
       );
       expect(
-        () => SearchDocument(
-          source: SearchDocumentSources.web,
-          queryId: 'nature-daily',
-          queryIntent: DailyQueryIntents.nature,
-          queryText: '오늘 자연 식물',
-          title: '제목',
-          snippet: '',
-          url: Uri.parse('file:///tmp/material.html'),
-        ),
+        () => _searchDocument(url: Uri.parse('file:///tmp/material.html')),
         throwsArgumentError,
       );
       expect(
-        () => SearchDocument(
-          source: SearchDocumentSources.web,
-          queryId: 'nature-daily',
-          queryIntent: DailyQueryIntents.nature,
-          queryText: '오늘 자연 식물',
-          title: '',
-          snippet: '',
-          url: Uri.parse('https://example.com'),
-        ),
+        () => _searchDocument(title: '', snippet: ''),
         throwsArgumentError,
       );
     });
   });
+}
+
+SearchDocument _searchDocument({
+  String source = SearchDocumentSources.web,
+  Uri? url,
+  String title = '제목',
+  String snippet = '',
+}) {
+  return SearchDocument(
+    source: source,
+    queryId: 'nature-daily',
+    queryIntent: DailyQueryIntents.nature,
+    queryText: '오늘 자연 식물',
+    queryPriority: 95,
+    freshnessWindowDays: 7,
+    title: title,
+    snippet: snippet,
+    url: url ?? Uri.parse('https://example.com'),
+  );
 }
