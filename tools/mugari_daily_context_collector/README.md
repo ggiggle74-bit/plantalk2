@@ -72,6 +72,23 @@ the eight-candidate and per-type limits again, and produces a final validated
 `DailyKeywordContextDocument`. Empty or partially failed input remains a valid
 document.
 
+### CR-2F — observable replacement runner
+
+CR-2F adds `DailyContextCollectorRunner`, the CPU-owned pipeline that plans
+queries, loads normalized search documents, extracts safe candidates, combines
+local fallback sources, and produces one validated daily document.
+
+Each run reports one explicit external-discovery state:
+
+- `SUCCESS`: at least one safe search candidate was extracted
+- `EMPTY`: searches completed but no safe candidate matched
+- `SOURCE_FAILED`: every search failed, or a partial failure left no reliable
+  candidate
+
+Partial failures with usable candidates remain `SUCCESS` with
+`degraded: true`. Summary output contains counts and failed IDs only, never
+document text, response bodies, authorization headers, or keys.
+
 ## Not included yet
 
 - live HTTP transport or production Kakao key
@@ -142,11 +159,12 @@ dart run bin/plan_daily_queries.dart 2026-07-18 ko-KR `
 3. Kakao/Daum Search client with fixture-based tests — CR-2C
 4. Keyword extraction, safety filtering, scoring, and diversity limits — CR-2D
 5. Calendar/season source and fail-safe source composition — CR-2E
-6. Weather, holiday, safe-issue, and optional region adapters
-7. Supabase repository and idempotent daily upsert
-8. Scheduler activation
-9. Plantalk remote source activation with local fallback
-10. Age-aware ranking as a separate policy stage
+6. Observable search/extraction/composition runner — CR-2F
+7. Weather, holiday, safe-issue, and optional region adapters
+8. Supabase repository and idempotent daily upsert
+9. Scheduler activation
+10. Plantalk remote source activation with local fallback
+11. Age-aware ranking as a separate policy stage
 
 The existing Flutter collector can later become an operator review screen. It
 must not hold production search secrets or run the scheduled collector.
