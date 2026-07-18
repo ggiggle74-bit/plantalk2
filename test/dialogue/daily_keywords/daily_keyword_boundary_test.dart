@@ -118,7 +118,7 @@ void main() {
     }
   });
 
-  test('opening context provider stays outside runtime wiring', () {
+  test('opening context provider and factory stay outside runtime wiring', () {
     const files = [
       'lib/dialogue/chat_panel.dart',
       'lib/dialogue/chat_panel_conversation_controller.dart',
@@ -130,8 +130,14 @@ void main() {
 
     for (final path in files) {
       final source = File(path).readAsStringSync().toLowerCase();
-      expect(source, isNot(contains('dailyopeningcontextprovider')));
-      expect(source, isNot(contains('daily_opening_context_provider')));
+      for (final snippet in [
+        'dailyopeningcontextprovider',
+        'daily_opening_context_provider',
+        'dailyopeningcontextproviderfactory',
+        'daily_opening_context_provider_factory',
+      ]) {
+        expect(source, isNot(contains(snippet)));
+      }
     }
   });
 }
