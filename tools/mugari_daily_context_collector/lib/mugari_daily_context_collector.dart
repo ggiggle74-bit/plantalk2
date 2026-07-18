@@ -1,3 +1,4 @@
+export 'src/extraction/daily_keyword_extraction_policy.dart';
 export 'src/models/daily_keyword_candidate.dart';
 export 'src/models/daily_keyword_context_document.dart';
 export 'src/models/search_document.dart';
