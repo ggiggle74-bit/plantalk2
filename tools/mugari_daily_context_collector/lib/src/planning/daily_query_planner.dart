@@ -210,7 +210,7 @@ final class DailyQueryPlanner {
 
   void _assertSafeQuery(String query) {
     final normalized = query.toLowerCase();
-    const forbiddenTerms = [
+    const forbiddenKoreanTerms = [
       '뉴스',
       '실시간',
       '사건',
@@ -218,13 +218,21 @@ final class DailyQueryPlanner {
       '정치',
       '범죄',
       '전쟁',
-      'breaking news',
-      'crime',
-      'war',
     ];
-    for (final term in forbiddenTerms) {
+    for (final term in forbiddenKoreanTerms) {
       if (normalized.contains(term)) {
         throw StateError('Unsafe query template contains a blocked term: $term');
+      }
+    }
+
+    final englishWords = normalized
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .trim()
+        .split(RegExp(r'\s+'));
+    const forbiddenEnglishWords = {'news', 'breaking', 'crime', 'war'};
+    for (final word in englishWords) {
+      if (forbiddenEnglishWords.contains(word)) {
+        throw StateError('Unsafe query template contains a blocked word: $word');
       }
     }
   }
