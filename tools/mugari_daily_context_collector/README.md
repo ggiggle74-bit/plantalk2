@@ -42,12 +42,29 @@ The client does not read environment variables, own an HTTP package, print or
 store the key, or make a live request by itself. A later server-side adapter
 will inject the production transport and secret.
 
+### CR-2D — whitelist extraction and ranking
+
+CR-2D adds `DailyKeywordExtractionPolicy`. It accepts normalized
+`SearchDocument` values and produces at most eight v1 candidates.
+
+The policy:
+
+- extracts only the checked-in weather, season, and safe-issue whitelist
+- rejects a complete document when blocked political, crime, war, accident, or
+  disaster terms are present
+- rejects stale and implausibly future-dated documents
+- combines catalog fit, query priority, and freshness into relevance scoring
+- keeps the highest-scored duplicate
+- prefers a specific term such as `장맛비` over the nested `비`
+- limits each candidate type to three entries
+- preserves optional age-band discovery metadata
+- returns an empty result instead of inventing an unrecognized keyword
+
 ## Not included yet
 
 - live HTTP transport or production Kakao key
 - weather or public-data API calls
 - RSS or HTML crawling
-- keyword extraction or scoring from search documents
 - Supabase writes
 - scheduling
 - Plantalk runtime activation
@@ -111,7 +128,7 @@ dart run bin/plan_daily_queries.dart 2026-07-18 ko-KR `
 1. Contract, validator, and optional age bands — CR-2A
 2. Search document model and deterministic query planner — CR-2B
 3. Kakao/Daum Search client with fixture-based tests — CR-2C
-4. Keyword extraction, safety filtering, scoring, and diversity limits
+4. Keyword extraction, safety filtering, scoring, and diversity limits — CR-2D
 5. Weather, calendar, holiday, safe-issue, and optional region sources
 6. Supabase repository and idempotent daily upsert
 7. Scheduler activation
