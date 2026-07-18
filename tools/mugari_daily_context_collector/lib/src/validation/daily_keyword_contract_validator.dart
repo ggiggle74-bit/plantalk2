@@ -21,11 +21,13 @@ final class DailyKeywordContractValidator {
     this.minimumFitScore = 0.60,
     this.maximumKeywords = 8,
     this.maximumConversationAngles = 4,
+    this.maximumTargetAgeBands = 6,
   });
 
   final double minimumFitScore;
   final int maximumKeywords;
   final int maximumConversationAngles;
+  final int maximumTargetAgeBands;
 
   DailyKeywordContractValidationResult validate(
     DailyKeywordContextDocument document,
@@ -136,6 +138,8 @@ final class DailyKeywordContractValidator {
       errors.add('$prefix.relevanceScore must be between 0.0 and 1.0.');
     }
 
+    _validateTargetAgeBands(errors, candidate, prefix);
+
     if (candidate.conversationAngles.isEmpty) {
       errors.add('$prefix.conversationAngles must not be empty.');
     }
@@ -163,6 +167,32 @@ final class DailyKeywordContractValidator {
         errors.add(
           '$prefix.conversationAngles[$angleIndex] duplicates an earlier angle.',
         );
+      }
+    }
+  }
+
+  void _validateTargetAgeBands(
+    List<String> errors,
+    DailyKeywordCandidate candidate,
+    String prefix,
+  ) {
+    final ageBands = candidate.targetAgeBands;
+    if (ageBands.length > maximumTargetAgeBands) {
+      errors.add(
+        '$prefix.targetAgeBands must contain at most '
+        '$maximumTargetAgeBands items.',
+      );
+    }
+
+    final seen = <String>{};
+    for (var index = 0; index < ageBands.length; index++) {
+      final ageBand = ageBands[index];
+      final label = '$prefix.targetAgeBands[$index]';
+      if (!DailyKeywordAgeBands.allowed.contains(ageBand)) {
+        errors.add('$label is not supported: $ageBand.');
+      }
+      if (!seen.add(_normalize(ageBand))) {
+        errors.add('$label duplicates an earlier age band.');
       }
     }
   }
