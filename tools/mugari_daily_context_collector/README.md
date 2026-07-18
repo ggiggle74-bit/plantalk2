@@ -27,6 +27,7 @@ Not included yet:
 - Supabase writes
 - scheduling
 - Plantalk runtime activation
+- age-band weighting or age-aware final selection
 
 ## Contract
 
@@ -60,6 +61,23 @@ It also contains one to four `conversationAngles`. These are short, reusable
 ways to discuss the same material. They are not final Mugari dialogue lines.
 The conversation engine remains responsible for character voice and final
 sentence composition.
+
+A candidate may optionally contain `targetAgeBands`. When the field is absent,
+the candidate is suitable for every age band. When present, it contains one or
+more of:
+
+```text
+10s
+20s
+30s
+40s
+50s
+60s_plus
+```
+
+The collector only labels age suitability. Plantalk will later use the label as
+a ranking signal; it must not treat an age band as a hard stereotype or infer a
+user's age from conversation text.
 
 Allowed candidate types:
 
@@ -97,14 +115,15 @@ Invalid input exits with a non-zero code and prints every contract violation.
 
 ## Planned sequence
 
-1. Contract and validator — CR-2A
-2. Search document model and deterministic query planner
+1. Contract, validator, and optional age bands — CR-2A
+2. Search document model and deterministic query planner — CR-2B
 3. Kakao/Daum Search client with fixture-based tests
 4. Keyword extraction, safety filtering, scoring, and diversity limits
 5. Weather, calendar, holiday, safe-issue, and optional region sources
 6. Supabase repository and idempotent daily upsert
 7. Scheduler activation
 8. Plantalk remote source activation with local fallback
+9. Age-aware ranking as a separate policy stage
 
 The existing Flutter collector can later become an operator review screen. It
 must not hold production search secrets or run the scheduled collector.
