@@ -20,6 +20,26 @@ final class DailyKeywordTones {
   static const allowed = {gentle, calm, bright, cautious};
 }
 
+final class DailyKeywordAgeBands {
+  DailyKeywordAgeBands._();
+
+  static const teens = '10s';
+  static const twenties = '20s';
+  static const thirties = '30s';
+  static const forties = '40s';
+  static const fifties = '50s';
+  static const sixtiesPlus = '60s_plus';
+
+  static const allowed = {
+    teens,
+    twenties,
+    thirties,
+    forties,
+    fifties,
+    sixtiesPlus,
+  };
+}
+
 final class DailyKeywordCandidate {
   DailyKeywordCandidate({
     required String type,
@@ -31,6 +51,7 @@ final class DailyKeywordCandidate {
     required Iterable<String> conversationAngles,
     String? category,
     this.relevanceScore,
+    Iterable<String> targetAgeBands = const [],
   }) : type = type.trim().toLowerCase(),
        keyword = keyword.trim(),
        hint = hint.trim(),
@@ -39,6 +60,9 @@ final class DailyKeywordCandidate {
        tone = tone.trim().toLowerCase(),
        conversationAngles = List.unmodifiable(
          conversationAngles.map((angle) => angle.trim()),
+       ),
+       targetAgeBands = List.unmodifiable(
+         targetAgeBands.map((ageBand) => ageBand.trim().toLowerCase()),
        );
 
   factory DailyKeywordCandidate.fromJson(Map<String, Object?> json) {
@@ -52,6 +76,7 @@ final class DailyKeywordCandidate {
       tone: _requiredString(json, 'tone'),
       fitScore: _requiredDouble(json, 'fitScore'),
       conversationAngles: _requiredStringList(json, 'conversationAngles'),
+      targetAgeBands: _optionalStringList(json, 'targetAgeBands'),
     );
   }
 
@@ -65,6 +90,9 @@ final class DailyKeywordCandidate {
   final double fitScore;
   final List<String> conversationAngles;
 
+  /// Empty means the candidate is suitable for every age band.
+  final List<String> targetAgeBands;
+
   Map<String, Object?> toJson() {
     return {
       'type': type,
@@ -76,6 +104,7 @@ final class DailyKeywordCandidate {
       'tone': tone,
       'fitScore': fitScore,
       'conversationAngles': conversationAngles,
+      if (targetAgeBands.isNotEmpty) 'targetAgeBands': targetAgeBands,
     };
   }
 
@@ -130,7 +159,24 @@ final class DailyKeywordCandidate {
     if (value is! List<Object?>) {
       throw FormatException('$key must be a list.');
     }
+    return _stringList(value, key);
+  }
 
+  static List<String> _optionalStringList(
+    Map<String, Object?> json,
+    String key,
+  ) {
+    final value = json[key];
+    if (value == null) {
+      return const [];
+    }
+    if (value is! List<Object?>) {
+      throw FormatException('$key must be a list when present.');
+    }
+    return _stringList(value, key);
+  }
+
+  static List<String> _stringList(List<Object?> value, String key) {
     final result = <String>[];
     for (final item in value) {
       if (item is! String) {
