@@ -111,9 +111,14 @@ final class DailyKeywordContextDocument {
   }
 
   static DateTime _parseDateTime(String value, String key) {
+    final hasTimeAndZone = RegExp(
+      r'T.*(?:[zZ]|[+-]\d{2}:\d{2})$',
+    ).hasMatch(value);
     final parsed = DateTime.tryParse(value);
-    if (parsed == null) {
-      throw FormatException('$key must be an ISO-8601 date-time.');
+    if (!hasTimeAndZone || parsed == null) {
+      throw FormatException(
+        '$key must be an ISO-8601 date-time with a timezone.',
+      );
     }
     return parsed.toUtc();
   }
