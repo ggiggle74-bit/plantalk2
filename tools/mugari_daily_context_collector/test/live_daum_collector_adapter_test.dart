@@ -1,6 +1,8 @@
 import 'package:mugari_daily_context_collector/mugari_daily_context_collector.dart';
 import 'package:test/test.dart';
 
+import '../bin/src/dart_io_search_http_transport.dart';
+
 void main() {
   group('DaumSearchDocumentLoader', () {
     test('uses web recency search for weather', () async {
