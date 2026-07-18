@@ -1,6 +1,5 @@
 import '../composition/daily_keyword_context_assembler.dart';
 import '../extraction/daily_keyword_extraction_policy.dart';
-import '../models/daily_keyword_candidate.dart';
 import '../models/daily_keyword_context_document.dart';
 import '../models/search_document.dart';
 import '../planning/daily_query_planner.dart';
