@@ -1,6 +1,7 @@
 import '../models/latest_condition_memory.dart';
 import '../services/dialogue_service.dart';
 import 'conversation_orchestrator.dart';
+import 'daily_keywords/models/daily_opening_context.dart';
 import 'dialogue_decision_context_builder.dart';
 import 'dialogue_engine.dart';
 import 'models/conversation_request.dart';
@@ -22,6 +23,9 @@ class ChatPanelConversationRequest {
     this.latestConditionMemory,
     this.conditionMemoryReplyCount = 0,
     this.fetchDialogueReply,
+    this.dailyOpeningContext,
+    this.isOpeningTurn = false,
+    this.now,
   });
 
   final String plantName;
@@ -35,6 +39,9 @@ class ChatPanelConversationRequest {
   final LatestConditionMemory? latestConditionMemory;
   final int conditionMemoryReplyCount;
   final ChatPanelDialogueReplyFetcher? fetchDialogueReply;
+  final DailyOpeningContext? dailyOpeningContext;
+  final bool isOpeningTurn;
+  final DateTime? now;
 }
 
 class ChatPanelConversationResponse {
@@ -190,7 +197,10 @@ class ChatPanelConversationController {
       species: request.speciesDisplayName,
       mood: request.mood,
       friendship: request.friendship,
+      now: request.now,
       latestConditionMemory: request.latestConditionMemory,
+      dailyOpeningContext: request.dailyOpeningContext,
+      isOpeningTurn: request.isOpeningTurn,
     );
 
     final route = _conversationOrchestrator.router.route(conversationRequest);
