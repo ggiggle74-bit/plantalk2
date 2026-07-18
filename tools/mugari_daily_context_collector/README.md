@@ -60,6 +60,18 @@ The policy:
 - preserves optional age-band discovery metadata
 - returns an empty result instead of inventing an unrecognized keyword
 
+### CR-2E — fail-safe source composition
+
+CR-2E adds a common `DailyCandidateSource` boundary, an immutable snapshot
+source, a deterministic Korean calendar/season source, and
+`DailyKeywordContextAssembler`.
+
+The assembler isolates individual source failures, rejects candidates that do
+not satisfy the v1 contract, keeps the strongest normalized duplicate, applies
+the eight-candidate and per-type limits again, and produces a final validated
+`DailyKeywordContextDocument`. Empty or partially failed input remains a valid
+document.
+
 ## Not included yet
 
 - live HTTP transport or production Kakao key
@@ -129,11 +141,12 @@ dart run bin/plan_daily_queries.dart 2026-07-18 ko-KR `
 2. Search document model and deterministic query planner — CR-2B
 3. Kakao/Daum Search client with fixture-based tests — CR-2C
 4. Keyword extraction, safety filtering, scoring, and diversity limits — CR-2D
-5. Weather, calendar, holiday, safe-issue, and optional region sources
-6. Supabase repository and idempotent daily upsert
-7. Scheduler activation
-8. Plantalk remote source activation with local fallback
-9. Age-aware ranking as a separate policy stage
+5. Calendar/season source and fail-safe source composition — CR-2E
+6. Weather, holiday, safe-issue, and optional region adapters
+7. Supabase repository and idempotent daily upsert
+8. Scheduler activation
+9. Plantalk remote source activation with local fallback
+10. Age-aware ranking as a separate policy stage
 
 The existing Flutter collector can later become an operator review screen. It
 must not hold production search secrets or run the scheduled collector.
