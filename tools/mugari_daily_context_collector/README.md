@@ -163,12 +163,19 @@ dart run bin/plan_daily_queries.dart 2026-07-18 ko-KR `
   --region-code=KR-11 --region-label=서울 `
   --age-bands=10s,20s,30s,40s,50s,60s_plus
 
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 $env:KAKAO_REST_API_KEY = '<Kakao REST API key>'
 dart run bin/collect_daily_context.dart 2026-07-18 ko-KR `
   --region-code=KR-11 --region-label=서울 `
   --age-bands=10s,20s,30s,40s,50s,60s_plus
 Remove-Item Env:KAKAO_REST_API_KEY
 ```
+
+Windows PowerShell must use UTF-8 output encoding before capturing the CLI JSON
+into a variable or pipe. Without this setting, Korean document text can be
+decoded with the legacy console code page and the otherwise valid JSON may no
+longer parse.
 
 ## Planned sequence
 
