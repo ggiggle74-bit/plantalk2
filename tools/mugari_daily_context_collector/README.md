@@ -101,12 +101,28 @@ query intent. The live CLI reads `KAKAO_REST_API_KEY` only from the process
 environment. The key is never accepted as a command-line option and is never
 included in output or errors.
 
+### CR-2H — idempotent Supabase storage
+
+CR-2H adds the `daily_keyword_contexts` table keyed by date, locale, and
+region code. Re-running the collector for the same key updates one row instead
+of creating a duplicate.
+
+Row-level security allows read-only access for app roles. Insert, update, and
+delete access is reserved for the server-side service role. The storage
+repository and its bounded HTTPS transport remain under the executable
+`bin/src` boundary so the reusable library stays free of IO, environment
+variables, and storage dependencies.
+
+Persistence is opt-in with `--persist`. The CLI reads `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` from the process environment only, never from
+arguments. A source-failed collection is not written.
+
 ## Not included yet
 
 - production Kakao key provisioning
 - weather or public-data API calls
 - RSS or HTML crawling
-- Supabase writes
+- migration deployment automation
 - scheduling
 - Plantalk runtime activation
 - age-band weighting or age-aware final selection
@@ -169,7 +185,14 @@ $env:KAKAO_REST_API_KEY = '<Kakao REST API key>'
 dart run bin/collect_daily_context.dart 2026-07-18 ko-KR `
   --region-code=KR-11 --region-label=서울 `
   --age-bands=10s,20s,30s,40s,50s,60s_plus
+
+# After applying the CR-2H migration, storage is explicitly enabled with:
+# $env:SUPABASE_URL and $env:SUPABASE_SERVICE_ROLE_KEY
+dart run bin/collect_daily_context.dart 2026-07-18 ko-KR --persist
+
 Remove-Item Env:KAKAO_REST_API_KEY
+Remove-Item Env:SUPABASE_URL -ErrorAction SilentlyContinue
+Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue
 ```
 
 Windows PowerShell must use UTF-8 output encoding before capturing the CLI JSON
@@ -186,7 +209,7 @@ longer parse.
 5. Calendar/season source and fail-safe source composition — CR-2E
 6. Observable search/extraction/composition runner — CR-2F
 7. Live Daum transport, intent adapter, and secret-only CLI — CR-2G
-8. Supabase repository and idempotent daily upsert
+8. Supabase repository and idempotent daily upsert — CR-2H
 9. Scheduler activation
 10. Plantalk remote source activation with local fallback
 11. Age-aware ranking as a separate policy stage

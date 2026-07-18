@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:mugari_daily_context_collector/mugari_daily_context_collector.dart';
 
+import 'src/dart_io_daily_context_storage_transport.dart';
 import 'src/dart_io_search_http_transport.dart';
+import 'src/supabase_daily_context_repository.dart';
 
 Future<void> main(List<String> arguments) async {
   if (arguments.length < 2) {
@@ -15,7 +17,18 @@ Future<void> main(List<String> arguments) async {
   try {
     final date = _parseDate(arguments[0]);
     final locale = arguments[1];
-    final options = _options(arguments.skip(2));
+    final trailingArguments = arguments.skip(2).toList();
+    final persistCount = trailingArguments
+        .where((argument) => argument == '--persist')
+        .length;
+    if (persistCount > 1) {
+      throw const FormatException('--persist may be specified only once.');
+    }
+    final persist = persistCount == 1;
+    final options = _options(
+      trailingArguments.where((argument) => argument != '--persist'),
+    );
+
     final apiKey = Platform.environment['KAKAO_REST_API_KEY'];
     if (apiKey == null || apiKey.trim().isEmpty) {
       stderr.writeln(
@@ -25,14 +38,31 @@ Future<void> main(List<String> arguments) async {
       return;
     }
 
+    final supabaseUrl = persist ? Platform.environment['SUPABASE_URL'] : null;
+    final serviceRoleKey = persist
+        ? Platform.environment['SUPABASE_SERVICE_ROLE_KEY']
+        : null;
+    if (persist &&
+        (supabaseUrl == null ||
+            supabaseUrl.trim().isEmpty ||
+            serviceRoleKey == null ||
+            serviceRoleKey.trim().isEmpty)) {
+      stderr.writeln(
+        'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required '
+        'when --persist is enabled.',
+      );
+      exitCode = 78;
+      return;
+    }
+
     final ageBands = (options['age-bands'] ?? '')
         .split(',')
         .map((value) => value.trim())
         .where((value) => value.isNotEmpty);
-    final transport = DartIoSearchHttpTransport();
+    final searchTransport = DartIoSearchHttpTransport();
     final searchClient = DaumSearchClient(
       restApiKey: apiKey,
-      transport: transport.call,
+      transport: searchTransport.call,
     );
     final runner = DailyContextCollectorRunner(
       searchLoader: DaumSearchDocumentLoader(client: searchClient),
@@ -45,13 +75,30 @@ Future<void> main(List<String> arguments) async {
         regionLabel: options['region-label'],
         targetAgeBands: ageBands,
         generatedAt: DateTime.now().toUtc(),
-        sourceVersion: options['source-version'] ?? 'collector-cr2g',
+        sourceVersion: options['source-version'] ?? 'collector-cr2h',
       ),
     );
 
+    var stored = false;
+    if (persist && report.status != DailyCollectorRunStatus.sourceFailed) {
+      final storageTransport = DartIoDailyContextStorageTransport(
+        supabaseUrl: supabaseUrl!,
+      );
+      final repository = SupabaseDailyContextRepository(
+        supabaseUrl: supabaseUrl,
+        serviceRoleKey: serviceRoleKey!,
+        transport: storageTransport.call,
+      );
+      await repository.upsert(report.document);
+      stored = true;
+    }
+
     stdout.writeln(
       const JsonEncoder.withIndent('  ').convert({
-        'summary': report.toSummaryJson(),
+        'summary': {
+          ...report.toSummaryJson(),
+          'stored': stored,
+        },
         'document': report.document.toJson(),
       }),
     );
@@ -64,6 +111,9 @@ Future<void> main(List<String> arguments) async {
   } on ArgumentError catch (error) {
     stderr.writeln(error.message);
     exitCode = 64;
+  } on DailyContextStorageException catch (error) {
+    stderr.writeln(error);
+    exitCode = 74;
   } on Object {
     stderr.writeln('Daily context collection failed.');
     exitCode = 70;
@@ -74,10 +124,14 @@ void _usage() {
   stderr.writeln(
     'Usage: dart run bin/collect_daily_context.dart <YYYY-MM-DD> <locale> '
     '[--region-code=CODE] [--region-label=LABEL] '
-    '[--age-bands=10s,20s,...] [--source-version=VERSION]',
+    '[--age-bands=10s,20s,...] [--source-version=VERSION] [--persist]',
   );
   stderr.writeln(
-    'Secret: set KAKAO_REST_API_KEY in the process environment.',
+    'Search secret: set KAKAO_REST_API_KEY in the process environment.',
+  );
+  stderr.writeln(
+    'Storage secrets for --persist: set SUPABASE_URL and '
+    'SUPABASE_SERVICE_ROLE_KEY in the process environment.',
   );
 }
 
