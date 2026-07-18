@@ -89,9 +89,21 @@ Partial failures with usable candidates remain `SUCCESS` with
 `degraded: true`. Summary output contains counts and failed IDs only, never
 document text, response bodies, authorization headers, or keys.
 
+### CR-2G — live Daum transport and secret-only CLI
+
+CR-2G connects the runner to the live Daum Search API through a bounded
+`dart:io` transport. The transport permits HTTPS requests only to the
+allowlisted provider host, disables redirects, applies time and response-size
+limits, and returns sanitized failures.
+
+`DaumSearchDocumentLoader` deterministically selects web or blog search per
+query intent. The live CLI reads `KAKAO_REST_API_KEY` only from the process
+environment. The key is never accepted as a command-line option and is never
+included in output or errors.
+
 ## Not included yet
 
-- live HTTP transport or production Kakao key
+- production Kakao key provisioning
 - weather or public-data API calls
 - RSS or HTML crawling
 - Supabase writes
@@ -150,7 +162,20 @@ dart run bin/mugari_daily_context_collector.dart example/daily_keyword_context.j
 dart run bin/plan_daily_queries.dart 2026-07-18 ko-KR `
   --region-code=KR-11 --region-label=서울 `
   --age-bands=10s,20s,30s,40s,50s,60s_plus
+
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
+$env:KAKAO_REST_API_KEY = '<Kakao REST API key>'
+dart run bin/collect_daily_context.dart 2026-07-18 ko-KR `
+  --region-code=KR-11 --region-label=서울 `
+  --age-bands=10s,20s,30s,40s,50s,60s_plus
+Remove-Item Env:KAKAO_REST_API_KEY
 ```
+
+Windows PowerShell must use UTF-8 output encoding before capturing the CLI JSON
+into a variable or pipe. Without this setting, Korean document text can be
+decoded with the legacy console code page and the otherwise valid JSON may no
+longer parse.
 
 ## Planned sequence
 
@@ -160,7 +185,7 @@ dart run bin/plan_daily_queries.dart 2026-07-18 ko-KR `
 4. Keyword extraction, safety filtering, scoring, and diversity limits — CR-2D
 5. Calendar/season source and fail-safe source composition — CR-2E
 6. Observable search/extraction/composition runner — CR-2F
-7. Weather, holiday, safe-issue, and optional region adapters
+7. Live Daum transport, intent adapter, and secret-only CLI — CR-2G
 8. Supabase repository and idempotent daily upsert
 9. Scheduler activation
 10. Plantalk remote source activation with local fallback
