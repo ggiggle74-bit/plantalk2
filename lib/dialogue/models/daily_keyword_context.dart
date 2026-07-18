@@ -35,6 +35,7 @@ class DailyKeywordEntry {
     this.plantHint,
     this.tone,
     this.fitScore,
+    this.targetAgeBands = const [],
   });
 
   final String type;
@@ -45,4 +46,7 @@ class DailyKeywordEntry {
   final String? plantHint;
   final String? tone;
   final double? fitScore;
+
+  /// Empty means the candidate is suitable for every age band.
+  final List<String> targetAgeBands;
 }

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plantalk.local/schema/daily_keyword_context_v1.schema.json",
+  "title": "Plantalk Daily Keyword Context v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "date",
+    "locale",
+    "regionCode",
+    "generatedAt",
+    "sourceVersion",
+    "keywords"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "daily-keyword-context/v1"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "regionCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourceVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "keywords": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/dailyKeywordCandidate"
+      }
+    }
+  },
+  "$defs": {
+    "dailyKeywordCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "keyword",
+        "hint",
+        "plantHint",
+        "tone",
+        "fitScore",
+        "conversationAngles"
+      ],
+      "properties": {
+        "type": {
+          "enum": ["weather", "calendar", "seasonal", "safe_issue"]
+        },
+        "keyword": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "hint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "relevanceScore": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "plantHint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "tone": {
+          "enum": ["gentle", "calm", "bright", "cautious"]
+        },
+        "fitScore": {
+          "type": "number",
+          "minimum": 0.6,
+          "maximum": 1.0
+        },
+        "conversationAngles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "targetAgeBands": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["10s", "20s", "30s", "40s", "50s", "60s_plus"]
+          }
+        }
+      }
+    }
+  }
+}
