@@ -87,4 +87,20 @@ void main() {
       expect(source, isNot(contains('safe_issue_keyword_catalog')));
     }
   });
+
+  test('opening selector stays outside conversation runtime wiring', () {
+    const files = [
+      'lib/dialogue/engines/local_casual_conversation_engine.dart',
+      'lib/dialogue/chat_panel_conversation_controller.dart',
+      'lib/dialogue/conversation_orchestrator.dart',
+      'lib/dialogue/models/conversation_request.dart',
+      'lib/main.dart',
+    ];
+
+    for (final path in files) {
+      final source = File(path).readAsStringSync().toLowerCase();
+      expect(source, isNot(contains('dailyopeningkeywordselector')));
+      expect(source, isNot(contains('daily_opening_keyword_selector')));
+    }
+  });
 }
