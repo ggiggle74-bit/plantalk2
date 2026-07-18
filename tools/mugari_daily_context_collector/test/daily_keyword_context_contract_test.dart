@@ -19,6 +19,10 @@ void main() {
           keyword: '장맛비',
           category: 'rain',
           relevanceScore: 0.92,
+          targetAgeBands: const [
+            DailyKeywordAgeBands.teens,
+            DailyKeywordAgeBands.twenties,
+          ],
           conversationAngles: const [
             '비 오는 날의 기분',
             '창밖 풍경',
@@ -49,9 +53,10 @@ void main() {
     expect(decoded.keywords.single.keyword, '장맛비');
     expect(decoded.keywords.single.plantHint, '화분 상태를 천천히 살피기');
     expect(decoded.keywords.single.conversationAngles, hasLength(3));
+    expect(decoded.keywords.single.targetAgeBands, ['10s', '20s']);
   });
 
-  test('normalizes candidate type, tone, text, and document timestamps', () {
+  test('normalizes candidate values and document timestamps', () {
     final document = DailyKeywordContextDocument(
       date: DateTime(2026, 7, 18, 15),
       locale: ' ko-KR ',
@@ -67,6 +72,7 @@ void main() {
           tone: ' GENTLE ',
           fitScore: 0.80,
           conversationAngles: const ['  빗소리 듣기  '],
+          targetAgeBands: const [' 20S ', ' 30s '],
         ),
       ],
     );
@@ -80,7 +86,23 @@ void main() {
     expect(document.keywords.single.keyword, '비');
     expect(document.keywords.single.tone, DailyKeywordTones.gentle);
     expect(document.keywords.single.conversationAngles, ['빗소리 듣기']);
+    expect(document.keywords.single.targetAgeBands, ['20s', '30s']);
     expect(validator.validate(document).isValid, isTrue);
+  });
+
+  test('omits targetAgeBands when a candidate is universal', () {
+    final candidate = _candidate(
+      type: DailyKeywordTypes.seasonal,
+      keyword: '한여름',
+      conversationAngles: const ['여름 햇빛'],
+    );
+
+    final json = candidate.toJson();
+    final decoded = DailyKeywordCandidate.fromJson(json);
+
+    expect(candidate.targetAgeBands, isEmpty);
+    expect(json.containsKey('targetAgeBands'), isFalse);
+    expect(decoded.targetAgeBands, isEmpty);
   });
 
   test('rejects unsupported values, low scores, and missing angles', () {
@@ -100,6 +122,7 @@ void main() {
           fitScore: 0.59,
           relevanceScore: 1.2,
           conversationAngles: const [],
+          targetAgeBands: const ['children', '20s', ' 20S '],
         ),
       ],
     );
@@ -112,6 +135,8 @@ void main() {
     expect(result.errors, anyElement(contains('fitScore')));
     expect(result.errors, anyElement(contains('relevanceScore')));
     expect(result.errors, anyElement(contains('must not be empty')));
+    expect(result.errors, anyElement(contains('targetAgeBands')));
+    expect(result.errors, anyElement(contains('duplicates an earlier age band')));
     expect(() => result.throwIfInvalid(), throwsFormatException);
   });
 
@@ -216,6 +241,7 @@ DailyKeywordCandidate _candidate({
   required Iterable<String> conversationAngles,
   String? category,
   double? relevanceScore,
+  Iterable<String> targetAgeBands = const [],
 }) {
   return DailyKeywordCandidate(
     type: type,
@@ -227,5 +253,6 @@ DailyKeywordCandidate _candidate({
     tone: DailyKeywordTones.gentle,
     fitScore: 0.80,
     conversationAngles: conversationAngles,
+    targetAgeBands: targetAgeBands,
   );
 }
