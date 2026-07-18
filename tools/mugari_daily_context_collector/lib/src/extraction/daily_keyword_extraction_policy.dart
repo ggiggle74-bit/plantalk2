@@ -72,7 +72,8 @@ final class DailyKeywordExtractionPolicy {
 
       var matched = false;
       for (final seed in _seeds) {
-        if (!_containsKeyword(searchable, seed.keyword)) {
+        if (!_containsKeyword(searchable, seed.keyword) ||
+            _hasMoreSpecificMatch(searchable, seed)) {
           continue;
         }
         matched = true;
@@ -176,6 +177,19 @@ final class DailyKeywordExtractionPolicy {
     final value =
         (seed.fitScore * 0.50) + (priority * 0.30) + (freshness * 0.20);
     return double.parse(value.clamp(0.0, 1.0).toStringAsFixed(4));
+  }
+
+  bool _hasMoreSpecificMatch(String value, _ExtractionSeed seed) {
+    final normalizedKeyword = _normalize(seed.keyword);
+    return _seeds.any((other) {
+      if (identical(other, seed)) {
+        return false;
+      }
+      final otherKeyword = _normalize(other.keyword);
+      return otherKeyword.length > normalizedKeyword.length &&
+          otherKeyword.contains(normalizedKeyword) &&
+          _containsKeyword(value, otherKeyword);
+    });
   }
 
   bool _containsBlockedTerm(String value) {
