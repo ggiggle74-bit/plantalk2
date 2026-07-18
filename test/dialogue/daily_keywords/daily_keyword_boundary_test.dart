@@ -117,4 +117,21 @@ void main() {
       expect(source, isNot(contains('daily_opening_context')));
     }
   });
+
+  test('opening context provider stays outside runtime wiring', () {
+    const files = [
+      'lib/dialogue/chat_panel.dart',
+      'lib/dialogue/chat_panel_conversation_controller.dart',
+      'lib/dialogue/conversation_orchestrator.dart',
+      'lib/dialogue/engines/local_casual_conversation_engine.dart',
+      'lib/dialogue/models/conversation_request.dart',
+      'lib/main.dart',
+    ];
+
+    for (final path in files) {
+      final source = File(path).readAsStringSync().toLowerCase();
+      expect(source, isNot(contains('dailyopeningcontextprovider')));
+      expect(source, isNot(contains('daily_opening_context_provider')));
+    }
+  });
 }
