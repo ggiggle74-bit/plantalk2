@@ -20,6 +20,26 @@ class DailyKeywordTones {
   static const allowed = {gentle, calm, bright, cautious};
 }
 
+class DailyKeywordAgeBands {
+  DailyKeywordAgeBands._();
+
+  static const teens = '10s';
+  static const twenties = '20s';
+  static const thirties = '30s';
+  static const forties = '40s';
+  static const fifties = '50s';
+  static const sixtiesPlus = '60s_plus';
+
+  static const allowed = {
+    teens,
+    twenties,
+    thirties,
+    forties,
+    fifties,
+    sixtiesPlus,
+  };
+}
+
 class DailyKeywordCandidate {
   const DailyKeywordCandidate({
     required this.type,
@@ -29,6 +49,7 @@ class DailyKeywordCandidate {
     required this.tone,
     required this.fitScore,
     this.category,
+    this.targetAgeBands = const [],
   });
 
   final String type;
@@ -38,4 +59,7 @@ class DailyKeywordCandidate {
   final String tone;
   final double fitScore;
   final String? category;
+
+  /// Empty means the candidate is suitable for every age band.
+  final List<String> targetAgeBands;
 }
