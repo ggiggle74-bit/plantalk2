@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:mugari_daily_context_collector/mugari_daily_context_collector.dart';
 
+import 'src/dart_io_search_http_transport.dart';
+
 Future<void> main(List<String> arguments) async {
   if (arguments.length < 2) {
     _usage();
