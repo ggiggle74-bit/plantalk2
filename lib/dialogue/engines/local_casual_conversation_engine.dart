@@ -31,6 +31,17 @@ class LocalCasualConversationEngine {
   }
 
   DailyKeywordEntry? _keywordFor(ConversationRequest request) {
+    final openingContext = request.dailyOpeningContext;
+    if (openingContext != null) {
+      final selected = openingContext.consume(
+        isOpeningTurn: request.isOpeningTurn,
+        consumedAt: request.now ?? DateTime.now(),
+      );
+      if (selected != null) {
+        return selected;
+      }
+    }
+
     final context = request.dailyKeywordContext;
     if (context == null || !context.hasKeywords) {
       return null;

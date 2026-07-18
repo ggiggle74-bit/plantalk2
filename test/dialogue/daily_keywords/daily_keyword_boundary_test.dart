@@ -47,8 +47,10 @@ void main() {
     'runtime conversation files do not reference LocalDailyKeywordSource',
     () {
       const files = [
+        'lib/dialogue/chat_panel.dart',
         'lib/dialogue/chat_panel_conversation_controller.dart',
         'lib/dialogue/conversation_orchestrator.dart',
+        'lib/dialogue/engines/local_casual_conversation_engine.dart',
         'lib/dialogue/models/conversation_request.dart',
         'lib/main.dart',
       ];
@@ -88,25 +90,31 @@ void main() {
     }
   });
 
-  test('opening projection stays outside conversation runtime wiring', () {
-    const files = [
-      'lib/dialogue/engines/local_casual_conversation_engine.dart',
+  test('opening runtime wiring stays limited to local chat files', () {
+    const wiredFiles = [
+      'lib/dialogue/chat_panel.dart',
       'lib/dialogue/chat_panel_conversation_controller.dart',
-      'lib/dialogue/conversation_orchestrator.dart',
+      'lib/dialogue/engines/local_casual_conversation_engine.dart',
       'lib/dialogue/models/conversation_request.dart',
-      'lib/main.dart',
     ];
 
-    for (final path in files) {
+    for (final path in wiredFiles) {
       final source = File(path).readAsStringSync().toLowerCase();
-      for (final snippet in [
-        'dailyopeningkeywordselector',
-        'daily_opening_keyword_selector',
-        'dailyopeningcontext',
-        'daily_opening_context',
-      ]) {
-        expect(source, isNot(contains(snippet)));
-      }
+      expect(
+        source,
+        contains('dailyopeningcontext'),
+        reason: '$path must carry the opening context',
+      );
+    }
+
+    const untouchedFiles = [
+      'lib/dialogue/conversation_orchestrator.dart',
+      'lib/main.dart',
+    ];
+    for (final path in untouchedFiles) {
+      final source = File(path).readAsStringSync().toLowerCase();
+      expect(source, isNot(contains('dailyopeningcontext')));
+      expect(source, isNot(contains('daily_opening_context')));
     }
   });
 }
