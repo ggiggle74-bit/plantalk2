@@ -88,7 +88,7 @@ void main() {
     }
   });
 
-  test('opening selector stays outside conversation runtime wiring', () {
+  test('opening projection stays outside conversation runtime wiring', () {
     const files = [
       'lib/dialogue/engines/local_casual_conversation_engine.dart',
       'lib/dialogue/chat_panel_conversation_controller.dart',
@@ -99,8 +99,14 @@ void main() {
 
     for (final path in files) {
       final source = File(path).readAsStringSync().toLowerCase();
-      expect(source, isNot(contains('dailyopeningkeywordselector')));
-      expect(source, isNot(contains('daily_opening_keyword_selector')));
+      for (final snippet in [
+        'dailyopeningkeywordselector',
+        'daily_opening_keyword_selector',
+        'dailyopeningcontext',
+        'daily_opening_context',
+      ]) {
+        expect(source, isNot(contains(snippet)));
+      }
     }
   });
 }
