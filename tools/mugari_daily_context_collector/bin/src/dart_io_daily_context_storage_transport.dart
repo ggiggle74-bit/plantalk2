@@ -30,7 +30,7 @@ final class DartIoDailyContextStorageTransport {
     DailyContextStorageRequest input,
   ) async {
     final expectedPath =
-        '/rest/v1/' + SupabaseDailyContextRepository.tableName;
+        '/rest/v1/${SupabaseDailyContextRepository.tableName}';
     if (input.uri.scheme != _allowedOrigin.scheme ||
         input.uri.host.toLowerCase() != _allowedOrigin.host.toLowerCase() ||
         input.uri.port != _allowedOrigin.port ||
