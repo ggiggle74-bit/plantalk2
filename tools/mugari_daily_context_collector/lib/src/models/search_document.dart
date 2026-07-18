@@ -16,11 +16,14 @@ final class SearchDocument {
     required String queryId,
     required String queryIntent,
     required String queryText,
+    required this.queryPriority,
+    required this.freshnessWindowDays,
     required String title,
     required String snippet,
     required Uri url,
     DateTime? publishedAt,
     Iterable<String> targetAgeBands = const [],
+    this.regionScoped = false,
   }) : source = _validatedSource(source),
        queryId = _validatedQueryId(queryId),
        queryIntent = _validatedQueryIntent(queryIntent),
@@ -30,9 +33,47 @@ final class SearchDocument {
        url = _validatedUrl(url),
        publishedAt = publishedAt?.toUtc(),
        targetAgeBands = _normalizedAgeBands(targetAgeBands) {
+    if (queryPriority < 0 || queryPriority > 100) {
+      throw ArgumentError.value(
+        queryPriority,
+        'queryPriority',
+        'must be between 0 and 100',
+      );
+    }
+    if (freshnessWindowDays < 1 || freshnessWindowDays > 90) {
+      throw ArgumentError.value(
+        freshnessWindowDays,
+        'freshnessWindowDays',
+        'must be between 1 and 90',
+      );
+    }
     if (this.title.isEmpty && this.snippet.isEmpty) {
       throw ArgumentError('title and snippet must not both be empty');
     }
+  }
+
+  factory SearchDocument.fromQuery({
+    required String source,
+    required DailySearchQuery query,
+    required String title,
+    required String snippet,
+    required Uri url,
+    DateTime? publishedAt,
+  }) {
+    return SearchDocument(
+      source: source,
+      queryId: query.id,
+      queryIntent: query.intent,
+      queryText: query.text,
+      queryPriority: query.priority,
+      freshnessWindowDays: query.freshnessWindowDays,
+      title: title,
+      snippet: snippet,
+      url: url,
+      publishedAt: publishedAt,
+      targetAgeBands: query.targetAgeBands,
+      regionScoped: query.regionScoped,
+    );
   }
 
   factory SearchDocument.fromJson(Map<String, Object?> json) {
@@ -41,11 +82,14 @@ final class SearchDocument {
       queryId: _requiredString(json, 'queryId'),
       queryIntent: _requiredString(json, 'queryIntent'),
       queryText: _requiredString(json, 'queryText'),
+      queryPriority: _requiredInt(json, 'queryPriority'),
+      freshnessWindowDays: _requiredInt(json, 'freshnessWindowDays'),
       title: _requiredString(json, 'title'),
       snippet: _requiredString(json, 'snippet'),
       url: Uri.parse(_requiredString(json, 'url')),
       publishedAt: _optionalDateTime(json, 'publishedAt'),
       targetAgeBands: _optionalStringList(json, 'targetAgeBands'),
+      regionScoped: _optionalBool(json, 'regionScoped'),
     );
   }
 
@@ -53,24 +97,31 @@ final class SearchDocument {
   final String queryId;
   final String queryIntent;
   final String queryText;
+  final int queryPriority;
+  final int freshnessWindowDays;
   final String title;
   final String snippet;
   final Uri url;
   final DateTime? publishedAt;
   final List<String> targetAgeBands;
+  final bool regionScoped;
 
   Map<String, Object?> toJson() {
+    final timestamp = publishedAt;
     return {
       'source': source,
       'queryId': queryId,
       'queryIntent': queryIntent,
       'queryText': queryText,
+      'queryPriority': queryPriority,
+      'freshnessWindowDays': freshnessWindowDays,
       'title': title,
       'snippet': snippet,
       'url': url.toString(),
-      if (publishedAt != null)
-        'publishedAt': publishedAt!.toUtc().toIso8601String(),
+      if (timestamp != null)
+        'publishedAt': timestamp.toUtc().toIso8601String(),
       if (targetAgeBands.isNotEmpty) 'targetAgeBands': targetAgeBands,
+      'regionScoped': regionScoped,
     };
   }
 
@@ -138,6 +189,25 @@ final class SearchDocument {
     final value = json[key];
     if (value is! String) {
       throw FormatException('$key must be a string.');
+    }
+    return value;
+  }
+
+  static int _requiredInt(Map<String, Object?> json, String key) {
+    final value = json[key];
+    if (value is! int) {
+      throw FormatException('$key must be an integer.');
+    }
+    return value;
+  }
+
+  static bool _optionalBool(Map<String, Object?> json, String key) {
+    final value = json[key];
+    if (value == null) {
+      return false;
+    }
+    if (value is! bool) {
+      throw FormatException('$key must be a boolean when present.');
     }
     return value;
   }
