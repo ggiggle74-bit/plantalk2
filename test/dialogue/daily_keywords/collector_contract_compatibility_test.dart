@@ -52,7 +52,13 @@ void main() {
 Map<String, Object?> _stringKeyedMap(Object? value) {
   expect(value, isA<Map<Object?, Object?>>());
   final map = value! as Map<Object?, Object?>;
-  return {
-    for (final entry in map.entries) entry.key! as String: entry.value,
-  };
+  final result = <String, Object?>{};
+
+  for (final entry in map.entries) {
+    final key = entry.key;
+    expect(key, isA<String>());
+    result[key! as String] = entry.value;
+  }
+
+  return result;
 }
