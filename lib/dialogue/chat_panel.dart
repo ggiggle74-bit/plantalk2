@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/latest_condition_memory.dart';
 import '../services/plant_service.dart';
 import 'chat_panel_conversation_controller.dart';
+import 'daily_keywords/models/daily_opening_context.dart';
 
 typedef FetchLatestConditionMemoryCallback =
     Future<LatestConditionMemory?> Function(String plantId);
@@ -30,6 +31,7 @@ class ChatPanel extends StatefulWidget {
     this.fetchLatestConditionMemory,
     this.fetchDialogueReply,
     this.conversationController,
+    this.dailyOpeningContext,
   });
 
   final String? plantId;
@@ -41,6 +43,7 @@ class ChatPanel extends StatefulWidget {
   final FetchLatestConditionMemoryCallback? fetchLatestConditionMemory;
   final FetchDialogueReplyCallback? fetchDialogueReply;
   final ChatPanelConversationController? conversationController;
+  final DailyOpeningContext? dailyOpeningContext;
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();
@@ -106,6 +109,8 @@ class _ChatPanelState extends State<ChatPanel> {
       return;
     }
 
+    final isOpeningTurn = _userMessageCount == 0;
+
     setState(() {
       _isSending = true;
     });
@@ -138,6 +143,9 @@ class _ChatPanelState extends State<ChatPanel> {
           latestConditionMemory: _latestConditionMemory,
           conditionMemoryReplyCount: _conditionMemoryReplyCount,
           fetchDialogueReply: widget.fetchDialogueReply,
+          dailyOpeningContext: widget.dailyOpeningContext,
+          isOpeningTurn: isOpeningTurn,
+          now: DateTime.now(),
         ),
       );
 
@@ -204,7 +212,6 @@ class _ChatPanelState extends State<ChatPanel> {
             speciesDisplayName == '알 수 없음'
         ? '종류 미확인'
         : '추정 종류: $speciesDisplayName';
-
     final latestConditionMemoryMessage = _latestConditionMemory?.message;
 
     return PopScope(
