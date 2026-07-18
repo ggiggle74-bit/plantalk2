@@ -77,7 +77,7 @@ List<String> _optionalStringList(Map<String, Object?> json, String key) {
   }
 
   expect(value, isA<List<Object?>>());
-  return (value! as List<Object?>).map((item) {
+  return (value as List<Object?>).map((item) {
     expect(item, isA<String>());
     return item! as String;
   }).toList(growable: false);
