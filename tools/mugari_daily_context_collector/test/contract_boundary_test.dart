@@ -4,7 +4,7 @@ import 'package:mugari_daily_context_collector/mugari_daily_context_collector.da
 import 'package:test/test.dart';
 
 void main() {
-  test('contract package has no UI, network, storage, or crawler dependency', () {
+  test('CR-2B core has no UI, IO, network, storage, or scheduler dependency', () {
     final dartFiles = Directory('lib')
         .listSync(recursive: true)
         .whereType<File>()
@@ -12,8 +12,10 @@ void main() {
 
     const forbiddenSnippets = [
       'dart:html',
+      'dart:io',
       'package:flutter',
       'package:http',
+      'platform.environment',
       'supabase',
       'kakao',
       'dapi.kakao.com',
@@ -27,7 +29,7 @@ void main() {
         expect(
           source,
           isNot(contains(snippet)),
-          reason: '${file.path} must not reference $snippet in CR-2A',
+          reason: '${file.path} must not reference $snippet in CR-2B',
         );
       }
     }
@@ -56,6 +58,26 @@ void main() {
     expect(
       schema,
       contains(DailyKeywordContextDocument.currentSchemaVersion),
+    );
+  });
+
+  test('planned queries stay within the safe deterministic template set', () {
+    final plan = const DailyQueryPlanner().plan(
+      DailyQueryPlanRequest(
+        date: DateTime.utc(2026, 7, 18),
+        locale: 'ko-KR',
+        regionCode: 'KR-11',
+        regionLabel: '서울',
+        targetAgeBands: DailyKeywordAgeBands.allowed,
+      ),
+    );
+
+    expect(plan.queries, isNotEmpty);
+    expect(plan.queries.length, lessThanOrEqualTo(9));
+    expect(plan.queries.map((query) => query.id).toSet(), hasLength(plan.queries.length));
+    expect(
+      plan.queries.map((query) => query.text).toSet(),
+      hasLength(plan.queries.length),
     );
   });
 }
