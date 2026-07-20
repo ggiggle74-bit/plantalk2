@@ -121,6 +121,11 @@ secret key is sent only through the `apikey` header; a legacy service-role JWT
 also uses the Bearer authorization header. A source-failed collection is not
 written.
 
+The database owns `created_at` and `updated_at`. A trigger advances
+`updated_at` on every conflict-key update, while the collector never supplies
+either storage-audit timestamp. This keeps collection generation time separate
+from database write time.
+
 ## Not included yet
 
 - production Kakao key provisioning
