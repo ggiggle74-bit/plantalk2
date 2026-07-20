@@ -39,17 +39,19 @@ Future<void> main(List<String> arguments) async {
     }
 
     final supabaseUrl = persist ? Platform.environment['SUPABASE_URL'] : null;
-    final serviceRoleKey = persist
-        ? Platform.environment['SUPABASE_SERVICE_ROLE_KEY']
+    final serverApiKey = persist
+        ? Platform.environment['SUPABASE_SECRET_KEY'] ??
+              Platform.environment['SUPABASE_SERVICE_ROLE_KEY']
         : null;
     if (persist &&
         (supabaseUrl == null ||
             supabaseUrl.trim().isEmpty ||
-            serviceRoleKey == null ||
-            serviceRoleKey.trim().isEmpty)) {
+            serverApiKey == null ||
+            serverApiKey.trim().isEmpty)) {
       stderr.writeln(
-        'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required '
-        'when --persist is enabled.',
+        'SUPABASE_URL and a server API key are required when --persist '
+        'is enabled. Prefer SUPABASE_SECRET_KEY; the legacy '
+        'SUPABASE_SERVICE_ROLE_KEY remains supported.',
       );
       exitCode = 78;
       return;
@@ -86,7 +88,7 @@ Future<void> main(List<String> arguments) async {
       );
       final repository = SupabaseDailyContextRepository(
         supabaseUrl: supabaseUrl,
-        serviceRoleKey: serviceRoleKey!,
+        serverApiKey: serverApiKey!,
         transport: storageTransport.call,
       );
       await repository.upsert(report.document);
@@ -131,7 +133,8 @@ void _usage() {
   );
   stderr.writeln(
     'Storage secrets for --persist: set SUPABASE_URL and '
-    'SUPABASE_SERVICE_ROLE_KEY in the process environment.',
+    'SUPABASE_SECRET_KEY. The legacy SUPABASE_SERVICE_ROLE_KEY is '
+    'also supported.',
   );
 }
 

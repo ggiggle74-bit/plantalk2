@@ -47,16 +47,16 @@ final class DailyContextStorageException implements Exception {
 final class SupabaseDailyContextRepository {
   SupabaseDailyContextRepository({
     required String supabaseUrl,
-    required String serviceRoleKey,
+    required String serverApiKey,
     required DailyContextStorageTransport transport,
   }) : _baseUri = _validateBaseUri(supabaseUrl),
-       _serviceRoleKey = _validateSecret(serviceRoleKey),
+       _serverApiKey = _validateSecret(serverApiKey),
        _transport = transport;
 
   static const tableName = 'daily_keyword_contexts';
 
   final Uri _baseUri;
-  final String _serviceRoleKey;
+  final String _serverApiKey;
   final DailyContextStorageTransport _transport;
 
   Future<void> upsert(DailyKeywordContextDocument document) async {
@@ -73,15 +73,17 @@ final class SupabaseDailyContextRepository {
         'on_conflict': 'context_date,locale,region_code',
       },
     );
+    final headers = <String, String>{
+      'apikey': _serverApiKey,
+      if (!_isSecretApiKey(_serverApiKey))
+        'Authorization': 'Bearer $_serverApiKey',
+      'Content-Type': 'application/json; charset=utf-8',
+      'Prefer': 'resolution=merge-duplicates,return=minimal',
+    };
     final response = await _transport(
       DailyContextStorageRequest(
         uri: uri,
-        headers: {
-          'apikey': _serviceRoleKey,
-          'Authorization': 'Bearer $_serviceRoleKey',
-          'Content-Type': 'application/json; charset=utf-8',
-          'Prefer': 'resolution=merge-duplicates,return=minimal',
-        },
+        headers: headers,
         body: jsonEncode({
           'context_date': _date(document.date),
           'locale': document.locale,
@@ -130,11 +132,15 @@ final class SupabaseDailyContextRepository {
         normalized.length > 4096) {
       throw ArgumentError.value(
         '[redacted]',
-        'serviceRoleKey',
+        'serverApiKey',
         'must be a non-empty token without whitespace',
       );
     }
     return normalized;
+  }
+
+  static bool _isSecretApiKey(String value) {
+    return value.startsWith('sb_secret_');
   }
 
   static String _date(DateTime value) {

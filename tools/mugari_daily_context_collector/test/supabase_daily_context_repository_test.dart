@@ -14,7 +14,7 @@ void main() {
       DailyContextStorageRequest? captured;
       final repository = SupabaseDailyContextRepository(
         supabaseUrl: 'https://fixture-project.supabase.co',
-        serviceRoleKey: secret,
+        serverApiKey: secret,
         transport: (request) async {
           captured = request;
           return const DailyContextStorageResponse(
@@ -46,11 +46,33 @@ void main() {
       expect(captured!.body, isNot(contains(secret)));
     });
 
+    test('uses a current secret API key only in the apikey header', () async {
+      const secret = 'sb_secret_fixture-server-key';
+      DailyContextStorageRequest? captured;
+      final repository = SupabaseDailyContextRepository(
+        supabaseUrl: 'https://fixture-project.supabase.co',
+        serverApiKey: secret,
+        transport: (request) async {
+          captured = request;
+          return const DailyContextStorageResponse(
+            statusCode: 201,
+            body: '',
+          );
+        },
+      );
+
+      await repository.upsert(_document());
+
+      expect(captured!.headers['apikey'], secret);
+      expect(captured!.headers, isNot(contains('Authorization')));
+      expect(captured!.body, isNot(contains(secret)));
+    });
+
     test('repeated runs target the same conflict key', () async {
       final requests = <DailyContextStorageRequest>[];
       final repository = SupabaseDailyContextRepository(
         supabaseUrl: 'https://fixture-project.supabase.co',
-        serviceRoleKey: 'fixture-service-role-key',
+        serverApiKey: 'fixture-service-role-key',
         transport: (request) async {
           requests.add(request);
           return const DailyContextStorageResponse(
@@ -73,7 +95,7 @@ void main() {
       var called = false;
       final repository = SupabaseDailyContextRepository(
         supabaseUrl: 'https://fixture-project.supabase.co',
-        serviceRoleKey: 'fixture-service-role-key',
+        serverApiKey: 'fixture-service-role-key',
         transport: (_) async {
           called = true;
           return const DailyContextStorageResponse(
@@ -102,7 +124,7 @@ void main() {
       const secret = 'fixture-service-role-key';
       final repository = SupabaseDailyContextRepository(
         supabaseUrl: 'https://fixture-project.supabase.co',
-        serviceRoleKey: secret,
+        serverApiKey: secret,
         transport: (_) async => const DailyContextStorageResponse(
           statusCode: 403,
           body: '{"message":"sensitive provider detail"}',
@@ -129,7 +151,7 @@ void main() {
       expect(
         () => SupabaseDailyContextRepository(
           supabaseUrl: 'http://secret-host.invalid/path',
-          serviceRoleKey: 'fixture-key',
+          serverApiKey: 'fixture-key',
           transport: (_) async => const DailyContextStorageResponse(
             statusCode: 204,
             body: '',
@@ -146,7 +168,7 @@ void main() {
       expect(
         () => SupabaseDailyContextRepository(
           supabaseUrl: 'https://fixture-project.supabase.co',
-          serviceRoleKey: 'secret with spaces',
+          serverApiKey: 'secret with spaces',
           transport: (_) async => const DailyContextStorageResponse(
             statusCode: 204,
             body: '',
