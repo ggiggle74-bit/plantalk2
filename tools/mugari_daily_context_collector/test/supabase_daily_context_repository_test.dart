@@ -43,6 +43,7 @@ void main() {
       expect(body['region_code'], 'global');
       expect(body['schema_version'], 'daily-keyword-context/v1');
       expect(body['keywords'], isA<List<Object?>>());
+      expect(body, isNot(contains('updated_at')));
       expect(captured!.body, isNot(contains(secret)));
     });
 
@@ -201,6 +202,38 @@ void main() {
         ),
       ),
       throwsA(isA<DailyContextStorageException>()),
+    );
+  });
+
+  test('update timestamp migration installs a database trigger', () {
+    final migration = File(
+      '../../supabase/migrations/'
+      '20260720060000_manage_daily_context_updated_at.sql',
+    ).readAsStringSync().toLowerCase();
+
+    expect(
+      migration,
+      contains('alter column updated_at set default now()'),
+    );
+    expect(
+      migration,
+      contains('where updated_at < created_at'),
+    );
+    expect(
+      migration,
+      contains('before update on public.daily_keyword_contexts'),
+    );
+    expect(
+      migration,
+      contains(
+        'execute function public.set_daily_keyword_context_updated_at()',
+      ),
+    );
+    expect(
+      migration,
+      contains(
+        'from public, anon, authenticated',
+      ),
     );
   });
 
