@@ -113,9 +113,13 @@ repository and its bounded HTTPS transport remain under the executable
 `bin/src` boundary so the reusable library stays free of IO, environment
 variables, and storage dependencies.
 
-Persistence is opt-in with `--persist`. The CLI reads `SUPABASE_URL` and
-`SUPABASE_SERVICE_ROLE_KEY` from the process environment only, never from
-arguments. A source-failed collection is not written.
+Persistence is opt-in with `--persist`. The CLI reads `SUPABASE_URL` and a
+server API key from the process environment only, never from arguments.
+`SUPABASE_SECRET_KEY` (`sb_secret_...`) is preferred. The legacy
+`SUPABASE_SERVICE_ROLE_KEY` remains supported during migration. A current
+secret key is sent only through the `apikey` header; a legacy service-role JWT
+also uses the Bearer authorization header. A source-failed collection is not
+written.
 
 ## Not included yet
 
@@ -187,11 +191,12 @@ dart run bin/collect_daily_context.dart 2026-07-18 ko-KR `
   --age-bands=10s,20s,30s,40s,50s,60s_plus
 
 # After applying the CR-2H migration, storage is explicitly enabled with:
-# $env:SUPABASE_URL and $env:SUPABASE_SERVICE_ROLE_KEY
+# $env:SUPABASE_URL and $env:SUPABASE_SECRET_KEY
 dart run bin/collect_daily_context.dart 2026-07-18 ko-KR --persist
 
 Remove-Item Env:KAKAO_REST_API_KEY
 Remove-Item Env:SUPABASE_URL -ErrorAction SilentlyContinue
+Remove-Item Env:SUPABASE_SECRET_KEY -ErrorAction SilentlyContinue
 Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue
 ```
 
