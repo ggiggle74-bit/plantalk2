@@ -94,7 +94,6 @@ final class SupabaseDailyContextRepository {
           'keywords': document.keywords
               .map((keyword) => keyword.toJson())
               .toList(),
-          'updated_at': document.generatedAt.toUtc().toIso8601String(),
         }),
       ),
     );
