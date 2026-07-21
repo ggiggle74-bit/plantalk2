@@ -59,8 +59,8 @@ class SupabaseGeminiConversationEngine implements ApiConversationEngine {
     final body = <String, Object?>{
       'message': message,
       'plantName': plantName,
-      if (species != null) 'species': species,
-      if (mood != null) 'mood': mood,
+      'species': ?species,
+      'mood': ?mood,
       if (friendship != null) 'friendship': friendship.clamp(0, 100),
       'locale': _normalizedLocale(request.locale),
     };
