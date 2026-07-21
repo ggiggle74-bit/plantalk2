@@ -23,7 +23,7 @@ class ConversationIntentRouter {
       return ConversationRoute.localCasual;
     }
 
-    return ConversationRoute.fallback;
+    return ConversationRoute.api;
   }
 
   bool _isConditionFollowUp(String message) {
