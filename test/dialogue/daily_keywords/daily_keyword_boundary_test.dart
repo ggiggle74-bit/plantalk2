@@ -44,7 +44,7 @@ void main() {
   );
 
   test(
-    'runtime conversation files do not reference LocalDailyKeywordSource',
+    'runtime conversation files do not reference DailyKeywordSource',
     () {
       const files = [
         'lib/dialogue/chat_panel.dart',
@@ -90,8 +90,9 @@ void main() {
     }
   });
 
-  test('opening runtime wiring stays limited to local chat files', () {
+  test('opening context is carried only by composition root and local chat', () {
     const wiredFiles = [
+      'lib/main.dart',
       'lib/dialogue/chat_panel.dart',
       'lib/dialogue/chat_panel_conversation_controller.dart',
       'lib/dialogue/engines/local_casual_conversation_engine.dart',
@@ -107,15 +108,11 @@ void main() {
       );
     }
 
-    const untouchedFiles = [
+    final orchestrator = File(
       'lib/dialogue/conversation_orchestrator.dart',
-      'lib/main.dart',
-    ];
-    for (final path in untouchedFiles) {
-      final source = File(path).readAsStringSync().toLowerCase();
-      expect(source, isNot(contains('dailyopeningcontext')));
-      expect(source, isNot(contains('daily_opening_context')));
-    }
+    ).readAsStringSync().toLowerCase();
+    expect(orchestrator, isNot(contains('dailyopeningcontext')));
+    expect(orchestrator, isNot(contains('daily_opening_context')));
   });
 
   test('opening context provider and factory stay outside runtime wiring', () {
@@ -138,6 +135,40 @@ void main() {
       ]) {
         expect(source, isNot(contains(snippet)));
       }
+    }
+  });
+
+  test('Supabase adapter stays outside dialogue and memory boundaries', () {
+    final source = File(
+      'lib/data/daily_keywords/supabase_daily_keyword_source.dart',
+    ).readAsStringSync().toLowerCase();
+
+    expect(source, contains('supabase'));
+    expect(source, contains('daily_keyword_contexts'));
+    for (final snippet in [
+      'plant_memories',
+      'conversationrequest',
+      'conversationorchestrator',
+      'chatpanelconversationcontroller',
+      'apiconversationengine',
+    ]) {
+      expect(source, isNot(contains(snippet)));
+    }
+  });
+
+  test('main delegates remote source composition to the coordinator', () {
+    final source = File('lib/main.dart').readAsStringSync().toLowerCase();
+
+    expect(source, contains('dailyopeningcontextcoordinator.supabase()'));
+    expect(source, contains('dailyopeningcontext: dailyopeningcontext'));
+    for (final snippet in [
+      'supabasedailykeywordsource',
+      'daily_keyword_contexts',
+      'dailyopeningcontextprovider',
+      'dailyopeningcontextproviderfactory',
+      'plant_memories',
+    ]) {
+      expect(source, isNot(contains(snippet)));
     }
   });
 }

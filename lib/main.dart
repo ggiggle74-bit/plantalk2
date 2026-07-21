@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
 import 'app/condition_check_action_coordinator.dart';
+import 'app/daily_opening_context_coordinator.dart';
 import 'app/plant_chat_result_handler.dart';
 import 'app/plant_registration_action_coordinator.dart';
 import 'app/plant_card_state_mapper.dart';
@@ -59,6 +60,8 @@ class _MyAppState extends State<MyApp> {
       ExistingPlantStateCheckServiceFactory.supabase().build();
   final ConditionCheckActionCoordinator conditionCheckActionCoordinator =
       const ConditionCheckActionCoordinator();
+  final DailyOpeningContextCoordinator dailyOpeningContextCoordinator =
+      DailyOpeningContextCoordinator.supabase();
   final PlantChatResultHandler plantChatResultHandler =
       const PlantChatResultHandler();
   final PlantRegistrationActionCoordinator plantRegistrationActionCoordinator =
@@ -373,6 +376,18 @@ class _MyAppState extends State<MyApp> {
     required int waterDay,
     LatestConditionMemory? initialConditionMemory,
   }) async {
+    final normalizedPlantId = plantId?.trim();
+    final dailyOpeningContext = await dailyOpeningContextCoordinator.loadForChat(
+      date: DateTime.now(),
+      locale: 'ko-KR',
+      plantKey: normalizedPlantId == null || normalizedPlantId.isEmpty
+          ? plantName
+          : normalizedPlantId,
+    );
+    if (!context.mounted) {
+      return null;
+    }
+
     return Navigator.push<ChatPanelResult>(
       context,
       MaterialPageRoute(
@@ -384,6 +399,7 @@ class _MyAppState extends State<MyApp> {
             initialPlantMessage: initialPlantMessage,
             waterDay: waterDay,
             initialConditionMemory: initialConditionMemory,
+            dailyOpeningContext: dailyOpeningContext,
           );
         },
       ),
