@@ -79,7 +79,6 @@ class SupabaseDailyKeywordSource implements DailyKeywordSource {
 
     return _parseRow(
       row,
-      request: request,
       expectedDate: contextDate,
       expectedLocale: locale,
       expectedRegionCode: regionCode,
@@ -88,7 +87,6 @@ class SupabaseDailyKeywordSource implements DailyKeywordSource {
 
   DailyKeywordContext _parseRow(
     Map<String, dynamic> row, {
-    required DailyKeywordSourceRequest request,
     required String expectedDate,
     required String expectedLocale,
     required String expectedRegionCode,
