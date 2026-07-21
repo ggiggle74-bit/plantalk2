@@ -138,12 +138,13 @@ void main() {
     expect(response.conditionMemoryReplyCount, 0);
   });
 
-  test('API-like message does not call or use orchestrator', () async {
+  test('API-like message uses the orchestrator after a DB miss', () async {
     const orchestratorMarker = 'API_ORCHESTRATOR_MARKER';
     final orchestrator = _FakeConversationOrchestrator(
       _orchestratorResponse(
         route: ConversationRoute.api,
         replyText: orchestratorMarker,
+        usedApi: true,
       ),
     );
     final controller = ChatPanelConversationController(
@@ -160,8 +161,8 @@ void main() {
       ),
     );
 
-    expect(orchestrator.callCount, 0);
-    expect(response.replyText, isNot(contains(orchestratorMarker)));
+    expect(orchestrator.callCount, 1);
+    expect(response.replyText, contains(orchestratorMarker));
     expect(response.replyText.trim(), isNotEmpty);
     expect(response.conditionMemoryReplyCount, 0);
   });
@@ -330,11 +331,13 @@ Future<String?> _nullDialogueReply({String? situation, String? conditionKey}) {
 ConversationResponse _orchestratorResponse({
   required ConversationRoute route,
   required String replyText,
+  bool usedApi = false,
   bool isFallback = false,
 }) {
   return ConversationResponse(
     replyText: replyText,
     route: route,
+    usedApi: usedApi,
     isFallback: isFallback,
   );
 }
