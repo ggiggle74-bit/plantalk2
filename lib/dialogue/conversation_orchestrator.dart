@@ -44,7 +44,26 @@ class ConversationOrchestrator {
             debugReason: 'api_engine_unavailable',
           );
         }
-        return apiEngine.generate(request);
+        try {
+          final response = await apiEngine.generate(request);
+          if (response.route != ConversationRoute.api ||
+              !response.usedApi ||
+              response.isFallback ||
+              response.replyText.trim().isEmpty) {
+            return fallbackEngine.generate(
+              request,
+              route: ConversationRoute.api,
+              debugReason: 'api_response_invalid',
+            );
+          }
+          return response;
+        } catch (_) {
+          return fallbackEngine.generate(
+            request,
+            route: ConversationRoute.api,
+            debugReason: 'api_request_failed',
+          );
+        }
       case ConversationRoute.fallback:
         return fallbackEngine.generate(request);
     }
