@@ -62,9 +62,9 @@ void main() {
       ),
     );
 
-    expect(receivedBody, isNot(contains('species')));
-    expect(receivedBody, isNot(contains('mood')));
-    expect(receivedBody, isNot(contains('friendship')));
+    expect(receivedBody, isNot(containsPair('species', anything)));
+    expect(receivedBody, isNot(containsPair('mood', anything)));
+    expect(receivedBody, isNot(containsPair('friendship', anything)));
   });
 
   test('rejects invalid function responses', () {
@@ -88,7 +88,7 @@ void main() {
     );
 
     expect(
-      engine.generate(_request(message: '가' * 501)),
+      engine.generate(_request(message: List.filled(501, '가').join())),
       throwsA(isA<FormatException>()),
     );
     expect(callCount, 0);
