@@ -126,13 +126,36 @@ The database owns `created_at` and `updated_at`. A trigger advances
 either storage-audit timestamp. This keeps collection generation time separate
 from database write time.
 
+
+### CR-2I — scheduled collection and failure visibility
+
+CR-2I adds a GitHub Actions workflow that runs every day at 01:17 in the
+`Asia/Seoul` time zone and also supports a manually supplied collection date.
+It checks out the tested `plant-personality-mvp` collector branch, installs the
+pinned Dart SDK, analyzes and tests the collector, then runs the persisted live
+collection with a 15-minute job timeout.
+
+The workflow has read-only repository permission and serializes runs so a
+manual collection cannot overlap the scheduled collection. It reads
+`KAKAO_REST_API_KEY`, `SUPABASE_URL`, and `SUPABASE_SECRET_KEY` only from
+GitHub Actions repository secrets. Missing secrets, source failure, invalid
+output, or a storage failure makes the workflow fail. Empty or degraded but
+stored results remain observable warnings. Only the sanitized summary is
+written to the log and job summary; the full collected document stays in a
+temporary runner file and is deleted after validation.
+
+GitHub scheduled workflows run only from the repository default branch. This
+workflow is developed and verified on `plant-personality-mvp` first; production
+scheduling begins only after the workflow is deliberately promoted to the
+default branch.
+
 ## Not included yet
 
 - production Kakao key provisioning
 - weather or public-data API calls
 - RSS or HTML crawling
 - migration deployment automation
-- scheduling
+- production schedule promotion to the repository default branch
 - Plantalk runtime activation
 - age-band weighting or age-aware final selection
 
@@ -205,6 +228,24 @@ Remove-Item Env:SUPABASE_SECRET_KEY -ErrorAction SilentlyContinue
 Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue
 ```
 
+
+For CR-2I, add these repository secrets under **Settings > Secrets and
+variables > Actions**:
+
+```text
+KAKAO_REST_API_KEY
+SUPABASE_URL
+SUPABASE_SECRET_KEY
+```
+
+Do not add their values to workflow YAML, repository variables, command-line
+arguments, or logs. After the workflow reaches the default branch, use
+**Actions > Daily context collector > Run workflow** for the first controlled
+run. Leave `collection_date` empty to use the current date in
+`Asia/Seoul`, or provide a valid `YYYY-MM-DD` value for an idempotent rerun.
+A failed scheduled workflow is visible in the Actions run list and GitHub's
+workflow-failure notification; its job summary links back to the failed run.
+
 Windows PowerShell must use UTF-8 output encoding before capturing the CLI JSON
 into a variable or pipe. Without this setting, Korean document text can be
 decoded with the legacy console code page and the otherwise valid JSON may no
@@ -220,7 +261,7 @@ longer parse.
 6. Observable search/extraction/composition runner — CR-2F
 7. Live Daum transport, intent adapter, and secret-only CLI — CR-2G
 8. Supabase repository and idempotent daily upsert — CR-2H
-9. Scheduler activation
+9. GitHub Actions schedule and monitored persistence — CR-2I
 10. Plantalk remote source activation with local fallback
 11. Age-aware ranking as a separate policy stage
 

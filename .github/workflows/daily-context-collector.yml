@@ -1,0 +1,170 @@
+name: Daily context collector
+
+on:
+  schedule:
+    - cron: '17 1 * * *'
+      timezone: 'Asia/Seoul'
+  workflow_dispatch:
+    inputs:
+      collection_date:
+        description: 'Optional date to collect (YYYY-MM-DD, Asia/Seoul)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-context-collector
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    name: Collect and persist daily context
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: tools/mugari_daily_context_collector
+    env:
+      KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      MANUAL_COLLECTION_DATE: ${{ inputs.collection_date }}
+
+    steps:
+      - name: Check out the tested collector branch
+        uses: actions/checkout@v7.0.0
+        with:
+          ref: plant-personality-mvp
+          persist-credentials: false
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1.7.2
+        with:
+          sdk: 3.11.5
+
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          missing=()
+          [[ -n "$KAKAO_REST_API_KEY" ]] || missing+=("KAKAO_REST_API_KEY")
+          [[ -n "$SUPABASE_URL" ]] || missing+=("SUPABASE_URL")
+          [[ -n "$SUPABASE_SECRET_KEY" ]] || missing+=("SUPABASE_SECRET_KEY")
+
+          if (( ${#missing[@]} > 0 )); then
+            joined="$(IFS=', '; echo "${missing[*]}")"
+            echo "::error::Missing required repository secrets: $joined"
+            exit 78
+          fi
+
+      - name: Resolve Dart dependencies
+        run: dart pub get
+
+      - name: Analyze collector
+        run: dart analyze
+
+      - name: Test collector
+        run: dart test
+
+      - name: Collect and persist
+        id: collect
+        shell: bash
+        run: |
+          collection_date="${MANUAL_COLLECTION_DATE:-}"
+          if [[ -z "$collection_date" ]]; then
+            collection_date="$(TZ=Asia/Seoul date +%F)"
+          fi
+
+          result_file="$RUNNER_TEMP/daily-context-result.json"
+          error_file="$RUNNER_TEMP/daily-context-error.log"
+
+          set +e
+          dart run bin/collect_daily_context.dart \
+            "$collection_date" ko-KR \
+            --source-version=collector-cr2i \
+            --persist \
+            > "$result_file" 2> "$error_file"
+          collector_exit_code=$?
+          set -e
+
+          if [[ $collector_exit_code -ne 0 ]]; then
+            if [[ -s "$error_file" ]]; then
+              cat "$error_file" >&2
+            fi
+            echo "::error::Daily context collector exited with code $collector_exit_code."
+            exit "$collector_exit_code"
+          fi
+
+          if ! jq -e '.summary and .document' "$result_file" > /dev/null; then
+            echo "::error::Collector output was not a valid result document."
+            exit 65
+          fi
+
+          status="$(jq -r '.summary.status // "UNKNOWN"' "$result_file")"
+          stored="$(jq -r '.summary.stored // false' "$result_file")"
+          degraded="$(jq -r '.summary.degraded // false' "$result_file")"
+          keyword_count="$(jq -r '.summary.keywordCount // 0' "$result_file")"
+          search_document_count="$(
+            jq -r '.summary.searchDocumentCount // 0' "$result_file"
+          )"
+          failed_query_count="$(
+            jq -r '.summary.failedQueryIds | length' "$result_file"
+          )"
+          failed_source_count="$(
+            jq -r '.summary.failedCandidateSourceIds | length' "$result_file"
+          )"
+
+          case "$status" in
+            SUCCESS|EMPTY) ;;
+            *)
+              echo "::error::Collector reported unexpected status: $status"
+              exit 75
+              ;;
+          esac
+
+          if [[ "$stored" != "true" ]]; then
+            echo "::error::Collector completed without persisting the document."
+            exit 74
+          fi
+
+          if [[ "$status" == "EMPTY" ]]; then
+            echo "::warning::Search completed without a safe external candidate."
+          fi
+          if [[ "$degraded" == "true" ]]; then
+            echo "::warning::Collector completed in degraded mode."
+          fi
+
+          {
+            echo "## Daily context collection"
+            echo
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Date | $collection_date |"
+            echo "| Locale | ko-KR |"
+            echo "| Region | global |"
+            echo "| Status | $status |"
+            echo "| Stored | $stored |"
+            echo "| Degraded | $degraded |"
+            echo "| Keywords | $keyword_count |"
+            echo "| Search documents | $search_document_count |"
+            echo "| Failed queries | $failed_query_count |"
+            echo "| Failed candidate sources | $failed_source_count |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          jq -c '.summary' "$result_file"
+          rm -f "$result_file" "$error_file"
+
+      - name: Publish failure guidance
+        if: failure()
+        working-directory: .
+        shell: bash
+        run: |
+          {
+            echo "## Daily context collection failed"
+            echo
+            echo "Open the failed step logs and confirm the three repository secrets."
+            echo "Secret values and collected document text are not written by this step."
+            echo
+            echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } >> "$GITHUB_STEP_SUMMARY"
