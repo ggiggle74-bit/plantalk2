@@ -192,7 +192,10 @@ function parseInput(input: Record<string, unknown>): PlantChatInput | null {
     species === false ||
     mood === false ||
     (friendship != null &&
-      (!Number.isInteger(friendship) || friendship < 0 || friendship > 100))
+      (typeof friendship !== 'number' ||
+        !Number.isInteger(friendship) ||
+        friendship < 0 ||
+        friendship > 100))
   ) {
     return null;
   }
@@ -200,7 +203,6 @@ function parseInput(input: Record<string, unknown>): PlantChatInput | null {
   return {
     message,
     plantName,
-    ifPresent: undefined,
     ...(species == null ? {} : { species }),
     ...(mood == null ? {} : { mood }),
     ...(friendship == null ? {} : { friendship: friendship as number }),
