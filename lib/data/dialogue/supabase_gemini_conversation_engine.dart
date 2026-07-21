@@ -52,15 +52,16 @@ class SupabaseGeminiConversationEngine implements ApiConversationEngine {
       40,
     );
 
+    final species = _optionalBounded(request.species, 'species', 80);
+    final mood = _optionalBounded(request.mood, 'mood', 40);
+    final friendship = request.friendship;
+
     final body = <String, Object?>{
       'message': message,
       'plantName': plantName,
-      if (_optionalBounded(request.species, 'species', 80) case final species?)
-        'species': species,
-      if (_optionalBounded(request.mood, 'mood', 40) case final mood?)
-        'mood': mood,
-      if (request.friendship case final friendship?)
-        'friendship': friendship.clamp(0, 100),
+      if (species != null) 'species': species,
+      if (mood != null) 'mood': mood,
+      if (friendship != null) 'friendship': friendship.clamp(0, 100),
       'locale': _normalizedLocale(request.locale),
     };
 
