@@ -35,6 +35,30 @@ void main() {
     expect(route, ConversationRoute.conditionMemory);
   });
 
+  test('routes unrecognized nonempty conversation to api', () {
+    final route = router.route(
+      const ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '어제 오래된 영화를 다시 봤어',
+      ),
+    );
+
+    expect(route, ConversationRoute.api);
+  });
+
+  test('keeps empty input on the local fallback route', () {
+    final route = router.route(
+      const ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '   ',
+      ),
+    );
+
+    expect(route, ConversationRoute.fallback);
+  });
+
   test('routes long or knowledge-like questions to api', () {
     final route = router.route(
       const ConversationRequest(
