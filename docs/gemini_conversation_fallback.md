@@ -35,8 +35,8 @@ condition memory, daily keyword document, or earlier conversation history.
 ## Production setup
 
 Create a Gemini API key in Google AI Studio and restrict it to the Gemini API.
-Do not place the key in Flutter source, GitHub Actions secrets, database rows,
-or local shell history.
+Do not place the key in Flutter source, database rows, committed files, or
+local shell history.
 
 Set the secret and deploy with the Supabase CLI:
 
