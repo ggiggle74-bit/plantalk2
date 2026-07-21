@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plantalk2/dialogue/conversation_orchestrator.dart';
+import 'package:plantalk2/dialogue/engines/api_conversation_engine.dart';
 import 'package:plantalk2/dialogue/models/conversation_request.dart';
+import 'package:plantalk2/dialogue/models/conversation_response.dart';
 import 'package:plantalk2/dialogue/models/conversation_route.dart';
 import 'package:plantalk2/models/latest_condition_memory.dart';
 
@@ -60,6 +62,52 @@ void main() {
     expect(response.debugReason, 'api_engine_unavailable');
   });
 
+  test('uses the API engine for unrecognized conversation', () async {
+    final apiEngine = _RecordingApiConversationEngine(
+      const ConversationResponse(
+        replyText: '영화 이야기도 듣고 싶어.',
+        route: ConversationRoute.api,
+        usedApi: true,
+      ),
+    );
+    final orchestrator = ConversationOrchestrator(
+      apiConversationEngine: apiEngine,
+    );
+
+    final response = await orchestrator.respond(
+      const ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '어제 오래된 영화를 다시 봤어',
+      ),
+    );
+
+    expect(apiEngine.requests, hasLength(1));
+    expect(response.replyText, '영화 이야기도 듣고 싶어.');
+    expect(response.route, ConversationRoute.api);
+    expect(response.usedApi, isTrue);
+    expect(response.isFallback, isFalse);
+  });
+
+  test('fails closed when the API engine throws', () async {
+    final orchestrator = ConversationOrchestrator(
+      apiConversationEngine: _ThrowingApiConversationEngine(),
+    );
+
+    final response = await orchestrator.respond(
+      const ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '몬스테라 분갈이 방법을 자세히 알려줘',
+      ),
+    );
+
+    expect(response.route, ConversationRoute.api);
+    expect(response.usedApi, isFalse);
+    expect(response.isFallback, isTrue);
+    expect(response.debugReason, 'api_request_failed');
+  });
+
   test('new dialogue boundary code does not import forbidden integrations', () {
     final files = Directory('lib/dialogue')
         .listSync(recursive: true)
@@ -103,4 +151,25 @@ void main() {
       }
     }
   });
+}
+
+
+class _RecordingApiConversationEngine implements ApiConversationEngine {
+  _RecordingApiConversationEngine(this.response);
+
+  final ConversationResponse response;
+  final List<ConversationRequest> requests = [];
+
+  @override
+  Future<ConversationResponse> generate(ConversationRequest request) async {
+    requests.add(request);
+    return response;
+  }
+}
+
+class _ThrowingApiConversationEngine implements ApiConversationEngine {
+  @override
+  Future<ConversationResponse> generate(ConversationRequest request) {
+    throw StateError('provider unavailable');
+  }
 }

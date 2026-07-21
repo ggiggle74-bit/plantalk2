@@ -152,7 +152,7 @@ class ChatPanelConversationController {
     }
 
     if (!usedDbReply && !decisionContext.usesConditionMemoryFallback) {
-      final orchestratorReply = await _localCasualOrchestratorReply(request);
+      final orchestratorReply = await _orchestratorReply(request);
       if (orchestratorReply != null) {
         reply = orchestratorReply;
       }
@@ -187,7 +187,7 @@ class ChatPanelConversationController {
     );
   }
 
-  Future<String?> _localCasualOrchestratorReply(
+  Future<String?> _orchestratorReply(
     ChatPanelConversationRequest request,
   ) async {
     final conversationRequest = ConversationRequest(
@@ -204,7 +204,8 @@ class ChatPanelConversationController {
     );
 
     final route = _conversationOrchestrator.router.route(conversationRequest);
-    if (route != ConversationRoute.localCasual) {
+    if (route != ConversationRoute.localCasual &&
+        route != ConversationRoute.api) {
       return null;
     }
 
@@ -212,7 +213,7 @@ class ChatPanelConversationController {
       conversationRequest,
     );
 
-    if (response.route != ConversationRoute.localCasual ||
+    if (response.route != route ||
         response.isFallback ||
         response.replyText.trim().isEmpty) {
       return null;

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'admin_dialogue_screen.dart';
 import 'app/condition_check_action_coordinator.dart';
 import 'app/daily_opening_context_coordinator.dart';
+import 'app/plant_chat_conversation_controller_factory.dart';
 import 'app/plant_chat_result_handler.dart';
 import 'app/plant_registration_action_coordinator.dart';
 import 'app/plant_card_state_mapper.dart';
@@ -62,6 +63,8 @@ class _MyAppState extends State<MyApp> {
       const ConditionCheckActionCoordinator();
   final DailyOpeningContextCoordinator dailyOpeningContextCoordinator =
       DailyOpeningContextCoordinator.supabase();
+  final chatConversationController =
+      PlantChatConversationControllerFactory.supabase();
   final PlantChatResultHandler plantChatResultHandler =
       const PlantChatResultHandler();
   final PlantRegistrationActionCoordinator plantRegistrationActionCoordinator =
@@ -399,6 +402,7 @@ class _MyAppState extends State<MyApp> {
             initialPlantMessage: initialPlantMessage,
             waterDay: waterDay,
             initialConditionMemory: initialConditionMemory,
+            conversationController: chatConversationController,
             dailyOpeningContext: dailyOpeningContext,
           );
         },
