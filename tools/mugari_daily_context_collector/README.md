@@ -149,14 +149,28 @@ workflow is developed and verified on `plant-personality-mvp` first; production
 scheduling begins only after the workflow is deliberately promoted to the
 default branch.
 
+### CR-2J — Plantalk remote source activation
+
+CR-2J lets the app read the exact date, locale, and region row from
+`daily_keyword_contexts`. Missing, empty, malformed, failed, or timed-out
+remote results fall back to the existing local source. The selected context is
+prepared at chat entry and remains limited to the first local casual turn.
+
+### CR-2J1 — month-consistent seasonal keywords
+
+CR-2J1 accepts only the season that matches the context month: spring for
+March through May, summer for June through August, autumn for September through
+November, and winter for December through February. The collector applies the
+gate before ranking and storage. The app parser repeats the same check so
+previously stored or externally modified rows cannot introduce an out-of-season
+opening topic.
+
 ## Not included yet
 
 - production Kakao key provisioning
 - weather or public-data API calls
 - RSS or HTML crawling
 - migration deployment automation
-- production schedule promotion to the repository default branch
-- Plantalk runtime activation
 - age-band weighting or age-aware final selection
 
 ## Daily keyword contract
@@ -262,8 +276,9 @@ longer parse.
 7. Live Daum transport, intent adapter, and secret-only CLI — CR-2G
 8. Supabase repository and idempotent daily upsert — CR-2H
 9. GitHub Actions schedule and monitored persistence — CR-2I
-10. Plantalk remote source activation with local fallback
-11. Age-aware ranking as a separate policy stage
+10. Plantalk remote source activation with local fallback — CR-2J
+11. Month-consistent seasonal filtering at collection and read time — CR-2J1
+12. Age-aware ranking as a separate policy stage
 
 The existing Flutter collector can later become an operator review screen. It
 must not hold production search secrets or run the scheduled collector.
