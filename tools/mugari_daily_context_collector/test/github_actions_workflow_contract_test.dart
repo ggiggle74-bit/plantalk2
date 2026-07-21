@@ -8,7 +8,7 @@ void main() {
   setUpAll(() {
     workflow = File(
       '../../.github/workflows/daily-context-collector.yml',
-    ).readAsStringSync();
+    ).readAsStringSync().replaceAll('\r\n', '\n');
   });
 
   test('CR-2I schedules the collector in the Korea time zone', () {
