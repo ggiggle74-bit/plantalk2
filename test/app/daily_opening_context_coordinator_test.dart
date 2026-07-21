@@ -51,6 +51,27 @@ void main() {
     expect(opening?.selectedCandidate.keyword, '여름');
   });
 
+  test('uses fallback source when the remote context is empty', () async {
+    final coordinator = DailyOpeningContextCoordinator(
+      provider: DailyOpeningContextProviderFactory.withFallback(
+        primary: _RecordingSource(
+          context: _context(date, keywords: const []),
+        ),
+        fallback: _RecordingSource(
+          context: _context(date, keywords: const ['독서']),
+        ),
+      ),
+    );
+
+    final opening = await coordinator.loadForChat(
+      date: date,
+      locale: 'ko-KR',
+      plantKey: 'plant-1',
+    );
+
+    expect(opening?.selectedCandidate.keyword, '독서');
+  });
+
   test('keeps selection deterministic for the same chat identity', () async {
     final source = _RecordingSource(
       context: _context(date, keywords: const ['장맛비', '독서']),
