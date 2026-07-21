@@ -77,7 +77,7 @@ Future<void> main(List<String> arguments) async {
         regionLabel: options['region-label'],
         targetAgeBands: ageBands,
         generatedAt: DateTime.now().toUtc(),
-        sourceVersion: options['source-version'] ?? 'collector-cr2h',
+        sourceVersion: options['source-version'] ?? 'collector-cr2j1',
       ),
     );
 
