@@ -132,7 +132,10 @@ class SupabaseDailyKeywordSource implements DailyKeywordSource {
       final normalized = rawKeyword.map(
         (key, value) => MapEntry(key.toString(), value),
       );
-      final entry = _parseEntry(normalized);
+      final entry = _parseEntry(
+        normalized,
+        month: parsedDate.month,
+      );
       if (entry != null) {
         keywords.add(entry);
       }
@@ -147,7 +150,10 @@ class SupabaseDailyKeywordSource implements DailyKeywordSource {
     );
   }
 
-  DailyKeywordEntry? _parseEntry(Map<String, dynamic> row) {
+  DailyKeywordEntry? _parseEntry(
+    Map<String, dynamic> row, {
+    required int month,
+  }) {
     try {
       final type = _requiredString(row, 'type').toLowerCase();
       final keyword = _requiredString(row, 'keyword');
@@ -162,6 +168,11 @@ class SupabaseDailyKeywordSource implements DailyKeywordSource {
 
       if (!DailyKeywordTypes.allowed.contains(type) ||
           !DailyKeywordTones.allowed.contains(tone) ||
+          !_isSeasonallyConsistent(
+            type: type,
+            keyword: keyword,
+            month: month,
+          ) ||
           fitScore < 0.60 ||
           [
             keyword,
@@ -186,6 +197,27 @@ class SupabaseDailyKeywordSource implements DailyKeywordSource {
     } on FormatException {
       return null;
     }
+  }
+
+  static bool _isSeasonallyConsistent({
+    required String type,
+    required String keyword,
+    required int month,
+  }) {
+    if (type != DailyKeywordTypes.seasonal) {
+      return true;
+    }
+
+    if (month >= 3 && month <= 5) {
+      return keyword == '봄';
+    }
+    if (month >= 6 && month <= 8) {
+      return keyword == '여름';
+    }
+    if (month >= 9 && month <= 11) {
+      return keyword == '가을';
+    }
+    return keyword == '겨울';
   }
 
   static DailyKeywordContext _emptyContext(

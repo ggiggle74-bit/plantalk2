@@ -118,6 +118,49 @@ void main() {
     expect(context.keywords.map((entry) => entry.keyword), ['장맛비']);
   });
 
+  test('keeps only the season matching the context month', () async {
+    final source = SupabaseDailyKeywordSource(
+      fetchRow:
+          ({
+            required contextDate,
+            required locale,
+            required regionCode,
+          }) async {
+            return _row(
+              keywords: [
+                _keyword(
+                  type: 'seasonal',
+                  keyword: '봄',
+                  category: 'season',
+                ),
+                _keyword(
+                  type: 'seasonal',
+                  keyword: '여름',
+                  category: 'season',
+                ),
+                _keyword(
+                  type: 'seasonal',
+                  keyword: '가을',
+                  category: 'season',
+                ),
+                _keyword(
+                  type: 'seasonal',
+                  keyword: '겨울',
+                  category: 'season',
+                ),
+              ],
+            );
+          },
+    );
+
+    final context = await source.load(request);
+
+    expect(
+      context.keywords.map((entry) => entry.keyword),
+      ['여름'],
+    );
+  });
+
   test('rejects an oversized remote keyword collection', () {
     final source = SupabaseDailyKeywordSource(
       fetchRow:
@@ -182,14 +225,16 @@ Map<String, dynamic> _row({
 }
 
 Map<String, dynamic> _keyword({
+  String type = 'weather',
   String keyword = '장맛비',
   String hint = '비가 이어지는 날',
+  String category = 'rain',
 }) {
   return {
-    'type': 'weather',
+    'type': type,
     'keyword': keyword,
     'hint': hint,
-    'category': 'rain',
+    'category': category,
     'relevanceScore': 0.91,
     'plantHint': '창가의 빗물을 피하기',
     'tone': 'gentle',

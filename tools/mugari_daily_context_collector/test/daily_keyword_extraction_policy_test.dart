@@ -126,7 +126,7 @@ void main() {
         ],
       );
 
-      expect(result.candidates, hasLength(8));
+      expect(result.candidates, hasLength(7));
       final counts = <String, int>{};
       for (final candidate in result.candidates) {
         counts[candidate.type] = (counts[candidate.type] ?? 0) + 1;
@@ -137,6 +137,39 @@ void main() {
         DailyKeywordTypes.safeIssue,
         DailyKeywordTypes.seasonal,
       ]));
+    });
+
+    test('keeps only the season that matches the collection month', () {
+      const cases = {
+        4: '봄',
+        7: '여름',
+        10: '가을',
+        1: '겨울',
+      };
+
+      for (final entry in cases.entries) {
+        final date = DateTime.utc(2026, entry.key, 15);
+        final result = const DailyKeywordExtractionPolicy().extract(
+          date: date,
+          documents: [
+            _document(
+              title: '봄 여름 가을 겨울',
+              publishedAt: date,
+            ),
+          ],
+        );
+
+        expect(
+          result.candidates
+              .where(
+                (candidate) =>
+                    candidate.type == DailyKeywordTypes.seasonal,
+              )
+              .map((candidate) => candidate.keyword),
+          [entry.value],
+          reason: '${entry.key}월에는 ${entry.value}만 허용해야 합니다.',
+        );
+      }
     });
 
     test('preserves optional age-band discovery metadata', () {

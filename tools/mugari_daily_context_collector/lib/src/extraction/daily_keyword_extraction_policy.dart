@@ -72,7 +72,8 @@ final class DailyKeywordExtractionPolicy {
 
       var matched = false;
       for (final seed in _seeds) {
-        if (!_containsKeyword(searchable, seed.keyword) ||
+        if (!_isSeasonallyConsistent(seed, date.month) ||
+            !_containsKeyword(searchable, seed.keyword) ||
             _hasMoreSpecificMatch(searchable, seed)) {
           continue;
         }
@@ -177,6 +178,26 @@ final class DailyKeywordExtractionPolicy {
     final value =
         (seed.fitScore * 0.50) + (priority * 0.30) + (freshness * 0.20);
     return double.parse(value.clamp(0.0, 1.0).toStringAsFixed(4));
+  }
+
+  bool _isSeasonallyConsistent(_ExtractionSeed seed, int month) {
+    if (seed.type != DailyKeywordTypes.seasonal) {
+      return true;
+    }
+    return seed.keyword == _seasonForMonth(month);
+  }
+
+  String _seasonForMonth(int month) {
+    if (month >= 3 && month <= 5) {
+      return '봄';
+    }
+    if (month >= 6 && month <= 8) {
+      return '여름';
+    }
+    if (month >= 9 && month <= 11) {
+      return '가을';
+    }
+    return '겨울';
   }
 
   bool _hasMoreSpecificMatch(String value, _ExtractionSeed seed) {

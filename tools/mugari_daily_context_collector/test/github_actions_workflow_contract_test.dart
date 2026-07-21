@@ -52,7 +52,7 @@ void main() {
     expect(workflow, contains('dart test'));
     expect(
       workflow,
-      contains('--source-version=collector-cr2i'),
+      contains('--source-version=collector-cr2j1'),
     );
     expect(workflow, contains('--persist'));
     expect(workflow, contains('ref: plant-personality-mvp'));

@@ -82,7 +82,7 @@ jobs:
           set +e
           dart run bin/collect_daily_context.dart \
             "$collection_date" ko-KR \
-            --source-version=collector-cr2i \
+            --source-version=collector-cr2j1 \
             --persist \
             > "$result_file" 2> "$error_file"
           collector_exit_code=$?
