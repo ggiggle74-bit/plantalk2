@@ -11,9 +11,11 @@ engine or remote slot.
 4. the existing authenticated Gemini fallback
 5. the existing fail-closed local fallback
 
-Calling the plant by name is not, by itself, a greeting intent. The remainder
-of the message still determines the route. For example,
-`무가리야 오늘 어때?` stays local, while
+Calling the plant by name is not, by itself, a greeting intent. The matcher
+uses the current request's `plantName`; `무가리` is only an example and is not
+hard-coded. Korean vocatives such as `해피야` and the common nickname form
+`초록이` -> `초록아` are recognized. The remainder of the message still
+determines the route. For example, `무가리야 오늘 어때?` stays local, while
 `무가리야 공룡은 왜 멸종했어?` uses the API route.
 
 ## Acceptance scenarios
