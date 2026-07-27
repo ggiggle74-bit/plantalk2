@@ -221,6 +221,7 @@ class _ChatPanelState extends State<ChatPanel> {
         _closePanel();
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         body: SafeArea(
           child: Padding(
             padding: EdgeInsets.only(bottom: bottomInset),
