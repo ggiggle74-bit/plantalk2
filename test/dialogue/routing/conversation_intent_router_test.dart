@@ -19,6 +19,31 @@ void main() {
     expect(route, ConversationRoute.localCasual);
   });
 
+  final qualityCases = <String, ConversationRoute>{
+    '무가리야': ConversationRoute.localCasual,
+    '무가리야 오늘 어때?': ConversationRoute.localCasual,
+    '안녕, 오늘 기분은 어때?': ConversationRoute.localCasual,
+    '무가리야 공룡은 왜 멸종했어?': ConversationRoute.api,
+    '안녕, 공룡은 왜 멸종했어?': ConversationRoute.api,
+    '무가리야 우주의 크기를 설명해줘': ConversationRoute.api,
+    '무가리야 나 오늘 학교에서 속상한 일이 있었어': ConversationRoute.api,
+    'Why did dinosaurs disappear?': ConversationRoute.api,
+  };
+
+  for (final entry in qualityCases.entries) {
+    test('quality gate routes "${entry.key}" to ${entry.value.name}', () {
+      final route = router.route(
+        ConversationRequest(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          userMessage: entry.key,
+        ),
+      );
+
+      expect(route, entry.value);
+    });
+  }
+
   test('routes condition follow-up to condition memory when memory exists', () {
     final route = router.route(
       const ConversationRequest(
