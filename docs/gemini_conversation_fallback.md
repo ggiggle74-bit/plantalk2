@@ -31,8 +31,10 @@ store and calls the fixed `gemini-3.1-flash-lite` endpoint. The function:
 The app sends plant name, optional species, optional mood, bounded friendship,
 locale, the current user message, and at most one complete immediately previous
 user/plant exchange. Each previous-turn field is limited to 500 characters and
-is omitted unless both sides are present. It does not send the plant database
-ID, condition memory, daily keyword document, or full conversation history.
+is omitted unless both sides are present. A previous condition-memory question
+and its reply are excluded from remote continuity. It does not send the plant
+database ID, condition memory object, daily keyword document, or full
+conversation history.
 The previous exchange is not persisted by this integration.
 
 ## Reply quality
