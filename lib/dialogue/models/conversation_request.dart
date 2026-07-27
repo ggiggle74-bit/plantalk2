@@ -8,6 +8,8 @@ class ConversationRequest {
     required this.plantId,
     required this.plantName,
     required this.userMessage,
+    this.previousUserMessage,
+    this.previousPlantReply,
     this.species,
     this.mood,
     this.friendship,
@@ -24,6 +26,8 @@ class ConversationRequest {
   final String plantId;
   final String plantName;
   final String userMessage;
+  final String? previousUserMessage;
+  final String? previousPlantReply;
   final String? species;
   final String? mood;
   final int? friendship;
