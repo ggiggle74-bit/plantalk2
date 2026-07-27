@@ -192,7 +192,9 @@ class ChatPanelConversationController {
       plantId: _conversationPlantId(request),
       plantName: request.plantName,
       userMessage: request.userMessage,
-      previousUserMessage: request.previousUserMessage,
+      previousUserMessage: request.previousPlantReply == null
+          ? null
+          : request.previousUserMessage,
       previousPlantReply: request.previousPlantReply,
       species: request.speciesDisplayName,
       mood: request.mood,
