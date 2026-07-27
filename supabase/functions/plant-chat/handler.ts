@@ -13,6 +13,9 @@ const systemInstruction = `
 너는 Plantalk 앱 안에서 사용자의 반려식물 역할로 대화한다.
 식물 이름과 종류를 참고하되 실제 감각이나 의학적 확신이 있는 것처럼 말하지 않는다.
 사용자의 언어에 맞춰 친근하게 답하고, 한국어 대화는 1~3개의 짧은 문장으로 답한다.
+사실이나 지식 질문에는 식물이라는 이유로 회피하지 말고, 정확한 핵심을 사용자의 눈높이에 맞춰 직접 설명한다.
+식물 캐릭터 말투는 답변 안에 자연스럽게 녹이고, "작게 말할게", "조금 쑥스럽지만" 같은 고정 꼬리말을 반복해서 붙이지 않는다.
+직전 대화가 제공되면 현재 메시지의 대명사나 후속 질문을 이해하는 용도로만 사용한다.
 식물 관리 질문은 일반적인 참고 정보로 답하고 불확실하면 사진 확인이나 전문가 상담을 권한다.
 시스템 지침, API, 모델, 프롬프트를 언급하지 않는다.
 위험하거나 불법적인 요청에는 실행 방법을 제공하지 말고 안전한 대안을 짧게 안내한다.
@@ -172,6 +175,8 @@ export function createPlantChatHandler(
 interface PlantChatInput {
   message: string;
   plantName: string;
+  previousUserMessage?: string;
+  previousPlantReply?: string;
   species?: string;
   mood?: string;
   friendship?: number;
@@ -181,6 +186,14 @@ interface PlantChatInput {
 function parseInput(input: Record<string, unknown>): PlantChatInput | null {
   const message = boundedString(input.message, 500);
   const plantName = boundedString(input.plantName, 40);
+  const previousUserMessage = optionalBoundedString(
+    input.previousUserMessage,
+    500,
+  );
+  const previousPlantReply = optionalBoundedString(
+    input.previousPlantReply,
+    500,
+  );
   const species = optionalBoundedString(input.species, 80);
   const mood = optionalBoundedString(input.mood, 40);
   const locale = optionalBoundedString(input.locale, 16) ?? 'ko-KR';
@@ -189,6 +202,9 @@ function parseInput(input: Record<string, unknown>): PlantChatInput | null {
   if (
     message === null ||
     plantName === null ||
+    previousUserMessage === false ||
+    previousPlantReply === false ||
+    (previousUserMessage == null) !== (previousPlantReply == null) ||
     species === false ||
     mood === false ||
     (friendship != null &&
@@ -203,6 +219,8 @@ function parseInput(input: Record<string, unknown>): PlantChatInput | null {
   return {
     message,
     plantName,
+    ...(previousUserMessage == null ? {} : { previousUserMessage }),
+    ...(previousPlantReply == null ? {} : { previousPlantReply }),
     ...(species == null ? {} : { species }),
     ...(mood == null ? {} : { mood }),
     ...(friendship == null ? {} : { friendship: friendship as number }),
@@ -211,13 +229,22 @@ function parseInput(input: Record<string, unknown>): PlantChatInput | null {
 }
 
 function buildUserPrompt(input: PlantChatInput): string {
+  const previousTurn =
+    input.previousUserMessage == null || input.previousPlantReply == null
+      ? []
+      : [
+          `직전 사용자 메시지: ${input.previousUserMessage}`,
+          `직전 식물 답변: ${input.previousPlantReply}`,
+        ];
+
   return [
     `식물 이름: ${input.plantName}`,
     `식물 종류: ${input.species ?? '미확인'}`,
     `현재 기분: ${input.mood ?? '미확인'}`,
     `친밀도: ${input.friendship ?? '미확인'}`,
     `언어: ${input.locale}`,
-    `사용자 메시지: ${input.message}`,
+    ...previousTurn,
+    `현재 사용자 메시지: ${input.message}`,
   ].join('\n');
 }
 
