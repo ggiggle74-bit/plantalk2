@@ -37,6 +37,10 @@ void main() {
     expect(source, contains('client.functions.invoke'));
     expect(source, isNot(contains('GEMINI_API_KEY')));
     expect(source, isNot(contains('generativelanguage.googleapis.com')));
+    expect(source, contains('previousUserMessage'));
+    expect(source, contains('previousPlantReply'));
+    expect(source, isNot(contains('conversationHistory')));
+    expect(source, isNot(contains('conversation_history')));
     expect(source, isNot(contains('plant_memories')));
   });
 
