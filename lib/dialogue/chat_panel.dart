@@ -117,7 +117,10 @@ class _ChatPanelState extends State<ChatPanel> {
     });
 
     try {
-      await _conditionMemoryLoad;
+      final conditionMemoryLoad = _conditionMemoryLoad;
+      if (conditionMemoryLoad != null) {
+        await conditionMemoryLoad;
+      }
 
       String? prevUser;
 
@@ -188,7 +191,12 @@ class _ChatPanelState extends State<ChatPanel> {
     final plantId = widget.plantId;
     if (plantId == null || plantId.isEmpty) return;
 
-    final memory = await _fetchLatestConditionMemory(plantId);
+    LatestConditionMemory? memory;
+    try {
+      memory = await _fetchLatestConditionMemory(plantId);
+    } catch (_) {
+      return;
+    }
     if (memory == null || !mounted || widget.initialConditionMemory != null) {
       return;
     }
