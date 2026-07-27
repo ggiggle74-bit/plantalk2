@@ -4,6 +4,7 @@ import '../models/latest_condition_memory.dart';
 import '../services/plant_service.dart';
 import 'chat_panel_conversation_controller.dart';
 import 'daily_keywords/models/daily_opening_context.dart';
+import 'dialogue_engine.dart';
 
 typedef FetchLatestConditionMemoryCallback =
     Future<LatestConditionMemory?> Function(String plantId);
@@ -118,7 +119,8 @@ class _ChatPanelState extends State<ChatPanel> {
 
     try {
       final conditionMemoryLoad = _conditionMemoryLoad;
-      if (conditionMemoryLoad != null) {
+      if (conditionMemoryLoad != null &&
+          DialogueEngine.isConditionMemoryQuestion(text)) {
         await conditionMemoryLoad;
       }
 
