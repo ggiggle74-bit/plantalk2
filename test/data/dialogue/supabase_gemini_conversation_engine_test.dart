@@ -99,7 +99,7 @@ void main() {
           plantId: 'plant-1',
           plantName: '무가리',
           userMessage: '왜?',
-          previousUserMessage: '가' * 501,
+          previousUserMessage: List.filled(501, '가').join(),
           previousPlantReply: '앞 답변',
         ),
       ),
