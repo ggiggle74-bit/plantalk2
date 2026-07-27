@@ -20,6 +20,7 @@ class ChatPanelConversationRequest {
     this.mood,
     this.friendship,
     this.previousUserMessage,
+    this.previousPlantReply,
     this.latestConditionMemory,
     this.conditionMemoryReplyCount = 0,
     this.fetchDialogueReply,
@@ -36,6 +37,7 @@ class ChatPanelConversationRequest {
   final String? mood;
   final int? friendship;
   final String? previousUserMessage;
+  final String? previousPlantReply;
   final LatestConditionMemory? latestConditionMemory;
   final int conditionMemoryReplyCount;
   final ChatPanelDialogueReplyFetcher? fetchDialogueReply;
@@ -158,11 +160,7 @@ class ChatPanelConversationController {
       }
     }
 
-    reply = DialogueEngine.applyPlantPersonality(
-      reply: reply,
-      plantId: request.plantId,
-      plantName: request.plantName,
-    );
+    reply = reply.trim();
 
     return ChatPanelConversationResponse(
       replyText: reply,
@@ -194,6 +192,8 @@ class ChatPanelConversationController {
       plantId: _conversationPlantId(request),
       plantName: request.plantName,
       userMessage: request.userMessage,
+      previousUserMessage: request.previousUserMessage,
+      previousPlantReply: request.previousPlantReply,
       species: request.speciesDisplayName,
       mood: request.mood,
       friendship: request.friendship,
