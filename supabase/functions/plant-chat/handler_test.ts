@@ -48,7 +48,54 @@ Deno.test('sends one bounded request and returns the text reply', async () => {
   assert(requestedUrl.includes('gemini-3.1-flash-lite:generateContent'));
   assertEquals(requestedApiKey, 'test-key-that-is-long-enough');
   assert(providerRequest != null);
-  assert(JSON.stringify(providerRequest).includes('사용자 메시지: 우주에는 별이 몇 개야?'));
+  const serializedRequest = JSON.stringify(providerRequest);
+  assert(serializedRequest.includes('현재 사용자 메시지: 우주에는 별이 몇 개야?'));
+  assert(serializedRequest.includes('고정 꼬리말을 반복해서 붙이지 않는다'));
+  assert(serializedRequest.includes('식물이라는 이유로 회피하지 말고'));
+});
+
+Deno.test('uses exactly one complete prior turn for a follow-up', async () => {
+  let providerRequest = '';
+  const handler = createPlantChatHandler({
+    apiKey: 'test-key-that-is-long-enough',
+    fetchImpl: async (_input, init) => {
+      providerRequest = init?.body?.toString() ?? '';
+      return providerResponse('그 일 때문에 속상했던 거구나.');
+    },
+  });
+
+  const response = await handler(
+    request(
+      validBody({
+        message: '그건 왜 그런 거야?',
+        previousUserMessage: '오늘 학교에서 속상한 일이 있었어.',
+        previousPlantReply: '무슨 일이 있었어? 천천히 말해줘.',
+      }),
+    ),
+  );
+
+  assertEquals(response.status, 200);
+  assert(providerRequest.includes('직전 사용자 메시지: 오늘 학교에서 속상한 일이 있었어.'));
+  assert(providerRequest.includes('직전 식물 답변: 무슨 일이 있었어? 천천히 말해줘.'));
+  assert(providerRequest.includes('현재 사용자 메시지: 그건 왜 그런 거야?'));
+});
+
+Deno.test('rejects an incomplete prior turn before calling Gemini', async () => {
+  let callCount = 0;
+  const handler = createPlantChatHandler({
+    apiKey: 'test-key-that-is-long-enough',
+    fetchImpl: async () => {
+      callCount++;
+      return providerResponse('unused');
+    },
+  });
+
+  const response = await handler(
+    request(validBody({ previousUserMessage: '앞 질문' })),
+  );
+
+  assertEquals(response.status, 400);
+  assertEquals(callCount, 0);
 });
 
 Deno.test('rejects oversized input before calling Gemini', async () => {
