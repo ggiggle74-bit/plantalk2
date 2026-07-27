@@ -204,7 +204,6 @@ class _ChatPanelState extends State<ChatPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final speciesDisplayName = widget.speciesDisplayName;
     final speciesLabel =
         speciesDisplayName == null ||
@@ -222,90 +221,87 @@ class _ChatPanelState extends State<ChatPanel> {
       },
       child: Scaffold(
         body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: bottomInset),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text(widget.plantName),
-                  subtitle: Text(
-                    latestConditionMemoryMessage == null
-                        ? speciesLabel
-                        : '$speciesLabel\n최근 상태 확인: $latestConditionMemoryMessage',
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: _closePanel,
-                  ),
+          child: Column(
+            children: [
+              ListTile(
+                title: Text(widget.plantName),
+                subtitle: Text(
+                  latestConditionMemoryMessage == null
+                      ? speciesLabel
+                      : '$speciesLabel\n최근 상태 확인: $latestConditionMemoryMessage',
                 ),
-                const Divider(height: 1),
-                Expanded(
-                  child: _messages.isEmpty
-                      ? Center(
-                          child: Text(
-                            widget.waterDay >= 2
-                                ? '목 마르다. 물 좀 챙겨줘 '
-                                : '${widget.plantName}에게 말을 걸어보세요.',
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final message = _messages[index];
-                            final isUser = message['sender'] == 'user';
+                trailing: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _closePanel,
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: _messages.isEmpty
+                    ? Center(
+                        child: Text(
+                          widget.waterDay >= 2
+                              ? '목 마르다. 물 좀 챙겨줘 '
+                              : '${widget.plantName}에게 말을 걸어보세요.',
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final message = _messages[index];
+                          final isUser = message['sender'] == 'user';
 
-                            return Align(
-                              alignment: isUser
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isUser
-                                      ? Colors.green.shade100
-                                      : Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(message['text'] ?? ''),
+                          return Align(
+                            alignment: isUser
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
                               ),
-                            );
-                          },
-                        ),
-                ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          textInputAction: TextInputAction.send,
-                          enabled: !_isSending,
-                          onSubmitted: _isSending
-                              ? null
-                              : (_) => _sendMessage(),
-                          decoration: InputDecoration(
-                            hintText: '${widget.plantName}에게 말 걸기',
-                            border: OutlineInputBorder(),
-                          ),
+                              decoration: BoxDecoration(
+                                color: isUser
+                                    ? Colors.green.shade100
+                                    : Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(message['text'] ?? ''),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        textInputAction: TextInputAction.send,
+                        enabled: !_isSending,
+                        onSubmitted: _isSending
+                            ? null
+                            : (_) => _sendMessage(),
+                        decoration: InputDecoration(
+                          hintText: '${widget.plantName}에게 말 걸기',
+                          border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.send),
-                        onPressed: _isSending ? null : () => _sendMessage(),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: _isSending ? null : () => _sendMessage(),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
