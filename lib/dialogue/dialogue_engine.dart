@@ -716,6 +716,9 @@ class DialogueEngine {
       '${normalizedPlantName}아',
       '${normalizedPlantName}야',
       normalizedPlantName,
+      if (normalizedPlantName.endsWith('이') &&
+          normalizedPlantName.length > 1)
+        '${normalizedPlantName.substring(0, normalizedPlantName.length - 1)}아',
     ];
     for (final prefix in prefixes) {
       if (message == prefix) {
