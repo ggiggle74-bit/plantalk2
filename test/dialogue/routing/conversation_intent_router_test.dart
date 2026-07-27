@@ -44,6 +44,45 @@ void main() {
     });
   }
 
+  test('uses the request plant name instead of a fixed character name', () {
+    final cases = <({String plantName, String message, ConversationRoute route})>[
+      (
+        plantName: '초록이',
+        message: '초록아 오늘 어때?',
+        route: ConversationRoute.localCasual,
+      ),
+      (
+        plantName: '초록이',
+        message: '초록아 공룡은 왜 멸종했어?',
+        route: ConversationRoute.api,
+      ),
+      (
+        plantName: '해피',
+        message: '해피야 오늘 어때?',
+        route: ConversationRoute.localCasual,
+      ),
+      (
+        plantName: '해피',
+        message: '해피야 우주의 크기를 알려줘',
+        route: ConversationRoute.api,
+      ),
+    ];
+
+    for (final testCase in cases) {
+      expect(
+        router.route(
+          ConversationRequest(
+            plantId: 'plant-1',
+            plantName: testCase.plantName,
+            userMessage: testCase.message,
+          ),
+        ),
+        testCase.route,
+        reason: '${testCase.plantName}: ${testCase.message}',
+      );
+    }
+  });
+
   test('routes condition follow-up to condition memory when memory exists', () {
     final route = router.route(
       const ConversationRequest(
