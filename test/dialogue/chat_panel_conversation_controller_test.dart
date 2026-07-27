@@ -63,8 +63,8 @@ void main() {
     final response = await controller.generateReply(
       ChatPanelConversationRequest(
         plantId: 'plant-1',
-        plantName: '무가리',
-        userMessage: '무가리야 공룡은 왜 멸종했어?',
+        plantName: '초록이',
+        userMessage: '초록아 공룡은 왜 멸종했어?',
         waterDay: 0,
         fetchDialogueReply: ({situation, conditionKey}) async {
           dbCallCount++;
