@@ -4,6 +4,7 @@ import '../models/latest_condition_memory.dart';
 import '../services/plant_service.dart';
 import 'chat_panel_conversation_controller.dart';
 import 'daily_keywords/models/daily_opening_context.dart';
+import 'dialogue_engine.dart';
 
 typedef FetchLatestConditionMemoryCallback =
     Future<LatestConditionMemory?> Function(String plantId);
@@ -56,6 +57,7 @@ class _ChatPanelState extends State<ChatPanel> {
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
   LatestConditionMemory? _latestConditionMemory;
+  Future<void>? _conditionMemoryLoad;
   int _userMessageCount = 0;
   int _conditionMemoryReplyCount = 0;
   bool _isSending = false;
@@ -89,7 +91,7 @@ class _ChatPanelState extends State<ChatPanel> {
     }
 
     if (_latestConditionMemory == null) {
-      _loadLatestConditionMemory();
+      _conditionMemoryLoad = _loadLatestConditionMemory();
     }
   }
 
@@ -116,6 +118,12 @@ class _ChatPanelState extends State<ChatPanel> {
     });
 
     try {
+      final conditionMemoryLoad = _conditionMemoryLoad;
+      if (conditionMemoryLoad != null &&
+          DialogueEngine.isConditionMemoryQuestion(text)) {
+        await conditionMemoryLoad;
+      }
+
       String? prevUser;
 
       for (int i = _messages.length - 1; i >= 0; i--) {
@@ -124,6 +132,11 @@ class _ChatPanelState extends State<ChatPanel> {
           break;
         }
       }
+
+      final previousPlantReply =
+          prevUser == null || DialogueEngine.isConditionMemoryQuestion(prevUser)
+          ? null
+          : _latestPlantReply;
 
       setState(() {
         _userMessageCount++;
@@ -140,6 +153,7 @@ class _ChatPanelState extends State<ChatPanel> {
           userMessage: text,
           waterDay: widget.waterDay,
           previousUserMessage: prevUser,
+          previousPlantReply: previousPlantReply,
           latestConditionMemory: _latestConditionMemory,
           conditionMemoryReplyCount: _conditionMemoryReplyCount,
           fetchDialogueReply: widget.fetchDialogueReply,
@@ -182,7 +196,12 @@ class _ChatPanelState extends State<ChatPanel> {
     final plantId = widget.plantId;
     if (plantId == null || plantId.isEmpty) return;
 
-    final memory = await _fetchLatestConditionMemory(plantId);
+    LatestConditionMemory? memory;
+    try {
+      memory = await _fetchLatestConditionMemory(plantId);
+    } catch (_) {
+      return;
+    }
     if (memory == null || !mounted || widget.initialConditionMemory != null) {
       return;
     }

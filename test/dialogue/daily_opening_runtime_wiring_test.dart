@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plantalk2/dialogue/chat_panel.dart';
@@ -197,6 +199,81 @@ void main() {
     expect(controller.requests.last.isOpeningTurn, isFalse);
     expect(controller.requests.first.dailyOpeningContext, same(openingContext));
     expect(controller.requests.last.dailyOpeningContext, same(openingContext));
+  });
+
+
+  testWidgets('ChatPanel forwards only the immediately previous turn', (
+    tester,
+  ) async {
+    final controller = _RecordingConversationController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatPanel(
+          plantName: '무가리',
+          initialPlantMessage: '',
+          waterDay: 0,
+          conversationController: controller,
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), '학교에서 속상한 일이 있었어');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '그건 왜 그런 거야?');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+
+    expect(controller.requests, hasLength(2));
+    expect(controller.requests.first.previousUserMessage, isNull);
+    expect(controller.requests.first.previousPlantReply, isNull);
+    expect(
+      controller.requests.last.previousUserMessage,
+      '학교에서 속상한 일이 있었어',
+    );
+    expect(controller.requests.last.previousPlantReply, 'reply-1');
+  });
+
+  testWidgets('ChatPanel awaits the latest condition memory before replying', (
+    tester,
+  ) async {
+    final memoryCompleter = Completer<LatestConditionMemory?>();
+    final controller = _RecordingConversationController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatPanel(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          initialPlantMessage: '',
+          waterDay: 0,
+          conversationController: controller,
+          fetchLatestConditionMemory: (_) => memoryCompleter.future,
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), '최근 상태가 어땠어?');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pump();
+
+    expect(controller.requests, isEmpty);
+
+    memoryCompleter.complete(
+      const LatestConditionMemory(
+        message: '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.',
+        eventType: 'normal',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.requests, hasLength(1));
+    expect(
+      controller.requests.single.latestConditionMemory?.eventType,
+      'normal',
+    );
   });
 }
 

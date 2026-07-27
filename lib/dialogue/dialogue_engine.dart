@@ -272,6 +272,9 @@ class DialogueEngine {
         _containsAny(normalizedMessage, const [
           '상태 어때',
           '상태가 어때',
+          '상태 어땠',
+          '상태가 어땠',
+          '최근 상태',
           '건강',
           '괜찮아',
           '괜찮니',

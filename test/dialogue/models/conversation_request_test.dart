@@ -31,6 +31,8 @@ void main() {
         plantId: 'plant-1',
         plantName: '무가리',
         userMessage: '오늘 어때?',
+        previousUserMessage: '어제 학교에서 속상했어.',
+        previousPlantReply: '무슨 일이 있었는지 말해줘.',
         dailyKeywordContext: keywordContext,
         userRegionContext: regionContext,
         latestConditionMemory: memory,
@@ -39,6 +41,8 @@ void main() {
       expect(request.plantId, 'plant-1');
       expect(request.plantName, '무가리');
       expect(request.userMessage, '오늘 어때?');
+      expect(request.previousUserMessage, '어제 학교에서 속상했어.');
+      expect(request.previousPlantReply, '무슨 일이 있었는지 말해줘.');
       expect(request.dailyKeywordContext, same(keywordContext));
       expect(request.userRegionContext, same(regionContext));
       expect(request.latestConditionMemory, same(memory));

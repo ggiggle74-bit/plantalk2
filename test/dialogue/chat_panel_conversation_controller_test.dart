@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plantalk2/dialogue/chat_panel_conversation_controller.dart';
 import 'package:plantalk2/dialogue/conversation_orchestrator.dart';
-import 'package:plantalk2/dialogue/dialogue_engine.dart';
 import 'package:plantalk2/dialogue/models/conversation_request.dart';
 import 'package:plantalk2/dialogue/models/conversation_response.dart';
 import 'package:plantalk2/dialogue/models/conversation_route.dart';
@@ -80,7 +79,7 @@ void main() {
     expect(response.conditionMemoryReplyCount, 1);
   });
 
-  test('applies legacy personality after selecting DB reply', () async {
+  test('preserves DB reply without a fixed personality suffix', () async {
     final controller = ChatPanelConversationController();
     const baseReply = 'DB 답변이야.';
 
@@ -94,14 +93,9 @@ void main() {
       ),
     );
 
-    expect(
-      response.replyText,
-      DialogueEngine.applyPlantPersonality(
-        reply: baseReply,
-        plantId: 'plant-tone',
-        plantName: '무가리',
-      ),
-    );
+    expect(response.replyText, baseReply);
+    expect(response.replyText, isNot(contains('작게 말해볼게')));
+    expect(response.replyText, isNot(contains('조금 쑥스럽지만')));
   });
 
   test('local casual orchestrator is used only after DB miss', () async {
@@ -128,13 +122,7 @@ void main() {
     expect(orchestrator.callCount, 1);
     expect(orchestrator.requests.single.plantId, '무가리');
     expect(orchestrator.requests.single.dailyKeywordContext, isNull);
-    expect(
-      response.replyText,
-      DialogueEngine.applyPlantPersonality(
-        reply: orchestratorReply,
-        plantName: '무가리',
-      ),
-    );
+    expect(response.replyText, orchestratorReply);
     expect(response.conditionMemoryReplyCount, 0);
   });
 
@@ -156,15 +144,52 @@ void main() {
         plantId: 'plant-1',
         plantName: '무가리',
         userMessage: '몬스테라 분갈이 방법과 흙 배합을 자세히 설명해줘',
+        previousUserMessage: '오늘 학교에서 속상한 일이 있었어.',
+        previousPlantReply: '무슨 일이 있었어? 천천히 말해줘.',
         waterDay: 0,
         fetchDialogueReply: _nullDialogueReply,
       ),
     );
 
     expect(orchestrator.callCount, 1);
+    expect(
+      orchestrator.requests.single.previousUserMessage,
+      '오늘 학교에서 속상한 일이 있었어.',
+    );
+    expect(
+      orchestrator.requests.single.previousPlantReply,
+      '무슨 일이 있었어? 천천히 말해줘.',
+    );
     expect(response.replyText, contains(orchestratorMarker));
     expect(response.replyText.trim(), isNotEmpty);
     expect(response.conditionMemoryReplyCount, 0);
+  });
+
+  test('omits an incomplete prior turn from the API request', () async {
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: 'API 답변',
+        usedApi: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+
+    await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '공룡은 왜 멸종했어?',
+        previousUserMessage: '최근 상태가 어땠어?',
+        waterDay: 0,
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+
+    expect(orchestrator.requests.single.previousUserMessage, isNull);
+    expect(orchestrator.requests.single.previousPlantReply, isNull);
   });
 
   test('non-localCasual orchestrator response is ignored', () async {

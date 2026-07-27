@@ -43,6 +43,71 @@ void main() {
     expect(response.debugReason, 'gemini_api');
   });
 
+  test('sends only one complete bounded prior turn', () async {
+    Map<String, Object?>? receivedBody;
+    final engine = SupabaseGeminiConversationEngine(
+      invoke: (body) async {
+        receivedBody = body;
+        return {'reply': '그 일 때문에 속상했던 거구나.'};
+      },
+    );
+
+    await engine.generate(
+      const ConversationRequest(
+        plantId: 'private-plant-id',
+        plantName: '무가리',
+        userMessage: '그건 왜 그런 거야?',
+        previousUserMessage: '오늘 학교에서 속상한 일이 있었어.',
+        previousPlantReply: '무슨 일이 있었어? 천천히 말해줘.',
+      ),
+    );
+
+    expect(receivedBody, containsPair(
+      'previousUserMessage',
+      '오늘 학교에서 속상한 일이 있었어.',
+    ));
+    expect(receivedBody, containsPair(
+      'previousPlantReply',
+      '무슨 일이 있었어? 천천히 말해줘.',
+    ));
+    expect(receivedBody, isNot(containsPair('plantId', anything)));
+  });
+
+  test('rejects an incomplete or oversized prior turn', () {
+    var callCount = 0;
+    final engine = SupabaseGeminiConversationEngine(
+      invoke: (_) async {
+        callCount++;
+        return {'reply': 'unused'};
+      },
+    );
+
+    expect(
+      engine.generate(
+        const ConversationRequest(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          userMessage: '왜?',
+          previousUserMessage: '앞 질문',
+        ),
+      ),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      engine.generate(
+        ConversationRequest(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          userMessage: '왜?',
+          previousUserMessage: List.filled(501, '가').join(),
+          previousPlantReply: '앞 답변',
+        ),
+      ),
+      throwsA(isA<FormatException>()),
+    );
+    expect(callCount, 0);
+  });
+
   test('omits empty optional context', () async {
     Map<String, Object?>? receivedBody;
     final engine = SupabaseGeminiConversationEngine(
