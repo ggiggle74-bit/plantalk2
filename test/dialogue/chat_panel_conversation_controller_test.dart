@@ -78,6 +78,105 @@ void main() {
     expect(response.replyText, apiReply);
   });
 
+  test('greeting words do not intercept a knowledge question', () async {
+    const apiReply = '소행성 충돌 뒤 기후가 크게 변한 것이 주요 원인으로 알려져 있어.';
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: apiReply,
+        usedApi: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+    var dbCallCount = 0;
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '안녕, 공룡은 왜 멸종했어?',
+        waterDay: 0,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return '왔구나. 기다리고 있었어.';
+        },
+      ),
+    );
+
+    expect(dbCallCount, 0);
+    expect(orchestrator.callCount, 1);
+    expect(response.replyText, apiReply);
+  });
+
+  test('water-day state does not intercept a knowledge question', () async {
+    const apiReply = '우주는 관측 가능한 범위만 해도 매우 넓어.';
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: apiReply,
+        usedApi: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+    var dbCallCount = 0;
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '우주의 크기를 설명해줘',
+        waterDay: 4,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return '목이 말라. 물부터 줘.';
+        },
+      ),
+    );
+
+    expect(dbCallCount, 0);
+    expect(orchestrator.callCount, 1);
+    expect(response.replyText, apiReply);
+  });
+
+  test('missing condition memory stays local and does not call the API', () async {
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: '사진을 보지 않았지만 추측한 답변',
+        usedApi: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+    var dbCallCount = 0;
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '최근 사진에서 상태가 어땠어?',
+        waterDay: 0,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return 'DB 상태 답변';
+        },
+      ),
+    );
+
+    expect(dbCallCount, 0);
+    expect(orchestrator.callCount, 0);
+    expect(
+      response.replyText,
+      ChatPanelConversationController.conditionMemoryUnavailableReply,
+    );
+    expect(response.replyText, contains('최근 일주일'));
+  });
+
   test('legacy condition-memory path wins over orchestrator', () async {
     const conditionMarker = '사진만으로는 상태를 확실히 판단하기 어려워요.';
     const orchestratorMarker = 'ORCHESTRATOR_MARKER 조건 답변';
@@ -408,7 +507,10 @@ class _FakeConversationOrchestrator extends ConversationOrchestrator {
   int get callCount => requests.length;
 
   @override
-  Future<ConversationResponse> respond(ConversationRequest request) async {
+  Future<ConversationResponse> respondForRoute(
+    ConversationRequest request,
+    ConversationRoute route,
+  ) async {
     requests.add(request);
     return response;
   }
