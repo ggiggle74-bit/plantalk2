@@ -46,6 +46,38 @@ void main() {
     expect(response.conditionMemoryReplyCount, 0);
   });
 
+  test('named knowledge question bypasses greeting DB replies', () async {
+    const apiReply = '소행성 충돌과 기후 변화가 큰 원인으로 알려져 있어.';
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: apiReply,
+        usedApi: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+    var dbCallCount = 0;
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '무가리야 공룡은 왜 멸종했어?',
+        waterDay: 0,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return '왔구나. 기다리고 있었어.';
+        },
+      ),
+    );
+
+    expect(dbCallCount, 0);
+    expect(orchestrator.callCount, 1);
+    expect(response.replyText, apiReply);
+  });
+
   test('legacy condition-memory path wins over orchestrator', () async {
     const conditionMarker = '사진만으로는 상태를 확실히 판단하기 어려워요.';
     const orchestratorMarker = 'ORCHESTRATOR_MARKER 조건 답변';
