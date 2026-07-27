@@ -34,6 +34,7 @@ class SupabaseGeminiConversationEngine implements ApiConversationEngine {
 
   static const functionName = 'plant-chat';
   static const maximumMessageLength = 500;
+  static const maximumPreviousTurnLength = 500;
   static const maximumReplyLength = 500;
 
   final PlantChatFunctionInvoker invoke;
@@ -52,6 +53,20 @@ class SupabaseGeminiConversationEngine implements ApiConversationEngine {
       40,
     );
 
+    final previousUserMessage = _optionalBounded(
+      request.previousUserMessage,
+      'previousUserMessage',
+      maximumPreviousTurnLength,
+    );
+    final previousPlantReply = _optionalBounded(
+      request.previousPlantReply,
+      'previousPlantReply',
+      maximumPreviousTurnLength,
+    );
+    if ((previousUserMessage == null) != (previousPlantReply == null)) {
+      throw const FormatException('Previous conversation turn must be complete.');
+    }
+
     final species = _optionalBounded(request.species, 'species', 80);
     final mood = _optionalBounded(request.mood, 'mood', 40);
     final friendship = request.friendship;
@@ -59,6 +74,8 @@ class SupabaseGeminiConversationEngine implements ApiConversationEngine {
     final body = <String, Object?>{
       'message': message,
       'plantName': plantName,
+      'previousUserMessage': ?previousUserMessage,
+      'previousPlantReply': ?previousPlantReply,
       'species': ?species,
       'mood': ?mood,
       if (friendship != null) 'friendship': friendship.clamp(0, 100),
