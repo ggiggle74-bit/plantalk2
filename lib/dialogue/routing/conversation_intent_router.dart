@@ -10,6 +10,10 @@ class ConversationIntentRouter {
       return ConversationRoute.fallback;
     }
 
+    if (_isExplicitConditionHistoryQuestion(message)) {
+      return ConversationRoute.conditionMemory;
+    }
+
     if (request.latestConditionMemory != null &&
         _isConditionFollowUp(message)) {
       return ConversationRoute.conditionMemory;
@@ -24,6 +28,29 @@ class ConversationIntentRouter {
     }
 
     return ConversationRoute.api;
+  }
+
+  bool _isExplicitConditionHistoryQuestion(String message) {
+    return _containsAny(message, const [
+      '최근 사진',
+      '지난 사진',
+      '방금 사진',
+      '최근 상태',
+      '상태 어때',
+      '상태가 어때',
+      '상태 어땠',
+      '상태가 어땠',
+      '사진 봤을 때',
+      '사진으로 상태',
+      '사진에서 상태',
+      '사진 확인',
+      '상태 확인했',
+      '상태 확인해',
+      'recent photo',
+      'latest photo',
+      'recent condition',
+      'last condition check',
+    ]);
   }
 
   bool _isConditionFollowUp(String message) {
