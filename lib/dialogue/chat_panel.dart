@@ -56,6 +56,7 @@ class _ChatPanelState extends State<ChatPanel> {
   final List<Map<String, String>> _messages = [];
   String? _latestPlantReply;
   LatestConditionMemory? _latestConditionMemory;
+  Future<void>? _conditionMemoryLoad;
   int _userMessageCount = 0;
   int _conditionMemoryReplyCount = 0;
   bool _isSending = false;
@@ -89,7 +90,7 @@ class _ChatPanelState extends State<ChatPanel> {
     }
 
     if (_latestConditionMemory == null) {
-      _loadLatestConditionMemory();
+      _conditionMemoryLoad = _loadLatestConditionMemory();
     }
   }
 
@@ -116,6 +117,8 @@ class _ChatPanelState extends State<ChatPanel> {
     });
 
     try {
+      await _conditionMemoryLoad;
+
       String? prevUser;
 
       for (int i = _messages.length - 1; i >= 0; i--) {
@@ -124,6 +127,8 @@ class _ChatPanelState extends State<ChatPanel> {
           break;
         }
       }
+
+      final previousPlantReply = prevUser == null ? null : _latestPlantReply;
 
       setState(() {
         _userMessageCount++;
@@ -140,6 +145,7 @@ class _ChatPanelState extends State<ChatPanel> {
           userMessage: text,
           waterDay: widget.waterDay,
           previousUserMessage: prevUser,
+          previousPlantReply: previousPlantReply,
           latestConditionMemory: _latestConditionMemory,
           conditionMemoryReplyCount: _conditionMemoryReplyCount,
           fetchDialogueReply: widget.fetchDialogueReply,
