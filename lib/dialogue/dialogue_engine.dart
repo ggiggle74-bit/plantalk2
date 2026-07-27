@@ -258,7 +258,7 @@ class DialogueEngine {
       return 'complain';
     }
 
-    if (_directlyAddressesPlant(normalizedMessage, plantName)) {
+    if (_isCasualPlantAddress(normalizedMessage, plantName)) {
       return 'greeting';
     }
 
@@ -679,30 +679,68 @@ class DialogueEngine {
         compactMessage.contains('누구니');
   }
 
-  static bool _directlyAddressesPlant(String message, String? plantName) {
-    final normalizedPlantName = plantName?.toLowerCase().trim();
-    if (normalizedPlantName == null || normalizedPlantName.isEmpty) {
+  static bool _isCasualPlantAddress(String message, String? plantName) {
+    final remainder = _directAddressRemainder(message, plantName);
+    if (remainder == null) {
       return false;
     }
-
-    if (message == normalizedPlantName) {
+    if (remainder.isEmpty) {
       return true;
     }
 
-    if (message.startsWith('$normalizedPlantName ') ||
-        message.startsWith('$normalizedPlantName,') ||
-        message.startsWith('$normalizedPlantName.') ||
-        message.startsWith('$normalizedPlantName!') ||
-        message.startsWith('$normalizedPlantName?')) {
-      return true;
+    return _containsAny(remainder, const [
+      '안녕',
+      '반가',
+      '뭐해',
+      '뭐 해',
+      '오늘 어때',
+      '요즘 어때',
+      '잘 지내',
+      '잘지내',
+      '심심',
+      '외로',
+      '기분 어때',
+    ]);
+  }
+
+  static String? _directAddressRemainder(
+    String message,
+    String? plantName,
+  ) {
+    final normalizedPlantName = plantName?.toLowerCase().trim();
+    if (normalizedPlantName == null || normalizedPlantName.isEmpty) {
+      return null;
     }
 
-    final compactMessage = message.replaceAll(RegExp(r'\s+'), '');
-    final compactPlantName = normalizedPlantName.replaceAll(RegExp(r'\s+'), '');
+    final prefixes = [
+      '${normalizedPlantName}아',
+      '${normalizedPlantName}야',
+      normalizedPlantName,
+    ];
+    for (final prefix in prefixes) {
+      if (message == prefix) {
+        return '';
+      }
+      if (!message.startsWith(prefix)) {
+        continue;
+      }
 
-    return compactMessage == compactPlantName ||
-        compactMessage.startsWith('$compactPlantName아') ||
-        compactMessage.startsWith('$compactPlantName야');
+      final nextIndex = prefix.length;
+      if (message.length <= nextIndex) {
+        return '';
+      }
+      final separator = message[nextIndex];
+      if (!RegExp(r'[\s,.!?]').hasMatch(separator)) {
+        continue;
+      }
+
+      return message
+          .substring(nextIndex)
+          .replaceFirst(RegExp(r'^[\s,.!?]+'), '')
+          .trim();
+    }
+
+    return null;
   }
 
   static String _plantDisplayName(String plantName) {
