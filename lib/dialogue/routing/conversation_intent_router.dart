@@ -131,8 +131,8 @@ class ConversationIntentRouter {
     }
 
     final prefixes = [
-      '${normalizedPlantName}아',
-      '${normalizedPlantName}야',
+      '$normalizedPlantName아',
+      '$normalizedPlantName야',
       normalizedPlantName,
       if (normalizedPlantName.endsWith('이') &&
           normalizedPlantName.length > 1)
