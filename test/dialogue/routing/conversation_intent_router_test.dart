@@ -35,6 +35,22 @@ void main() {
     expect(route, ConversationRoute.conditionMemory);
   });
 
+  test('routes a past-tense recent condition question to memory', () {
+    final route = router.route(
+      const ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '최근 상태가 어땠어?',
+        latestConditionMemory: LatestConditionMemory(
+          message: '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.',
+          eventType: 'normal',
+        ),
+      ),
+    );
+
+    expect(route, ConversationRoute.conditionMemory);
+  });
+
   test('routes unrecognized nonempty conversation to api', () {
     final route = router.route(
       const ConversationRequest(
