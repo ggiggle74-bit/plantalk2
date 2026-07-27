@@ -29,8 +29,19 @@ store and calls the fixed `gemini-3.1-flash-lite` endpoint. The function:
 - does not read or write `plant_memories`
 
 The app sends plant name, optional species, optional mood, bounded friendship,
-locale, and the current user message. It does not send the plant database ID,
-condition memory, daily keyword document, or earlier conversation history.
+locale, the current user message, and at most one complete immediately previous
+user/plant exchange. Each previous-turn field is limited to 500 characters and
+is omitted unless both sides are present. It does not send the plant database
+ID, condition memory, daily keyword document, or full conversation history.
+The previous exchange is not persisted by this integration.
+
+## Reply quality
+
+The provider prompt keeps the plant character light rather than using it as a
+reason to avoid factual questions. Knowledge questions should receive a direct,
+age-appropriate answer. Repeated boilerplate endings such as
+`작게 말해볼게` or `조금 쑥스럽지만` are prohibited; the response should
+end naturally for the current situation.
 
 ## Production setup
 
