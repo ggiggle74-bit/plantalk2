@@ -165,6 +165,33 @@ void main() {
     expect(response.conditionMemoryReplyCount, 0);
   });
 
+  test('omits an incomplete prior turn from the API request', () async {
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: 'API 답변',
+        usedApi: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+
+    await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '공룡은 왜 멸종했어?',
+        previousUserMessage: '최근 상태가 어땠어?',
+        waterDay: 0,
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+
+    expect(orchestrator.requests.single.previousUserMessage, isNull);
+    expect(orchestrator.requests.single.previousPlantReply, isNull);
+  });
+
   test('non-localCasual orchestrator response is ignored', () async {
     const orchestratorMarker = 'NON_LOCAL_ORCHESTRATOR_MARKER';
     final orchestrator = _FakeConversationOrchestrator(
