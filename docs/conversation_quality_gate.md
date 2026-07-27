@@ -36,7 +36,6 @@ determines the route. For example, `무가리야 오늘 어때?` stays local, wh
 | `안녕, 공룡은 왜 멸종했어?` | API | knowledge intent wins over the greeting word |
 | `무가리야 나 오늘 학교에서 속상한 일이 있었어` | API | empathetic response rather than a generic greeting |
 | `그건 왜 그런 거야?` | API | uses only the immediately previous complete turn |
-| `안녕, 공룡은 왜 멸종했어?` | API | skips greeting DB replies |
 | `우주의 크기를 설명해줘` with overdue watering | API | skips thirsty DB replies |
 | `최근 사진에서 상태가 어땠어?` without memory | condition memory | returns a local seven-day photo-check invitation |
 
