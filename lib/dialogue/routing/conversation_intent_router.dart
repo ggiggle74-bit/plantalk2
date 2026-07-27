@@ -55,11 +55,13 @@ class ConversationIntentRouter {
   }
 
   bool _isLocalCasual(String message, String plantName) {
-    if (_directlyAddressesPlant(message, plantName)) {
+    final addressedRemainder = _directAddressRemainder(message, plantName);
+    if (addressedRemainder != null && addressedRemainder.isEmpty) {
       return true;
     }
 
-    return _containsAny(message, const [
+    final casualMessage = addressedRemainder ?? message;
+    return _containsAny(casualMessage, const [
           '안녕',
           '하이',
           '반가워',
@@ -68,7 +70,6 @@ class ConversationIntentRouter {
           '오늘 어때',
           '요즘 어때',
           '심심',
-          '무가리야',
           '기분 어때',
           '기분은 어때',
           '잘 지내',
@@ -87,6 +88,13 @@ class ConversationIntentRouter {
       '어떻게 키워',
       '어떻게 해야',
       '왜 그런',
+      '왜 ',
+      '왜?',
+      '무슨 뜻',
+      '알려줘',
+      '알려 줘',
+      '어떻게 만들어',
+      '어떻게 작동',
       '원인',
       '방법',
       '분갈이',
@@ -104,6 +112,10 @@ class ConversationIntentRouter {
       '자세히',
       '설명',
       'care guide',
+      'why ',
+      'how ',
+      'what is',
+      'explain',
       'repot',
       'fertilizer',
       'humidity',
@@ -112,18 +124,44 @@ class ConversationIntentRouter {
     ]);
   }
 
-  bool _directlyAddressesPlant(String message, String plantName) {
+  String? _directAddressRemainder(String message, String plantName) {
     final normalizedPlantName = plantName.toLowerCase().trim();
     if (normalizedPlantName.isEmpty) {
-      return false;
+      return null;
     }
 
-    final compactMessage = message.replaceAll(RegExp(r'\s+'), '');
-    final compactName = normalizedPlantName.replaceAll(RegExp(r'\s+'), '');
+    final prefixes = [
+      '$normalizedPlantName아',
+      '$normalizedPlantName야',
+      normalizedPlantName,
+      if (normalizedPlantName.endsWith('이') &&
+          normalizedPlantName.length > 1)
+        '${normalizedPlantName.substring(0, normalizedPlantName.length - 1)}아',
+    ];
+    for (final prefix in prefixes) {
+      if (message == prefix) {
+        return '';
+      }
+      if (!message.startsWith(prefix)) {
+        continue;
+      }
 
-    return compactMessage == compactName ||
-        compactMessage.startsWith('$compactName아') ||
-        compactMessage.startsWith('$compactName야');
+      final nextIndex = prefix.length;
+      if (message.length <= nextIndex) {
+        return '';
+      }
+      final separator = message[nextIndex];
+      if (!RegExp(r'[\s,.!?]').hasMatch(separator)) {
+        continue;
+      }
+
+      return message
+          .substring(nextIndex)
+          .replaceFirst(RegExp(r'^[\s,.!?]+'), '')
+          .trim();
+    }
+
+    return null;
   }
 
   bool _containsAny(String message, List<String> keywords) {
