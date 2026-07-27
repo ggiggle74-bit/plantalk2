@@ -133,7 +133,10 @@ class _ChatPanelState extends State<ChatPanel> {
         }
       }
 
-      final previousPlantReply = prevUser == null ? null : _latestPlantReply;
+      final previousPlantReply =
+          prevUser == null || DialogueEngine.isConditionMemoryQuestion(prevUser)
+          ? null
+          : _latestPlantReply;
 
       setState(() {
         _userMessageCount++;
