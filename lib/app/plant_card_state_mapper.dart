@@ -4,6 +4,15 @@ String? plantIdOf(Map<String, dynamic> plant) {
   return id;
 }
 
+String? speciesKeyForChat(
+  String? plantId,
+  Iterable<Map<String, dynamic>> plants,
+) {
+  final plant = _plantForChat(plantId, plants);
+  final key = plant?['speciesKey']?.toString().trim().toLowerCase();
+  return key == null || key.isEmpty || key == 'unknown' ? null : key;
+}
+
 String? speciesDisplayNameForChat(
   String? plantId,
   Iterable<Map<String, dynamic>> plants,
