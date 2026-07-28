@@ -57,4 +57,13 @@ void main() {
     expect(source, isNot(contains("speciesKey ==")));
     expect(source, isNot(contains("speciesDisplayName ==")));
   });
+
+  test('chat panel forwards the canonical key without species decisions', () {
+    final source = File('lib/dialogue/chat_panel.dart').readAsStringSync();
+
+    expect(source, contains('speciesKey: widget.speciesKey'));
+    expect(source, isNot(contains("widget.speciesDisplayName == '몬스테라'")));
+    expect(source, isNot(contains("widget.speciesKey ==")));
+  });
+
 }
