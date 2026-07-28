@@ -244,6 +244,8 @@ void main() {
     final response = await controller.generateReply(
       ChatPanelConversationRequest(
         plantName: '초록이',
+        speciesDisplayName: '몬스테라',
+        speciesKey: 'monstera',
         mood: '수줍음',
         friendship: 11,
         userMessage: '안녕',
@@ -255,6 +257,8 @@ void main() {
     expect(orchestrator.callCount, 1);
     expect(orchestrator.requests.single.plantId, '초록이');
     expect(orchestrator.requests.single.plantName, '초록이');
+    expect(orchestrator.requests.single.species, '몬스테라');
+    expect(orchestrator.requests.single.speciesKey, 'monstera');
     expect(orchestrator.requests.single.mood, '수줍음');
     expect(orchestrator.requests.single.friendship, 11);
     expect(
