@@ -72,6 +72,28 @@ void main() {
     expect(opening?.selectedCandidate.keyword, '독서');
   });
 
+  test('loads opening and session material from one source request', () async {
+    final source = _RecordingSource(
+      context: _context(date, keywords: const ['장맛비', '독서']),
+    );
+    final coordinator = DailyOpeningContextCoordinator.fromSource(
+      source: source,
+    );
+
+    final bundle = await coordinator.loadSessionForChat(
+      date: date,
+      locale: 'ko-KR',
+      plantKey: 'plant-1',
+    );
+
+    expect(source.callCount, 1);
+    expect(bundle.openingContext, isNotNull);
+    expect(
+      bundle.materialContext?.materials.map((material) => material.keyword),
+      ['장맛비', '독서'],
+    );
+  });
+
   test('keeps selection deterministic for the same chat identity', () async {
     final source = _RecordingSource(
       context: _context(date, keywords: const ['장맛비', '독서']),
@@ -127,9 +149,11 @@ class _RecordingSource implements DailyKeywordSource {
   final DailyKeywordContext? context;
   final Object? error;
   DailyKeywordSourceRequest? request;
+  int callCount = 0;
 
   @override
   Future<DailyKeywordContext> load(DailyKeywordSourceRequest request) async {
+    callCount++;
     this.request = request;
     final currentError = error;
     if (currentError != null) {
