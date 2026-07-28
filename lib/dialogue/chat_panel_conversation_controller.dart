@@ -123,9 +123,10 @@ class ChatPanelConversationController {
     var usedDbReply = false;
     var nextConditionMemoryReplyCount = request.conditionMemoryReplyCount;
 
-    if (decisionContext.hasDetectedSituation ||
-        decisionContext.situationKey ==
-            PhotoConditionDialogueSituations.conditionCheckRequest) {
+    if ((decisionContext.hasDetectedSituation ||
+            decisionContext.situationKey ==
+                PhotoConditionDialogueSituations.conditionCheckRequest) &&
+        _shouldTryDbReply(request, decisionContext, route)) {
       try {
         final dbReply = await _fetchDialogueReply(
           request,
@@ -133,9 +134,21 @@ class ChatPanelConversationController {
           conditionKey: decisionContext.conditionKey,
         );
 
-        if (dbReply != null) {
+        if (dbReply != null &&
+            _canUseDbReply(
+              request,
+              route: route,
+              situation: decisionContext.situationKey,
+              reply: dbReply,
+            )) {
           reply = dbReply;
           usedDbReply = true;
+          _recordDbReply(
+            request,
+            route: route,
+            situation: decisionContext.situationKey,
+            reply: dbReply,
+          );
         }
       } catch (_) {
         reply = fallbackReply;
@@ -196,6 +209,70 @@ class ChatPanelConversationController {
       replyText: reply,
       conditionMemoryReplyCount: nextConditionMemoryReplyCount,
     );
+  }
+
+  bool _shouldTryDbReply(
+    ChatPanelConversationRequest request,
+    DialogueDecisionContext decisionContext,
+    ConversationRoute route,
+  ) {
+    if (route != ConversationRoute.localCasual ||
+        request.isOpeningTurn ||
+        decisionContext.situationKey == 'thirsty' ||
+        decisionContext.situationKey == 'identity' ||
+        decisionContext.situationKey ==
+            PhotoConditionDialogueSituations.conditionCheckRequest) {
+      return true;
+    }
+
+    final materialContext = request.dailyConversationMaterialContext;
+    final usageLedger = request.usageLedger;
+    if (materialContext == null ||
+        !materialContext.hasMaterials ||
+        usageLedger == null) {
+      return true;
+    }
+
+    return usageLedger.turn.isEven;
+  }
+
+  bool _canUseDbReply(
+    ChatPanelConversationRequest request, {
+    required ConversationRoute route,
+    required String? situation,
+    required String reply,
+  }) {
+    if (route != ConversationRoute.localCasual) {
+      return true;
+    }
+
+    final usageLedger = request.usageLedger;
+    return usageLedger == null ||
+        usageLedger.canUseReply(_dbReplyKey(situation, reply));
+  }
+
+  void _recordDbReply(
+    ChatPanelConversationRequest request, {
+    required ConversationRoute route,
+    required String? situation,
+    required String reply,
+  }) {
+    if (route != ConversationRoute.localCasual) {
+      return;
+    }
+
+    request.usageLedger?.record(
+      replyKey: _dbReplyKey(situation, reply),
+    );
+  }
+
+  String _dbReplyKey(String? situation, String reply) {
+    final normalizedSituation = situation?.trim().toLowerCase() ?? 'casual';
+    final normalizedReply = reply
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), ' ');
+    return 'db:$normalizedSituation:$normalizedReply';
   }
 
   Future<String?> _fetchDialogueReply(
