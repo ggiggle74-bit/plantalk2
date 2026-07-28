@@ -119,6 +119,34 @@ void main() {
     expect(orchestrator, isNot(contains('daily_opening_context')));
   });
 
+  test('session material is carried without source or projector wiring', () {
+    const wiredFiles = [
+      'lib/main.dart',
+      'lib/dialogue/chat_panel.dart',
+      'lib/dialogue/chat_panel_conversation_controller.dart',
+      'lib/dialogue/engines/local_casual_conversation_engine.dart',
+      'lib/dialogue/models/conversation_request.dart',
+    ];
+
+    for (final path in wiredFiles) {
+      final source = File(path).readAsStringSync().toLowerCase();
+      expect(
+        source,
+        contains('dailyconversationmaterialcontext'),
+        reason: '$path must carry the session material context',
+      );
+    }
+
+    final orchestrator = File(
+      'lib/dialogue/conversation_orchestrator.dart',
+    ).readAsStringSync().toLowerCase();
+    expect(orchestrator, isNot(contains('dailyconversationmaterialcontext')));
+    expect(
+      orchestrator,
+      isNot(contains('daily_conversation_material_context')),
+    );
+  });
+
   test('opening context provider and factory stay outside runtime wiring', () {
     const files = [
       'lib/dialogue/chat_panel.dart',
@@ -164,7 +192,9 @@ void main() {
     final source = File('lib/main.dart').readAsStringSync().toLowerCase();
 
     expect(source, contains('dailyopeningcontextcoordinator.supabase()'));
-    expect(source, contains('dailyopeningcontext: dailyopeningcontext'));
+    expect(source, contains('loadsessionforchat'));
+    expect(source, contains('dailyopeningcontext: dailychatcontext'));
+    expect(source, contains('dailyconversationmaterialcontext:'));
     for (final snippet in [
       'supabasedailykeywordsource',
       'daily_keyword_contexts',
