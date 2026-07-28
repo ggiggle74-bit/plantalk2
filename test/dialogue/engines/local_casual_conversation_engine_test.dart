@@ -228,18 +228,6 @@ void main() {
     expect(response.usedApi, isFalse);
     expect(response.replyText, isNotEmpty);
   });
-}
-
-DailyConversationMaterialContext _materialContext(
-  DateTime date,
-  List<DailyConversationMaterial> materials,
-) {
-  return DailyConversationMaterialContext(
-    date: date,
-    locale: 'ko-KR',
-    sourceVersion: 'test-v1',
-    materials: materials,
-  );
 
   test('applies stored species character only through the local engine', () {
     const engine = LocalCasualConversationEngine();
@@ -257,5 +245,16 @@ DailyConversationMaterialContext _materialContext(
     expect(response.usedApi, isFalse);
     expect(response.replyText, startsWith('잎을 활짝 펼친 기분으로, '));
   });
+}
 
+DailyConversationMaterialContext _materialContext(
+  DateTime date,
+  List<DailyConversationMaterial> materials,
+) {
+  return DailyConversationMaterialContext(
+    date: date,
+    locale: 'ko-KR',
+    sourceVersion: 'test-v1',
+    materials: materials,
+  );
 }
