@@ -379,6 +379,7 @@ class _MyAppState extends State<MyApp> {
     required int waterDay,
     String? mood,
     int? friendship,
+    String? speciesKey,
     LatestConditionMemory? initialConditionMemory,
   }) async {
     final normalizedPlantId = plantId?.trim();
@@ -386,6 +387,8 @@ class _MyAppState extends State<MyApp> {
         mood ?? plantMoodForChat(normalizedPlantId, extraPlants);
     final resolvedFriendship =
         friendship ?? plantFriendshipForChat(normalizedPlantId, extraPlants);
+    final resolvedSpeciesKey =
+        speciesKey ?? speciesKeyForChat(normalizedPlantId, extraPlants);
     final dailyChatContext =
         await dailyOpeningContextCoordinator.loadSessionForChat(
       date: DateTime.now(),
@@ -406,6 +409,7 @@ class _MyAppState extends State<MyApp> {
             plantId: plantId,
             plantName: plantName,
             speciesDisplayName: speciesDisplayNameForChat(plantId, extraPlants),
+            speciesKey: resolvedSpeciesKey,
             mood: resolvedMood,
             friendship: resolvedFriendship,
             initialPlantMessage: initialPlantMessage,
@@ -470,6 +474,7 @@ class _MyAppState extends State<MyApp> {
                       initialPlantMessage: monsteraMessage,
                       waterDay: monsteraWaterDay,
                       friendship: monsteraFriendship,
+                      speciesKey: 'monstera',
                     );
                     if (chatResult != null && mounted) {
                       setState(() {
@@ -497,6 +502,7 @@ class _MyAppState extends State<MyApp> {
                       initialPlantMessage: stuckyMessage,
                       waterDay: stuckyWaterDay,
                       friendship: stuckyFriendship,
+                      speciesKey: 'stucky',
                     );
                     if (chatResult != null && mounted) {
                       setState(() {
