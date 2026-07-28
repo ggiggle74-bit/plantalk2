@@ -24,5 +24,5 @@ stays local, while knowledge and complex exceptions continue to use Gemini.
 - when every material is cooling down, the engine uses a rotating plain local
   reply instead of calling an external API
 
-The ledger is discarded when the chat panel closes. Character mood and
-friendship-specific composition remain a later bounded CR.
+The ledger is discarded when the chat panel closes. CR-2Q adds bounded mood
+and friendship composition without changing this ledger or adding a processor.
