@@ -1,11 +1,13 @@
 import '../models/latest_condition_memory.dart';
 import '../services/dialogue_service.dart';
 import 'conversation_orchestrator.dart';
+import 'daily_keywords/models/daily_conversation_material_context.dart';
 import 'daily_keywords/models/daily_opening_context.dart';
 import 'dialogue_decision_context_builder.dart';
 import 'dialogue_engine.dart';
 import 'models/conversation_request.dart';
 import 'models/conversation_route.dart';
+import 'models/conversation_usage_ledger.dart';
 
 typedef ChatPanelDialogueReplyFetcher =
     Future<String?> Function({String? situation, String? conditionKey});
@@ -25,6 +27,8 @@ class ChatPanelConversationRequest {
     this.conditionMemoryReplyCount = 0,
     this.fetchDialogueReply,
     this.dailyOpeningContext,
+    this.dailyConversationMaterialContext,
+    this.usageLedger,
     this.isOpeningTurn = false,
     this.now,
   });
@@ -42,6 +46,8 @@ class ChatPanelConversationRequest {
   final int conditionMemoryReplyCount;
   final ChatPanelDialogueReplyFetcher? fetchDialogueReply;
   final DailyOpeningContext? dailyOpeningContext;
+  final DailyConversationMaterialContext? dailyConversationMaterialContext;
+  final ConversationUsageLedger? usageLedger;
   final bool isOpeningTurn;
   final DateTime? now;
 }
@@ -225,7 +231,10 @@ class ChatPanelConversationController {
       friendship: request.friendship,
       now: request.now,
       latestConditionMemory: request.latestConditionMemory,
+      dailyConversationMaterialContext:
+          request.dailyConversationMaterialContext,
       dailyOpeningContext: request.dailyOpeningContext,
+      usageLedger: request.usageLedger,
       isOpeningTurn: request.isOpeningTurn,
     );
   }
