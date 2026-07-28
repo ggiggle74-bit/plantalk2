@@ -155,13 +155,14 @@ class LocalCasualConversationEngine {
     String plantName,
   ) {
     final normalized = request.userMessage.toLowerCase().trim();
+    final plantSubject = _subjectLabel(plantName);
     final String group;
     final List<String> focusedReplies;
 
     if (normalized.contains('외로')) {
       group = 'lonely';
       focusedReplies = [
-        '나 여기 있어. $plantName이 네 이야기 천천히 들어줄게.',
+        '나 여기 있어. $plantSubject 네 이야기 천천히 들어줄게.',
         '혼자라고 느껴질 때는 나한테 와. 지금은 같이 있잖아.',
         '$plantName도 네가 와서 반가워. 오늘 마음부터 들려줘.',
       ];
@@ -175,14 +176,14 @@ class LocalCasualConversationEngine {
     } else if (normalized.contains('뭐해') || normalized.contains('뭐 해')) {
       group = 'doing';
       focusedReplies = [
-        '$plantName은 잎 정리하면서 네 말 기다리고 있었어.',
+        '$plantSubject 잎 정리하면서 네 말 기다리고 있었어.',
         '햇빛 쪽을 보면서 쉬는 중이야. 너는 뭐 하고 있었어?',
         '조용히 자라는 중이었어. 네가 오니까 이야기할 수 있겠네.',
       ];
     } else if (normalized.contains('기분')) {
       group = 'mood';
       focusedReplies = [
-        '$plantName은 오늘 꽤 잔잔해. 네가 와서 더 괜찮아졌어.',
+        '$plantSubject 오늘 꽤 잔잔해. 네가 와서 더 괜찮아졌어.',
         '오늘 기분은 편안한 편이야. 너는 지금 어때?',
         '조금 느긋한 기분이야. 네 마음도 궁금해.',
       ];
@@ -197,7 +198,7 @@ class LocalCasualConversationEngine {
 
     final candidates = [
       ...focusedReplies,
-      '지금처럼 편하게 말해줘. $plantName이 듣고 있을게.',
+      '지금처럼 편하게 말해줘. $plantSubject 듣고 있을게.',
       '오늘 네 이야기를 하나 들려줄래? 천천히 들어볼게.',
     ];
     final ledger = request.usageLedger;
@@ -239,6 +240,19 @@ class LocalCasualConversationEngine {
   String _plantLabel(String plantName) {
     final trimmed = plantName.trim();
     return trimmed.isEmpty ? '이 식물' : trimmed;
+  }
+
+  String _subjectLabel(String plantName) {
+    if (plantName.isEmpty) {
+      return plantName;
+    }
+
+    final lastCodeUnit = plantName.codeUnitAt(plantName.length - 1);
+    final isHangulSyllable =
+        lastCodeUnit >= 0xac00 && lastCodeUnit <= 0xd7a3;
+    final hasBatchim =
+        isHangulSyllable && (lastCodeUnit - 0xac00) % 28 != 0;
+    return '$plantName${hasBatchim ? '이' : '가'}';
   }
 
   String _sentence(String value) {
