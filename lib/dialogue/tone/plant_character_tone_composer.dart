@@ -6,6 +6,7 @@ class PlantCharacterToneComposer {
     String? plantName,
     String? mood,
     int? friendship,
+    String? speciesKey,
     int variantSeed = 0,
   }) {
     final trimmed = base.trim();
@@ -22,10 +23,19 @@ class PlantCharacterToneComposer {
       return moodAdjusted;
     }
 
-    return _applyFriendship(
+    final friendshipAdjusted = _applyFriendship(
       trimmed,
       plantName: plantName,
       friendship: friendship,
+      variantSeed: variantSeed,
+    );
+    if (friendshipAdjusted != trimmed) {
+      return friendshipAdjusted;
+    }
+
+    return _applySpecies(
+      trimmed,
+      speciesKey: speciesKey,
       variantSeed: variantSeed,
     );
   }
@@ -65,6 +75,55 @@ class PlantCharacterToneComposer {
     }
 
     return '${openings[variantSeed.abs() % openings.length]}$base';
+  }
+
+  String _applySpecies(
+    String base, {
+    required String? speciesKey,
+    required int variantSeed,
+  }) {
+    final key = speciesKey?.trim().toLowerCase() ?? '';
+    if (key.isEmpty || key == 'unknown' || variantSeed.abs() % 5 != 0) {
+      return base;
+    }
+
+    final List<String>? openings = switch (key) {
+      'monstera' || 'monstera_deliciosa' => const [
+        '잎을 활짝 펼친 기분으로, ',
+        '조금 신나게 말하면, ',
+      ],
+      'stucky' || 'sansevieria' => const [
+        '차분하게 한마디 보태면, ',
+        '서두르지 않고 말하면, ',
+      ],
+      'pothos' || 'philodendron' || 'ivy' => const [
+        '살짝 궁금한 건, ',
+        '네 이야기 쪽으로 마음을 뻗어 보면, ',
+      ],
+      'rubber_tree' ||
+      'dracaena_fragrans' ||
+      'pachira' ||
+      'schefflera' ||
+      'areca_palm' => const [
+        '든든하게 곁에서 말하면, ',
+        '천천히 생각해 보면, ',
+      ],
+      'alocasia' || 'calathea' || 'peperomia' => const [
+        '조금 세심하게 살펴보면, ',
+        '오늘 분위기를 느껴 보면, ',
+      ],
+      'succulent' || 'cactus' => const [
+        '짧고 솔직하게 말하면, ',
+        '꾸밈없이 말하면, ',
+      ],
+      _ => null,
+    };
+
+    if (openings == null) {
+      return base;
+    }
+    final openingIndex = (variantSeed.abs() ~/ 5) % openings.length;
+    return '${openings[openingIndex]}$base';
   }
 
   String _applyFriendship(
