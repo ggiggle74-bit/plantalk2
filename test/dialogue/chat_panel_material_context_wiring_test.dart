@@ -101,6 +101,39 @@ void main() {
     expect(ledger.turn, 2);
   });
 
+  test('repeated DB reply waits for the shared reply cooldown', () async {
+    final controller = ChatPanelConversationController();
+    final ledger = ConversationUsageLedger();
+    const repeatedDbReply = '왔구나. 기다리고 있었어.';
+    final replies = <String>[];
+
+    for (var turn = 0; turn < 7; turn++) {
+      final response = await controller.generateReply(
+        ChatPanelConversationRequest(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          userMessage: '안녕',
+          waterDay: 0,
+          isOpeningTurn: turn == 0,
+          dailyConversationMaterialContext: materialContext,
+          usageLedger: ledger,
+          fetchDialogueReply: ({situation, conditionKey}) async {
+            return repeatedDbReply;
+          },
+        ),
+      );
+      replies.add(response.replyText);
+    }
+
+    final dbReplyTurns = <int>[
+      for (var index = 0; index < replies.length; index++)
+        if (replies[index] == repeatedDbReply) index,
+    ];
+
+    expect(dbReplyTurns, [0, 6]);
+    expect(ledger.turn, 7);
+  });
+
   test('API-routed conversation does not consume local material', () async {
     final controller = ChatPanelConversationController();
     final ledger = ConversationUsageLedger();
