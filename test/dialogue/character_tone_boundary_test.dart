@@ -10,6 +10,7 @@ void main() {
 
     expect(source, contains('PlantCharacterToneComposer'));
     expect(source, contains('friendship: request.friendship'));
+    expect(source, contains('speciesKey: request.speciesKey'));
     expect(source, isNot(contains('MugariToneComposer')));
     expect(source, isNot(contains("'무가리'")));
   });
@@ -29,6 +30,8 @@ void main() {
 
     expect(source, contains('plantMoodForChat'));
     expect(source, contains('plantFriendshipForChat'));
+    expect(source, contains('speciesKeyForChat'));
+    expect(source, contains('speciesKey: resolvedSpeciesKey'));
     expect(source, contains('mood: resolvedMood'));
     expect(source, contains('friendship: resolvedFriendship'));
     expect(source, isNot(contains('PlantCharacterToneComposer')));
@@ -42,5 +45,16 @@ void main() {
     expect(source, isNot(contains('무가리')));
     expect(source, isNot(contains('작게 말해볼게')));
     expect(source, isNot(contains('조금 쑥스럽지만')));
+    expect(source, isNot(contains("speciesKey: '몬스테라'")));
+  });
+
+  test('controller only forwards canonical species context', () {
+    final source = File(
+      'lib/dialogue/chat_panel_conversation_controller.dart',
+    ).readAsStringSync();
+
+    expect(source, contains('speciesKey: request.speciesKey'));
+    expect(source, isNot(contains("speciesKey ==")));
+    expect(source, isNot(contains("speciesDisplayName ==")));
   });
 }
