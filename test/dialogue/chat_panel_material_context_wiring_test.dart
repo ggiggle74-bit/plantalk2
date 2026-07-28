@@ -59,6 +59,48 @@ void main() {
     expect(ledger.trackedMaterialKeys, hasLength(2));
   });
 
+  test('alternates a DB-authored opening with local daily material', () async {
+    final controller = ChatPanelConversationController();
+    final ledger = ConversationUsageLedger();
+    var dbCallCount = 0;
+
+    final opening = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '안녕',
+        waterDay: 0,
+        isOpeningTurn: true,
+        dailyConversationMaterialContext: materialContext,
+        usageLedger: ledger,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return '왔구나. 기다리고 있었어.';
+        },
+      ),
+    );
+    final next = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '오늘 뭐해?',
+        waterDay: 0,
+        dailyConversationMaterialContext: materialContext,
+        usageLedger: ledger,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return '왔구나. 기다리고 있었어.';
+        },
+      ),
+    );
+
+    expect(opening.replyText, '왔구나. 기다리고 있었어.');
+    expect(next.replyText, isNot('왔구나. 기다리고 있었어.'));
+    expect(next.replyText, anyOf(contains('비'), contains('독서')));
+    expect(dbCallCount, 1);
+    expect(ledger.turn, 2);
+  });
+
   test('API-routed conversation does not consume local material', () async {
     final controller = ChatPanelConversationController();
     final ledger = ConversationUsageLedger();
