@@ -80,9 +80,9 @@ class PlantCharacterToneComposer {
     }
 
     final openings = [
-      '$name은 이제 네가 오면 바로 알아봐. ',
+      '$name, 이제 네가 오면 바로 알아봐. ',
       '$name도 네 목소리가 꽤 익숙해졌어. ',
-      '$name은 오늘도 네가 와서 마음이 놓여. ',
+      '$name, 오늘도 네가 와서 마음이 놓여. ',
     ];
     final openingIndex = (variantSeed.abs() ~/ 3) % openings.length;
     return '${openings[openingIndex]}$base';
