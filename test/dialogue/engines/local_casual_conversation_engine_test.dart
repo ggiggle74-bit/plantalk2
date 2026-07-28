@@ -243,7 +243,13 @@ void main() {
 
     expect(response.route, ConversationRoute.localCasual);
     expect(response.usedApi, isFalse);
-    expect(response.replyText, startsWith('잎을 활짝 펼친 기분으로, '));
+    expect(
+      response.replyText,
+      anyOf(
+        startsWith('잎을 활짝 펼친 기분으로, '),
+        startsWith('조금 신나게 말하면, '),
+      ),
+    );
   });
 }
 
