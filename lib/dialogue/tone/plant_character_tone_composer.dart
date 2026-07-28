@@ -43,7 +43,7 @@ class PlantCharacterToneComposer {
       return base;
     }
 
-    final List<String>? openings;
+    final List<String> openings;
     if (normalizedMood.contains('shy') ||
         normalizedMood.contains('수줍') ||
         normalizedMood.contains('소심')) {
