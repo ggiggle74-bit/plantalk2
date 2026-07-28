@@ -51,4 +51,24 @@ void main() {
     expect(state['mood'], '수줍음');
     expect(state['friendship'], 8);
   });
+
+  test('returns only a stored canonical species key for chat', () {
+    final plants = <Map<String, dynamic>>[
+      {
+        'id': 'plant-1',
+        'speciesKey': '  MONSTERA ',
+        'speciesDisplayName': '사용자가 바꾼 표시 이름',
+      },
+      {
+        'id': 'plant-2',
+        'speciesKey': 'unknown',
+        'speciesDisplayName': '몬스테라',
+      },
+    ];
+
+    expect(speciesKeyForChat('plant-1', plants), 'monstera');
+    expect(speciesKeyForChat('plant-2', plants), isNull);
+    expect(speciesKeyForChat('missing', plants), isNull);
+  });
+
 }
