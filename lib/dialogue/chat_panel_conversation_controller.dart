@@ -19,6 +19,7 @@ class ChatPanelConversationRequest {
     required this.waterDay,
     this.plantId,
     this.speciesDisplayName,
+    this.speciesKey,
     this.mood,
     this.friendship,
     this.previousUserMessage,
@@ -38,6 +39,7 @@ class ChatPanelConversationRequest {
   final int waterDay;
   final String? plantId;
   final String? speciesDisplayName;
+  final String? speciesKey;
   final String? mood;
   final int? friendship;
   final String? previousUserMessage;
@@ -304,6 +306,7 @@ class ChatPanelConversationController {
           : request.previousUserMessage,
       previousPlantReply: request.previousPlantReply,
       species: request.speciesDisplayName,
+      speciesKey: request.speciesKey,
       mood: request.mood,
       friendship: request.friendship,
       now: request.now,
