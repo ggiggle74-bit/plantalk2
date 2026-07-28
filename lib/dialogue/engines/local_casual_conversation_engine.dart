@@ -22,6 +22,7 @@ class LocalCasualConversationEngine {
       plantName: request.plantName,
       mood: request.mood,
       friendship: request.friendship,
+      speciesKey: request.speciesKey,
       variantSeed: _stableHash(selection.replyKey),
     );
 
