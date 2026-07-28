@@ -380,7 +380,8 @@ class _MyAppState extends State<MyApp> {
     LatestConditionMemory? initialConditionMemory,
   }) async {
     final normalizedPlantId = plantId?.trim();
-    final dailyOpeningContext = await dailyOpeningContextCoordinator.loadForChat(
+    final dailyChatContext =
+        await dailyOpeningContextCoordinator.loadSessionForChat(
       date: DateTime.now(),
       locale: 'ko-KR',
       plantKey: normalizedPlantId == null || normalizedPlantId.isEmpty
@@ -403,7 +404,9 @@ class _MyAppState extends State<MyApp> {
             waterDay: waterDay,
             initialConditionMemory: initialConditionMemory,
             conversationController: chatConversationController,
-            dailyOpeningContext: dailyOpeningContext,
+            dailyOpeningContext: dailyChatContext.openingContext,
+            dailyConversationMaterialContext:
+                dailyChatContext.materialContext,
           );
         },
       ),

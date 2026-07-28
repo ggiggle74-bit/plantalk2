@@ -1,0 +1,164 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:plantalk2/dialogue/chat_panel_conversation_controller.dart';
+import 'package:plantalk2/dialogue/daily_keywords/models/daily_conversation_material_context.dart';
+import 'package:plantalk2/dialogue/models/conversation_usage_ledger.dart';
+
+void main() {
+  final materialContext = DailyConversationMaterialContext(
+    date: DateTime.utc(2026, 7, 28),
+    locale: 'ko-KR',
+    materials: [
+      DailyConversationMaterial(
+        type: 'weather',
+        keyword: '비',
+        hint: '비가 내리는 날',
+        plantHint: '창가의 빗소리를 함께 듣기',
+        tone: 'gentle',
+        fitScore: 0.82,
+      ),
+      DailyConversationMaterial(
+        type: 'safe_issue',
+        keyword: '독서',
+        hint: '책 이야기를 나누는 날',
+        plantHint: '조용한 시간을 함께 보내기',
+        tone: 'calm',
+        fitScore: 0.72,
+      ),
+    ],
+  );
+
+  test('controller carries session material into the local engine', () async {
+    final controller = ChatPanelConversationController();
+    final ledger = ConversationUsageLedger();
+
+    final first = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '오늘 뭐해?',
+        waterDay: 0,
+        dailyConversationMaterialContext: materialContext,
+        usageLedger: ledger,
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+    final second = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '오늘 뭐해?',
+        waterDay: 0,
+        dailyConversationMaterialContext: materialContext,
+        usageLedger: ledger,
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+
+    expect(first.replyText, isNot(second.replyText));
+    expect(ledger.turn, 2);
+    expect(ledger.trackedMaterialKeys, hasLength(2));
+  });
+
+  test('alternates a DB-authored opening with local daily material', () async {
+    final controller = ChatPanelConversationController();
+    final ledger = ConversationUsageLedger();
+    var dbCallCount = 0;
+
+    final opening = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '안녕',
+        waterDay: 0,
+        isOpeningTurn: true,
+        dailyConversationMaterialContext: materialContext,
+        usageLedger: ledger,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return '왔구나. 기다리고 있었어.';
+        },
+      ),
+    );
+    final next = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '오늘 뭐해?',
+        waterDay: 0,
+        dailyConversationMaterialContext: materialContext,
+        usageLedger: ledger,
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return '왔구나. 기다리고 있었어.';
+        },
+      ),
+    );
+
+    expect(opening.replyText, '왔구나. 기다리고 있었어.');
+    expect(next.replyText, isNot('왔구나. 기다리고 있었어.'));
+    expect(next.replyText, anyOf(contains('비'), contains('독서')));
+    expect(dbCallCount, 1);
+    expect(ledger.turn, 2);
+  });
+
+  test('repeated DB reply waits for the shared reply cooldown', () async {
+    final controller = ChatPanelConversationController();
+    final ledger = ConversationUsageLedger();
+    const repeatedDbReply = '왔구나. 기다리고 있었어.';
+    final replies = <String>[];
+
+    for (var turn = 0; turn < 7; turn++) {
+      final response = await controller.generateReply(
+        ChatPanelConversationRequest(
+          plantId: 'plant-1',
+          plantName: '무가리',
+          userMessage: '안녕',
+          waterDay: 0,
+          isOpeningTurn: turn == 0,
+          dailyConversationMaterialContext: materialContext,
+          usageLedger: ledger,
+          fetchDialogueReply: ({situation, conditionKey}) async {
+            return repeatedDbReply;
+          },
+        ),
+      );
+      replies.add(response.replyText);
+    }
+
+    final dbReplyTurns = <int>[
+      for (var index = 0; index < replies.length; index++)
+        if (replies[index] == repeatedDbReply) index,
+    ];
+
+    expect(dbReplyTurns, [0, 6]);
+    expect(ledger.turn, 7);
+  });
+
+  test('API-routed conversation does not consume local material', () async {
+    final controller = ChatPanelConversationController();
+    final ledger = ConversationUsageLedger();
+
+    await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '공룡은 왜 멸종했어?',
+        waterDay: 0,
+        dailyConversationMaterialContext: materialContext,
+        usageLedger: ledger,
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+
+    expect(ledger.turn, 0);
+    expect(ledger.trackedMaterialKeys, isEmpty);
+    expect(ledger.trackedReplyKeys, isEmpty);
+  });
+}
+
+Future<String?> _nullDialogueReply({
+  String? situation,
+  String? conditionKey,
+}) {
+  return Future<String?>.value();
+}

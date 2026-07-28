@@ -252,7 +252,11 @@ void main() {
 
     expect(orchestrator.callCount, 1);
     expect(orchestrator.requests.single.plantId, '무가리');
-    expect(orchestrator.requests.single.dailyKeywordContext, isNull);
+    expect(
+      orchestrator.requests.single.dailyConversationMaterialContext,
+      isNull,
+    );
+    expect(orchestrator.requests.single.usageLedger, isNull);
     expect(response.replyText, orchestratorReply);
     expect(response.conditionMemoryReplyCount, 0);
   });

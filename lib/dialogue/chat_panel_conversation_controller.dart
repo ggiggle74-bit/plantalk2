@@ -1,11 +1,13 @@
 import '../models/latest_condition_memory.dart';
 import '../services/dialogue_service.dart';
 import 'conversation_orchestrator.dart';
+import 'daily_keywords/models/daily_conversation_material_context.dart';
 import 'daily_keywords/models/daily_opening_context.dart';
 import 'dialogue_decision_context_builder.dart';
 import 'dialogue_engine.dart';
 import 'models/conversation_request.dart';
 import 'models/conversation_route.dart';
+import 'models/conversation_usage_ledger.dart';
 
 typedef ChatPanelDialogueReplyFetcher =
     Future<String?> Function({String? situation, String? conditionKey});
@@ -25,6 +27,8 @@ class ChatPanelConversationRequest {
     this.conditionMemoryReplyCount = 0,
     this.fetchDialogueReply,
     this.dailyOpeningContext,
+    this.dailyConversationMaterialContext,
+    this.usageLedger,
     this.isOpeningTurn = false,
     this.now,
   });
@@ -42,6 +46,8 @@ class ChatPanelConversationRequest {
   final int conditionMemoryReplyCount;
   final ChatPanelDialogueReplyFetcher? fetchDialogueReply;
   final DailyOpeningContext? dailyOpeningContext;
+  final DailyConversationMaterialContext? dailyConversationMaterialContext;
+  final ConversationUsageLedger? usageLedger;
   final bool isOpeningTurn;
   final DateTime? now;
 }
@@ -117,9 +123,10 @@ class ChatPanelConversationController {
     var usedDbReply = false;
     var nextConditionMemoryReplyCount = request.conditionMemoryReplyCount;
 
-    if (decisionContext.hasDetectedSituation ||
-        decisionContext.situationKey ==
-            PhotoConditionDialogueSituations.conditionCheckRequest) {
+    if ((decisionContext.hasDetectedSituation ||
+            decisionContext.situationKey ==
+                PhotoConditionDialogueSituations.conditionCheckRequest) &&
+        _shouldTryDbReply(request, decisionContext, route)) {
       try {
         final dbReply = await _fetchDialogueReply(
           request,
@@ -127,9 +134,21 @@ class ChatPanelConversationController {
           conditionKey: decisionContext.conditionKey,
         );
 
-        if (dbReply != null) {
+        if (dbReply != null &&
+            _canUseDbReply(
+              request,
+              route: route,
+              situation: decisionContext.situationKey,
+              reply: dbReply,
+            )) {
           reply = dbReply;
           usedDbReply = true;
+          _recordDbReply(
+            request,
+            route: route,
+            situation: decisionContext.situationKey,
+            reply: dbReply,
+          );
         }
       } catch (_) {
         reply = fallbackReply;
@@ -192,6 +211,70 @@ class ChatPanelConversationController {
     );
   }
 
+  bool _shouldTryDbReply(
+    ChatPanelConversationRequest request,
+    DialogueDecisionContext decisionContext,
+    ConversationRoute route,
+  ) {
+    if (route != ConversationRoute.localCasual ||
+        request.isOpeningTurn ||
+        decisionContext.situationKey == 'thirsty' ||
+        decisionContext.situationKey == 'identity' ||
+        decisionContext.situationKey ==
+            PhotoConditionDialogueSituations.conditionCheckRequest) {
+      return true;
+    }
+
+    final materialContext = request.dailyConversationMaterialContext;
+    final usageLedger = request.usageLedger;
+    if (materialContext == null ||
+        !materialContext.hasMaterials ||
+        usageLedger == null) {
+      return true;
+    }
+
+    return usageLedger.turn.isEven;
+  }
+
+  bool _canUseDbReply(
+    ChatPanelConversationRequest request, {
+    required ConversationRoute route,
+    required String? situation,
+    required String reply,
+  }) {
+    if (route != ConversationRoute.localCasual) {
+      return true;
+    }
+
+    final usageLedger = request.usageLedger;
+    return usageLedger == null ||
+        usageLedger.canUseReply(_dbReplyKey(situation, reply));
+  }
+
+  void _recordDbReply(
+    ChatPanelConversationRequest request, {
+    required ConversationRoute route,
+    required String? situation,
+    required String reply,
+  }) {
+    if (route != ConversationRoute.localCasual) {
+      return;
+    }
+
+    request.usageLedger?.record(
+      replyKey: _dbReplyKey(situation, reply),
+    );
+  }
+
+  String _dbReplyKey(String? situation, String reply) {
+    final normalizedSituation = situation?.trim().toLowerCase() ?? 'casual';
+    final normalizedReply = reply
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), ' ');
+    return 'db:$normalizedSituation:$normalizedReply';
+  }
+
   Future<String?> _fetchDialogueReply(
     ChatPanelConversationRequest request, {
     String? situation,
@@ -225,7 +308,10 @@ class ChatPanelConversationController {
       friendship: request.friendship,
       now: request.now,
       latestConditionMemory: request.latestConditionMemory,
+      dailyConversationMaterialContext:
+          request.dailyConversationMaterialContext,
       dailyOpeningContext: request.dailyOpeningContext,
+      usageLedger: request.usageLedger,
       isOpeningTurn: request.isOpeningTurn,
     );
   }

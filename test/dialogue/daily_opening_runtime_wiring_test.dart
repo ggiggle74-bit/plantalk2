@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plantalk2/dialogue/chat_panel.dart';
 import 'package:plantalk2/dialogue/chat_panel_conversation_controller.dart';
+import 'package:plantalk2/dialogue/daily_keywords/models/daily_conversation_material_context.dart';
 import 'package:plantalk2/dialogue/daily_keywords/models/daily_opening_context.dart';
 import 'package:plantalk2/dialogue/engines/local_casual_conversation_engine.dart';
 import 'package:plantalk2/dialogue/models/conversation_request.dart';
@@ -168,10 +169,11 @@ void main() {
     expect(openingContext.isConsumed, isTrue);
   });
 
-  testWidgets('ChatPanel marks only the first user message as opening', (
+  testWidgets('ChatPanel keeps opening and session material separated', (
     tester,
   ) async {
     final openingContext = _openingContext();
+    final materialContext = _materialContext();
     final controller = _RecordingConversationController();
 
     await tester.pumpWidget(
@@ -182,6 +184,7 @@ void main() {
           waterDay: 0,
           conversationController: controller,
           dailyOpeningContext: openingContext,
+          dailyConversationMaterialContext: materialContext,
         ),
       ),
     );
@@ -199,6 +202,19 @@ void main() {
     expect(controller.requests.last.isOpeningTurn, isFalse);
     expect(controller.requests.first.dailyOpeningContext, same(openingContext));
     expect(controller.requests.last.dailyOpeningContext, same(openingContext));
+    expect(
+      controller.requests.first.dailyConversationMaterialContext,
+      same(materialContext),
+    );
+    expect(
+      controller.requests.last.dailyConversationMaterialContext,
+      same(materialContext),
+    );
+    expect(controller.requests.first.usageLedger, isNotNull);
+    expect(
+      controller.requests.last.usageLedger,
+      same(controller.requests.first.usageLedger),
+    );
   });
 
 
@@ -279,6 +295,23 @@ void main() {
 
 Future<String?> _nullDialogueReply({String? situation, String? conditionKey}) {
   return Future<String?>.value();
+}
+
+DailyConversationMaterialContext _materialContext() {
+  return DailyConversationMaterialContext(
+    date: DateTime.utc(2026, 7, 18),
+    locale: 'ko-KR',
+    materials: [
+      DailyConversationMaterial(
+        type: 'safe_issue',
+        keyword: '독서',
+        hint: '책 이야기를 나누는 날',
+        plantHint: '조용한 시간을 함께 보내기',
+        tone: 'calm',
+        fitScore: 0.72,
+      ),
+    ],
+  );
 }
 
 DailyOpeningContext _openingContext() {

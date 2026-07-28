@@ -1,20 +1,29 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plantalk2/dialogue/daily_keywords/models/daily_conversation_material_context.dart';
 import 'package:plantalk2/dialogue/models/conversation_request.dart';
-import 'package:plantalk2/dialogue/models/daily_keyword_context.dart';
+import 'package:plantalk2/dialogue/models/conversation_usage_ledger.dart';
 import 'package:plantalk2/dialogue/models/user_region_context.dart';
 import 'package:plantalk2/models/latest_condition_memory.dart';
 
 void main() {
   test(
-    'carries plant, message, daily keyword, region, and condition memory',
+    'carries plant, message, daily material, usage, region, and memory',
     () {
-      final keywordContext = DailyKeywordContext(
-        date: DateTime.utc(2026, 7, 8),
-        locale: 'ko',
-        keywords: const [
-          DailyKeywordEntry(type: 'weather', keyword: '장맛비', hint: '비가 이어지는 날'),
+      final materialContext = DailyConversationMaterialContext(
+        date: DateTime.utc(2026, 7, 28),
+        locale: 'ko-KR',
+        materials: [
+          DailyConversationMaterial(
+            type: 'weather',
+            keyword: '장맛비',
+            hint: '비가 이어지는 날',
+            plantHint: '실내 공기 흐름을 살펴보기',
+            tone: 'gentle',
+            fitScore: 0.82,
+          ),
         ],
       );
+      final usageLedger = ConversationUsageLedger();
       const regionContext = UserRegionContext(
         countryCode: 'KR',
         regionLabel: '제주',
@@ -33,7 +42,8 @@ void main() {
         userMessage: '오늘 어때?',
         previousUserMessage: '어제 학교에서 속상했어.',
         previousPlantReply: '무슨 일이 있었는지 말해줘.',
-        dailyKeywordContext: keywordContext,
+        dailyConversationMaterialContext: materialContext,
+        usageLedger: usageLedger,
         userRegionContext: regionContext,
         latestConditionMemory: memory,
       );
@@ -43,7 +53,8 @@ void main() {
       expect(request.userMessage, '오늘 어때?');
       expect(request.previousUserMessage, '어제 학교에서 속상했어.');
       expect(request.previousPlantReply, '무슨 일이 있었는지 말해줘.');
-      expect(request.dailyKeywordContext, same(keywordContext));
+      expect(request.dailyConversationMaterialContext, same(materialContext));
+      expect(request.usageLedger, same(usageLedger));
       expect(request.userRegionContext, same(regionContext));
       expect(request.latestConditionMemory, same(memory));
     },
