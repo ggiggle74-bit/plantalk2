@@ -115,6 +115,30 @@ void main() {
     expect(route, ConversationRoute.conditionMemory);
   });
 
+  test('routes an explicit condition-history question locally without memory', () {
+    final route = router.route(
+      const ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '최근 사진에서 상태가 어땠어?',
+      ),
+    );
+
+    expect(route, ConversationRoute.conditionMemory);
+  });
+
+  test('keeps a general plant-care explanation on the API route', () {
+    final route = router.route(
+      const ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '몬스테라 잎이 처지는 일반적인 원인을 설명해줘',
+      ),
+    );
+
+    expect(route, ConversationRoute.api);
+  });
+
   test('routes unrecognized nonempty conversation to api', () {
     final route = router.route(
       const ConversationRequest(

@@ -57,6 +57,9 @@ class ChatPanelConversationResponse {
 }
 
 class ChatPanelConversationController {
+  static const conditionMemoryUnavailableReply =
+      '우리 최근 일주일 동안은 상태를 같이 확인하지 않았네. 지금 사진으로 한번 봐줄래?';
+
   ChatPanelConversationController({
     DialogueDecisionContextBuilder decisionContextBuilder =
         const DialogueDecisionContextBuilder(),
@@ -74,6 +77,8 @@ class ChatPanelConversationController {
   Future<ChatPanelConversationResponse> generateReply(
     ChatPanelConversationRequest request,
   ) async {
+    final conversationRequest = _conversationRequest(request);
+    final route = _conversationOrchestrator.router.route(conversationRequest);
     final decisionContext = _decisionContextBuilder.build(
       input: request.userMessage,
       waterDay: request.waterDay,
@@ -91,6 +96,22 @@ class ChatPanelConversationController {
       situation: decisionContext.situationKey,
       previousUserMessage: request.previousUserMessage,
     );
+
+    if (route == ConversationRoute.api) {
+      final apiReply = await _orchestratorReply(conversationRequest, route);
+      return ChatPanelConversationResponse(
+        replyText: (apiReply ?? fallbackReply).trim(),
+        conditionMemoryReplyCount: request.conditionMemoryReplyCount,
+      );
+    }
+
+    if (route == ConversationRoute.conditionMemory &&
+        request.latestConditionMemory == null) {
+      return ChatPanelConversationResponse(
+        replyText: conditionMemoryUnavailableReply,
+        conditionMemoryReplyCount: request.conditionMemoryReplyCount,
+      );
+    }
 
     var reply = fallbackReply;
     var usedDbReply = false;
@@ -154,7 +175,10 @@ class ChatPanelConversationController {
     }
 
     if (!usedDbReply && !decisionContext.usesConditionMemoryFallback) {
-      final orchestratorReply = await _orchestratorReply(request);
+      final orchestratorReply = await _orchestratorReply(
+        conversationRequest,
+        route,
+      );
       if (orchestratorReply != null) {
         reply = orchestratorReply;
       }
@@ -185,10 +209,10 @@ class ChatPanelConversationController {
     );
   }
 
-  Future<String?> _orchestratorReply(
+  ConversationRequest _conversationRequest(
     ChatPanelConversationRequest request,
-  ) async {
-    final conversationRequest = ConversationRequest(
+  ) {
+    return ConversationRequest(
       plantId: _conversationPlantId(request),
       plantName: request.plantName,
       userMessage: request.userMessage,
@@ -204,15 +228,19 @@ class ChatPanelConversationController {
       dailyOpeningContext: request.dailyOpeningContext,
       isOpeningTurn: request.isOpeningTurn,
     );
+  }
 
-    final route = _conversationOrchestrator.router.route(conversationRequest);
-    if (route != ConversationRoute.localCasual &&
-        route != ConversationRoute.api) {
+  Future<String?> _orchestratorReply(
+    ConversationRequest request,
+    ConversationRoute route,
+  ) async {
+    if (route == ConversationRoute.fallback) {
       return null;
     }
 
-    final response = await _conversationOrchestrator.respond(
-      conversationRequest,
+    final response = await _conversationOrchestrator.respondForRoute(
+      request,
+      route,
     );
 
     if (response.route != route ||

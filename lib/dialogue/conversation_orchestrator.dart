@@ -22,9 +22,15 @@ class ConversationOrchestrator {
   final ApiConversationEngine? apiConversationEngine;
   final FallbackConversationEngine fallbackEngine;
 
-  Future<ConversationResponse> respond(ConversationRequest request) async {
+  Future<ConversationResponse> respond(ConversationRequest request) {
     final route = router.route(request);
+    return respondForRoute(request, route);
+  }
 
+  Future<ConversationResponse> respondForRoute(
+    ConversationRequest request,
+    ConversationRoute route,
+  ) async {
     switch (route) {
       case ConversationRoute.localCasual:
         return localCasualEngine.generate(request);

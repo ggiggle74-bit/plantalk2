@@ -6,6 +6,7 @@ import 'package:plantalk2/dialogue/engines/api_conversation_engine.dart';
 import 'package:plantalk2/dialogue/models/conversation_request.dart';
 import 'package:plantalk2/dialogue/models/conversation_response.dart';
 import 'package:plantalk2/dialogue/models/conversation_route.dart';
+import 'package:plantalk2/dialogue/routing/conversation_intent_router.dart';
 import 'package:plantalk2/models/latest_condition_memory.dart';
 
 void main() {
@@ -108,6 +109,25 @@ void main() {
     expect(response.debugReason, 'api_request_failed');
   });
 
+  test('respondForRoute does not ask the router to decide again', () async {
+    const orchestrator = ConversationOrchestrator(
+      router: _ThrowingConversationIntentRouter(),
+    );
+    const request = ConversationRequest(
+      plantId: 'plant-1',
+      plantName: '무가리',
+      userMessage: '안녕',
+    );
+
+    final response = await orchestrator.respondForRoute(
+      request,
+      ConversationRoute.localCasual,
+    );
+
+    expect(response.route, ConversationRoute.localCasual);
+    expect(response.isFallback, isFalse);
+  });
+
   test('new dialogue boundary code does not import forbidden integrations', () {
     final files = Directory('lib/dialogue')
         .listSync(recursive: true)
@@ -153,6 +173,15 @@ void main() {
   });
 }
 
+
+class _ThrowingConversationIntentRouter extends ConversationIntentRouter {
+  const _ThrowingConversationIntentRouter();
+
+  @override
+  ConversationRoute route(ConversationRequest request) {
+    throw StateError('router must not be called');
+  }
+}
 
 class _RecordingApiConversationEngine implements ApiConversationEngine {
   _RecordingApiConversationEngine(this.response);
