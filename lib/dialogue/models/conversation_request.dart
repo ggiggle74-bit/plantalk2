@@ -12,6 +12,7 @@ class ConversationRequest {
     this.previousUserMessage,
     this.previousPlantReply,
     this.species,
+    this.speciesKey,
     this.mood,
     this.friendship,
     this.visitCount,
@@ -31,6 +32,7 @@ class ConversationRequest {
   final String? previousUserMessage;
   final String? previousPlantReply;
   final String? species;
+  final String? speciesKey;
   final String? mood;
   final int? friendship;
   final int? visitCount;
