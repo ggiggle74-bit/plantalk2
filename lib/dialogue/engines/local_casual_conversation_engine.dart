@@ -2,14 +2,14 @@ import '../daily_keywords/models/daily_conversation_material_context.dart';
 import '../models/conversation_request.dart';
 import '../models/conversation_response.dart';
 import '../models/conversation_route.dart';
-import '../tone/mugari_tone_composer.dart';
+import '../tone/plant_character_tone_composer.dart';
 
 class LocalCasualConversationEngine {
   const LocalCasualConversationEngine({
-    this.toneComposer = const MugariToneComposer(),
+    this.toneComposer = const PlantCharacterToneComposer(),
   });
 
-  final MugariToneComposer toneComposer;
+  final PlantCharacterToneComposer toneComposer;
 
   ConversationResponse generate(ConversationRequest request) {
     final plantName = _plantLabel(request.plantName);
@@ -21,6 +21,8 @@ class LocalCasualConversationEngine {
       selection.baseReply,
       plantName: request.plantName,
       mood: request.mood,
+      friendship: request.friendship,
+      variantSeed: _stableHash(selection.replyKey),
     );
 
     request.usageLedger?.record(
