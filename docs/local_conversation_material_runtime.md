@@ -16,9 +16,11 @@ stays local, while knowledge and complex exceptions continue to use Gemini.
 ## Repetition guard
 
 - a material keyword cools down for three local turns
-- a reply template cools down for four local turns
+- a reply template, including a DB-authored line, cools down for four local turns
 - the opening keyword enters the same material cooldown
 - tracked material and reply keys are bounded in memory
+- DB-authored casual lines and local material replies alternate when a material
+  pool is available
 - when every material is cooling down, the engine uses a rotating plain local
   reply instead of calling an external API
 
