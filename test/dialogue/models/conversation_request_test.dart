@@ -38,8 +38,10 @@ void main() {
 
       final request = ConversationRequest(
         plantId: 'plant-1',
-        plantName: '무가리',
+        plantName: '초록이',
         userMessage: '오늘 어때?',
+        mood: '밝음',
+        friendship: 12,
         previousUserMessage: '어제 학교에서 속상했어.',
         previousPlantReply: '무슨 일이 있었는지 말해줘.',
         dailyConversationMaterialContext: materialContext,
@@ -49,8 +51,10 @@ void main() {
       );
 
       expect(request.plantId, 'plant-1');
-      expect(request.plantName, '무가리');
+      expect(request.plantName, '초록이');
       expect(request.userMessage, '오늘 어때?');
+      expect(request.mood, '밝음');
+      expect(request.friendship, 12);
       expect(request.previousUserMessage, '어제 학교에서 속상했어.');
       expect(request.previousPlantReply, '무슨 일이 있었는지 말해줘.');
       expect(request.dailyConversationMaterialContext, same(materialContext));
