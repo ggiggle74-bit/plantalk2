@@ -120,11 +120,14 @@ class DailyOpeningContextCoordinator {
     final currentSource = source;
 
     if (currentSource == null) {
-      final openingContext = await provider?.load(
-        request: request,
-        isOpeningTurn: true,
-        seed: seed,
-      );
+      final currentProvider = provider;
+      final openingContext = currentProvider == null
+          ? null
+          : await currentProvider.load(
+              request: request,
+              isOpeningTurn: true,
+              seed: seed,
+            );
       return DailyChatContextBundle(openingContext: openingContext);
     }
 
