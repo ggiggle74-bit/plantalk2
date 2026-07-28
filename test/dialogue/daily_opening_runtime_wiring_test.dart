@@ -179,7 +179,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: ChatPanel(
-          plantName: '무가리',
+          plantName: '초록이',
+          mood: '밝음',
+          friendship: 12,
           initialPlantMessage: '',
           waterDay: 0,
           conversationController: controller,
@@ -210,6 +212,11 @@ void main() {
       controller.requests.last.dailyConversationMaterialContext,
       same(materialContext),
     );
+    expect(controller.requests.first.mood, '밝음');
+    expect(controller.requests.last.mood, '밝음');
+    expect(controller.requests.first.friendship, 12);
+    expect(controller.requests.last.friendship, 12);
+    expect(controller.requests.first.plantName, '초록이');
     expect(controller.requests.first.usageLedger, isNotNull);
     expect(
       controller.requests.last.usageLedger,

@@ -169,6 +169,50 @@ void main() {
     expect(replies.toSet(), hasLength(5));
   });
 
+  test('uses the current plant name with the correct Korean subject particle', () {
+    const engine = LocalCasualConversationEngine();
+
+    final vowelNameReply = engine.generate(
+      const ConversationRequest(
+        plantId: 'name-vowel',
+        plantName: '몬스테라',
+        userMessage: '뭐해?',
+      ),
+    );
+    final batchimNameReply = engine.generate(
+      const ConversationRequest(
+        plantId: 'name-batchim',
+        plantName: '봄',
+        userMessage: '뭐해?',
+      ),
+    );
+
+    expect(vowelNameReply.replyText, contains('몬스테라가 잎 정리하면서'));
+    expect(batchimNameReply.replyText, contains('봄이 잎 정리하면서'));
+    expect(vowelNameReply.replyText, isNot(contains('무가리')));
+    expect(batchimNameReply.replyText, isNot(contains('무가리')));
+  });
+
+  test('applies request mood once without a fixed personality suffix', () {
+    const engine = LocalCasualConversationEngine();
+    final response = engine.generate(
+      const ConversationRequest(
+        plantId: 'id-0',
+        plantName: '초록이',
+        userMessage: '안녕',
+        mood: '밝음',
+        friendship: 10,
+      ),
+    );
+
+    expect(
+      response.replyText,
+      anyOf(startsWith('좋아, '), startsWith('반가워. '), startsWith('오늘은 기분 좋게, ')),
+    );
+    expect(response.replyText, contains('초록이'));
+    expect(response.replyText, isNot(contains('작게 말')));
+  });
+
   test('uses a plain local reply when material context is absent', () {
     const engine = LocalCasualConversationEngine();
     final response = engine.generate(

@@ -19,6 +19,46 @@ String? speciesDisplayNameForChat(
   return null;
 }
 
+String? plantMoodForChat(
+  String? plantId,
+  Iterable<Map<String, dynamic>> plants,
+) {
+  final plant = _plantForChat(plantId, plants);
+  final mood = plant?['mood']?.toString().trim();
+  return mood == null || mood.isEmpty ? null : mood;
+}
+
+int? plantFriendshipForChat(
+  String? plantId,
+  Iterable<Map<String, dynamic>> plants,
+) {
+  final plant = _plantForChat(plantId, plants);
+  final value = plant?['friendship'];
+  if (value == null) {
+    return null;
+  }
+  if (value is int) {
+    return value;
+  }
+  return int.tryParse(value.toString());
+}
+
+Map<String, dynamic>? _plantForChat(
+  String? plantId,
+  Iterable<Map<String, dynamic>> plants,
+) {
+  if (plantId == null || plantId.isEmpty) {
+    return null;
+  }
+
+  for (final plant in plants) {
+    if (plantIdOf(plant) == plantId) {
+      return plant;
+    }
+  }
+  return null;
+}
+
 int waterDayOf(Map<String, dynamic> plant) {
   final value = plant['waterDay'] ?? plant['water_day'] ?? 0;
   if (value is int) return value;

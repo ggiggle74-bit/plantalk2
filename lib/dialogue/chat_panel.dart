@@ -27,6 +27,8 @@ class ChatPanel extends StatefulWidget {
     super.key,
     this.plantId,
     this.speciesDisplayName,
+    this.mood,
+    this.friendship,
     required this.plantName,
     required this.initialPlantMessage,
     required this.waterDay,
@@ -40,6 +42,8 @@ class ChatPanel extends StatefulWidget {
 
   final String? plantId;
   final String? speciesDisplayName;
+  final String? mood;
+  final int? friendship;
   final String plantName;
   final String initialPlantMessage;
   final int waterDay;
@@ -155,6 +159,8 @@ class _ChatPanelState extends State<ChatPanel> {
         ChatPanelConversationRequest(
           plantId: widget.plantId,
           speciesDisplayName: widget.speciesDisplayName,
+          mood: widget.mood,
+          friendship: widget.friendship,
           plantName: widget.plantName,
           userMessage: text,
           waterDay: widget.waterDay,
