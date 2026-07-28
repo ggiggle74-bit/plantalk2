@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/latest_condition_memory.dart';
 import '../services/plant_service.dart';
 import 'chat_panel_conversation_controller.dart';
+import 'daily_keywords/models/daily_conversation_material_context.dart';
 import 'daily_keywords/models/daily_opening_context.dart';
 import 'dialogue_engine.dart';
+import 'models/conversation_usage_ledger.dart';
 
 typedef FetchLatestConditionMemoryCallback =
     Future<LatestConditionMemory?> Function(String plantId);
@@ -33,6 +35,7 @@ class ChatPanel extends StatefulWidget {
     this.fetchDialogueReply,
     this.conversationController,
     this.dailyOpeningContext,
+    this.dailyConversationMaterialContext,
   });
 
   final String? plantId;
@@ -45,6 +48,7 @@ class ChatPanel extends StatefulWidget {
   final FetchDialogueReplyCallback? fetchDialogueReply;
   final ChatPanelConversationController? conversationController;
   final DailyOpeningContext? dailyOpeningContext;
+  final DailyConversationMaterialContext? dailyConversationMaterialContext;
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();
@@ -55,6 +59,8 @@ class _ChatPanelState extends State<ChatPanel> {
   PlantService? _plantService;
   late final ChatPanelConversationController _conversationController;
   final List<Map<String, String>> _messages = [];
+  final ConversationUsageLedger _conversationUsageLedger =
+      ConversationUsageLedger();
   String? _latestPlantReply;
   LatestConditionMemory? _latestConditionMemory;
   Future<void>? _conditionMemoryLoad;
@@ -158,6 +164,9 @@ class _ChatPanelState extends State<ChatPanel> {
           conditionMemoryReplyCount: _conditionMemoryReplyCount,
           fetchDialogueReply: widget.fetchDialogueReply,
           dailyOpeningContext: widget.dailyOpeningContext,
+          dailyConversationMaterialContext:
+              widget.dailyConversationMaterialContext,
+          usageLedger: _conversationUsageLedger,
           isOpeningTurn: isOpeningTurn,
           now: DateTime.now(),
         ),
