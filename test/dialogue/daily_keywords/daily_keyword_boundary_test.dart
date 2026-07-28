@@ -67,6 +67,10 @@ void main() {
           'local_daily_keyword_source_adapter',
           'fallback_daily_keyword_source',
           'daily_keyword_source.dart',
+          'dailyconversationmaterialprovider',
+          'daily_conversation_material_provider',
+          'dailyconversationmaterialprojector',
+          'daily_conversation_material_projector',
         ]) {
           expect(source, isNot(contains(snippet)));
         }
