@@ -1,28 +1,38 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plantalk2/dialogue/daily_keywords/models/daily_conversation_material_context.dart';
+import 'package:plantalk2/dialogue/daily_keywords/models/daily_opening_context.dart';
 import 'package:plantalk2/dialogue/engines/local_casual_conversation_engine.dart';
 import 'package:plantalk2/dialogue/models/conversation_request.dart';
 import 'package:plantalk2/dialogue/models/conversation_route.dart';
+import 'package:plantalk2/dialogue/models/conversation_usage_ledger.dart';
 import 'package:plantalk2/dialogue/models/daily_keyword_context.dart';
 
 void main() {
-  test('uses a daily keyword in a short Korean reply without API', () {
-    final engine = LocalCasualConversationEngine();
+  final now = DateTime.utc(2026, 7, 28);
+
+  test('uses projected daily material in a local reply without API', () {
+    const engine = LocalCasualConversationEngine();
+    final ledger = ConversationUsageLedger();
     final response = engine.generate(
       ConversationRequest(
         plantId: 'plant-1',
         plantName: '무가리',
-        userMessage: '오늘 어때?',
-        dailyKeywordContext: DailyKeywordContext(
-          date: DateTime.utc(2026, 7, 8),
-          locale: 'ko',
-          keywords: const [
-            DailyKeywordEntry(
+        userMessage: '오늘 뭐해?',
+        now: now,
+        dailyConversationMaterialContext: _materialContext(
+          now,
+          [
+            DailyConversationMaterial(
               type: 'weather',
               keyword: '장맛비',
               hint: '비가 이어지는 날',
+              plantHint: '실내 공기 흐름을 살펴보자',
+              tone: 'gentle',
+              fitScore: 0.82,
             ),
           ],
         ),
+        usageLedger: ledger,
       ),
     );
 
@@ -31,35 +41,159 @@ void main() {
     expect(response.usedApi, isFalse);
     expect(response.replyText, contains('장맛비'));
     expect(response.replyText, contains('무가리'));
+    expect(ledger.trackedMaterialKeys, contains('장맛비'));
   });
 
-  test(
-    'uses the plain local reply for null or empty daily keyword context',
-    () {
-      final engine = LocalCasualConversationEngine();
-      final nullContextResponse = engine.generate(
-        const ConversationRequest(
-          plantId: 'plant-1',
-          plantName: '무가리',
-          userMessage: '안녕',
-        ),
-      );
-      final emptyContextResponse = engine.generate(
+  test('does not immediately reuse a material from the opening turn', () {
+    const engine = LocalCasualConversationEngine();
+    final ledger = ConversationUsageLedger();
+    final openingContext = DailyOpeningContext(
+      selectedCandidate: const DailyKeywordEntry(
+        type: 'weather',
+        keyword: '비',
+        hint: '비가 내리는 날',
+        plantHint: '창가의 빗소리를 들어보자',
+        tone: 'gentle',
+        fitScore: 0.8,
+      ),
+    );
+    final materials = _materialContext(now, [
+      DailyConversationMaterial(
+        type: 'weather',
+        keyword: '비',
+        hint: '비가 내리는 날',
+        plantHint: '창가의 빗소리를 들어보자',
+        tone: 'gentle',
+        fitScore: 0.8,
+      ),
+      DailyConversationMaterial(
+        type: 'safe_issue',
+        keyword: '독서',
+        hint: '책 이야기를 나누는 날',
+        plantHint: '조용한 시간을 함께 보내자',
+        tone: 'calm',
+        fitScore: 0.72,
+      ),
+    ]);
+
+    final opening = engine.generate(
+      ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '안녕',
+        now: now,
+        dailyOpeningContext: openingContext,
+        dailyConversationMaterialContext: materials,
+        usageLedger: ledger,
+        isOpeningTurn: true,
+      ),
+    );
+    final next = engine.generate(
+      ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '오늘 뭐해?',
+        now: now.add(const Duration(minutes: 1)),
+        dailyOpeningContext: openingContext,
+        dailyConversationMaterialContext: materials,
+        usageLedger: ledger,
+      ),
+    );
+
+    expect(opening.replyText, contains('비'));
+    expect(next.replyText, contains('독서'));
+    expect(next.replyText, isNot(contains('비가 내리는 날')));
+  });
+
+  test('rotates materials and falls back locally while all are cooling down', () {
+    const engine = LocalCasualConversationEngine();
+    final ledger = ConversationUsageLedger();
+    final materials = _materialContext(now, [
+      DailyConversationMaterial(
+        type: 'weather',
+        keyword: '비',
+        hint: '비가 내리는 날',
+        plantHint: '창가의 빗소리를 들어보자',
+        tone: 'gentle',
+        fitScore: 0.8,
+      ),
+      DailyConversationMaterial(
+        type: 'safe_issue',
+        keyword: '독서',
+        hint: '책 이야기를 나누는 날',
+        plantHint: '조용한 시간을 함께 보내자',
+        tone: 'calm',
+        fitScore: 0.72,
+      ),
+    ]);
+
+    final responses = List.generate(
+      3,
+      (_) => engine.generate(
         ConversationRequest(
           plantId: 'plant-1',
           plantName: '무가리',
-          userMessage: '안녕',
-          dailyKeywordContext: DailyKeywordContext(
-            date: DateTime.utc(2026, 1, 1),
-            locale: 'ko-KR',
-            keywords: const [],
-          ),
+          userMessage: '오늘 뭐해?',
+          now: now,
+          dailyConversationMaterialContext: materials,
+          usageLedger: ledger,
         ),
-      );
+      ),
+    );
 
-      expect(nullContextResponse.usedDailyKeyword, isFalse);
-      expect(emptyContextResponse.usedDailyKeyword, isFalse);
-      expect(nullContextResponse.replyText, emptyContextResponse.replyText);
-    },
+    expect(responses[0].usedDailyKeyword, isTrue);
+    expect(responses[1].usedDailyKeyword, isTrue);
+    expect(responses[0].replyText, isNot(responses[1].replyText));
+    expect(responses[2].usedDailyKeyword, isFalse);
+    expect(responses.every((response) => response.usedApi == false), isTrue);
+  });
+
+  test('rotates repeated plain casual replies inside one session', () {
+    const engine = LocalCasualConversationEngine();
+    final ledger = ConversationUsageLedger();
+
+    final replies = List.generate(
+      5,
+      (_) => engine
+          .generate(
+            ConversationRequest(
+              plantId: 'plant-1',
+              plantName: '무가리',
+              userMessage: '기분 어때?',
+              usageLedger: ledger,
+            ),
+          )
+          .replyText,
+    );
+
+    expect(replies.toSet(), hasLength(5));
+  });
+
+  test('uses a plain local reply when material context is absent', () {
+    const engine = LocalCasualConversationEngine();
+    final response = engine.generate(
+      ConversationRequest(
+        plantId: 'plant-1',
+        plantName: '무가리',
+        userMessage: '안녕',
+        usageLedger: ConversationUsageLedger(),
+      ),
+    );
+
+    expect(response.usedDailyKeyword, isFalse);
+    expect(response.usedApi, isFalse);
+    expect(response.replyText, isNotEmpty);
+  });
+}
+
+DailyConversationMaterialContext _materialContext(
+  DateTime date,
+  List<DailyConversationMaterial> materials,
+) {
+  return DailyConversationMaterialContext(
+    date: date,
+    locale: 'ko-KR',
+    sourceVersion: 'test-v1',
+    materials: materials,
   );
 }
