@@ -102,6 +102,7 @@ void main() {
     expect(receivedRequest?.photoUrl, _photoUrl);
     expect(receivedRequest?.speciesKey, _speciesKey);
     expect(receivedRequest?.speciesDisplayName, _speciesDisplayName);
+    expect(receivedRequest?.deepHealthReservationId, _reservationId);
     expect(outcome, isA<DeepHealthAssessmentCompletedOutcome>());
 
     final completed = outcome as DeepHealthAssessmentCompletedOutcome;
