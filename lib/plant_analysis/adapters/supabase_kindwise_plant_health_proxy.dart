@@ -27,16 +27,16 @@ class SupabaseKindwisePlantHealthProxy {
     final normalizedImageUrl = _validatedImageUrl(imageUrl);
     final normalizedReservationId = _optionalReservationId(reservationId);
     final invokeFunction = _invokeFunction ?? _invokeSupabaseFunction;
+    final body = <String, Object?>{'imageUrl': normalizedImageUrl};
+    if (normalizedReservationId != null) {
+      body['reservationId'] = normalizedReservationId;
+    }
 
     final Object? response;
     try {
       response = await invokeFunction(
         functionName: normalizedFunctionName,
-        body: {
-          'imageUrl': normalizedImageUrl,
-          if (normalizedReservationId case final reservationId?)
-            'reservationId': reservationId,
-        },
+        body: body,
       );
     } catch (error) {
       throw PlantAnalysisException(
