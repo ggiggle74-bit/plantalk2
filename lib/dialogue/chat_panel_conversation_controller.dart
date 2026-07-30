@@ -85,14 +85,18 @@ class ChatPanelConversationController {
   Future<ChatPanelConversationResponse> generateReply(
     ChatPanelConversationRequest request,
   ) async {
-    final conversationRequest = _conversationRequest(request);
+    final latestConditionMemory = _freshConditionMemory(request);
+    final conversationRequest = _conversationRequest(
+      request,
+      latestConditionMemory: latestConditionMemory,
+    );
     final route = _conversationOrchestrator.router.route(conversationRequest);
     final decisionContext = _decisionContextBuilder.build(
       input: request.userMessage,
       waterDay: request.waterDay,
       plantName: request.plantName,
       previousUserMessage: request.previousUserMessage,
-      conditionMemoryContext: request.latestConditionMemory,
+      conditionMemoryContext: latestConditionMemory,
       conditionMemoryReplyCount: request.conditionMemoryReplyCount,
       allowConditionMemoryFallback: request.conditionMemoryReplyCount < 2,
     );
@@ -114,7 +118,7 @@ class ChatPanelConversationController {
     }
 
     if (route == ConversationRoute.conditionMemory &&
-        request.latestConditionMemory == null) {
+        latestConditionMemory == null) {
       return ChatPanelConversationResponse(
         replyText: conditionMemoryUnavailableReply,
         conditionMemoryReplyCount: request.conditionMemoryReplyCount,
@@ -174,8 +178,8 @@ class ChatPanelConversationController {
       if (!usedDbReply) {
         final conditionContext = DialogueEngine.photoConditionDialogueContext(
           userMessage: request.userMessage,
-          memoryMessage: request.latestConditionMemory?.message,
-          memoryEventType: request.latestConditionMemory?.eventType,
+          memoryMessage: latestConditionMemory?.message,
+          memoryEventType: latestConditionMemory?.eventType,
           replyCount: request.conditionMemoryReplyCount,
         );
         final conditionMemoryReply = conditionContext == null
@@ -294,9 +298,22 @@ class ChatPanelConversationController {
     );
   }
 
-  ConversationRequest _conversationRequest(
+  LatestConditionMemory? _freshConditionMemory(
     ChatPanelConversationRequest request,
   ) {
+    final memory = request.latestConditionMemory;
+    if (memory == null) {
+      return null;
+    }
+
+    final now = request.now ?? DateTime.now();
+    return memory.isFreshAt(now) ? memory : null;
+  }
+
+  ConversationRequest _conversationRequest(
+    ChatPanelConversationRequest request, {
+    required LatestConditionMemory? latestConditionMemory,
+  }) {
     return ConversationRequest(
       plantId: _conversationPlantId(request),
       plantName: request.plantName,
@@ -310,7 +327,7 @@ class ChatPanelConversationController {
       mood: request.mood,
       friendship: request.friendship,
       now: request.now,
-      latestConditionMemory: request.latestConditionMemory,
+      latestConditionMemory: latestConditionMemory,
       dailyConversationMaterialContext:
           request.dailyConversationMaterialContext,
       dailyOpeningContext: request.dailyOpeningContext,
