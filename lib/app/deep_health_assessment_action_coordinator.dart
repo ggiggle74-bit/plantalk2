@@ -43,7 +43,7 @@ class DeepHealthAssessmentActionCoordinator {
       debugPrint('Deep health assessment failed: $error');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('심층 진단에 실패했어요. 무료 사용은 자동으로 반환됩니다.'),
+          content: Text('심층 진단에 실패했어요. 잠시 후 다시 시도해 주세요.'),
         ),
       );
       return null;
