@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('deep flow checks authorization before photo work', () {
+  test('deep flow checks authorization before provider work', () {
     final source = File(
       'lib/services/deep_health_assessment_flow_service.dart',
     ).readAsStringSync();
@@ -12,11 +12,39 @@ void main() {
     final photoIndex = source.indexOf('_savePhoto(');
     final analysisIndex = source.indexOf('_analyze(');
     final memoryIndex = source.indexOf('_insertMemory(');
+    final commitIndex = source.indexOf('_gateService.commitReservation');
 
     expect(gateIndex, greaterThanOrEqualTo(0));
     expect(photoIndex, greaterThan(gateIndex));
     expect(analysisIndex, greaterThan(photoIndex));
     expect(memoryIndex, greaterThan(analysisIndex));
+    expect(commitIndex, greaterThan(memoryIndex));
+  });
+
+  test('failed deep work has an explicit reservation release path', () {
+    final source = File(
+      'lib/services/deep_health_assessment_flow_service.dart',
+    ).readAsStringSync();
+
+    expect(source, contains('_gateService.releaseReservation'));
+    expect(source, contains('Error.throwWithStackTrace'));
+    expect(
+      source,
+      contains('DeepHealthAssessmentUsageRecoveryException'),
+    );
+  });
+
+  test('paid deep flow rejects mock analysis', () {
+    final source = File(
+      'lib/services/deep_health_assessment_flow_service.dart',
+    ).readAsStringSync();
+
+    expect(source, contains('result.isMock'));
+    expect(source, contains('result.normalizedEvent.isMock'));
+    expect(
+      source,
+      contains('Paid deep health assessment must not complete with mock data.'),
+    );
   });
 
   test('deep memory type stays separate from ordinary condition memory', () {
