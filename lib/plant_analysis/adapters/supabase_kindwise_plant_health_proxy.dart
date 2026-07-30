@@ -34,8 +34,8 @@ class SupabaseKindwisePlantHealthProxy {
         functionName: normalizedFunctionName,
         body: {
           'imageUrl': normalizedImageUrl,
-          if (normalizedReservationId != null)
-            'reservationId': normalizedReservationId,
+          if (normalizedReservationId case final reservationId?)
+            'reservationId': reservationId,
         },
       );
     } catch (error) {
