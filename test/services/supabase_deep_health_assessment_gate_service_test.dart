@@ -17,6 +17,7 @@ void main() {
             'free_remaining': 1,
             'current_usage': 0,
             'usage_limit': 1,
+            'reset_at': null,
           },
         ];
       },
@@ -40,9 +41,10 @@ void main() {
     expect(result.access.freeRemaining, 1);
     expect(result.access.currentUsage, 0);
     expect(result.access.limit, 1);
+    expect(result.access.resetAt, isNull);
   });
 
-  test('maps exhausted server quota to payment required', () async {
+  test('maps exhausted server quota to reset-window block', () async {
     final gate = SupabaseDeepHealthAssessmentGateService(
       invokeRpc: ({required functionName, required params}) async {
         return {
@@ -52,6 +54,7 @@ void main() {
           'free_remaining': 0,
           'current_usage': 1,
           'usage_limit': 1,
+          'reset_at': '2026-08-29T15:30:00Z',
         };
       },
     );
@@ -64,6 +67,8 @@ void main() {
     expect(result.access.freeRemaining, 0);
     expect(result.access.currentUsage, 1);
     expect(result.access.limit, 1);
+    expect(result.access.resetAt, DateTime.utc(2026, 8, 29, 15, 30));
+    expect(result.access.message, contains('다시 사용할 수 있어요'));
   });
 
   test('rejects inconsistent or malformed reserve decisions', () async {
