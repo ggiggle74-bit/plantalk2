@@ -40,6 +40,8 @@ void main() {
         plantId: 'plant-1',
         plantName: '초록이',
         userMessage: '오늘 어때?',
+        species: '몬스테라',
+        speciesKey: 'monstera',
         mood: '밝음',
         friendship: 12,
         previousUserMessage: '어제 학교에서 속상했어.',
@@ -53,6 +55,8 @@ void main() {
       expect(request.plantId, 'plant-1');
       expect(request.plantName, '초록이');
       expect(request.userMessage, '오늘 어때?');
+      expect(request.species, '몬스테라');
+      expect(request.speciesKey, 'monstera');
       expect(request.mood, '밝음');
       expect(request.friendship, 12);
       expect(request.previousUserMessage, '어제 학교에서 속상했어.');

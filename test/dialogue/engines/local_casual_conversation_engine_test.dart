@@ -228,6 +228,29 @@ void main() {
     expect(response.usedApi, isFalse);
     expect(response.replyText, isNotEmpty);
   });
+
+  test('applies stored species character only through the local engine', () {
+    const engine = LocalCasualConversationEngine();
+    final response = engine.generate(
+      const ConversationRequest(
+        plantId: 'species-0',
+        plantName: '초록이',
+        userMessage: '안녕',
+        species: '사용자가 바꾼 표시 이름',
+        speciesKey: 'monstera',
+      ),
+    );
+
+    expect(response.route, ConversationRoute.localCasual);
+    expect(response.usedApi, isFalse);
+    expect(
+      response.replyText,
+      anyOf(
+        startsWith('잎을 활짝 펼친 기분으로, '),
+        startsWith('조금 신나게 말하면, '),
+      ),
+    );
+  });
 }
 
 DailyConversationMaterialContext _materialContext(
