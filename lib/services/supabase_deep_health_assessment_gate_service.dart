@@ -83,7 +83,7 @@ class SupabaseDeepHealthAssessmentGateService
     final status = _requiredText(row, 'reservation_status');
 
     if (returnedId != normalizedId || status != 'committed') {
-      throw const StateError(
+      throw StateError(
         'Deep health quota reservation was not committed.',
       );
     }
@@ -102,7 +102,7 @@ class SupabaseDeepHealthAssessmentGateService
 
     if (returnedId != normalizedId ||
         !const {'released', 'expired', 'committed'}.contains(status)) {
-      throw const StateError(
+      throw StateError(
         'Deep health quota reservation was not safely released.',
       );
     }
