@@ -165,13 +165,19 @@ class PlantService {
 
   Future<LatestConditionMemory?> fetchLatestConditionMemoryBestEffort({
     required String plantId,
+    DateTime? now,
   }) async {
     final memory = await fetchLatestPlantMemoryBestEffort(
       plantId: plantId,
       memoryType: PlantMemoryTypes.conditionCheck,
     );
 
-    return LatestConditionMemory.fromRow(memory);
+    final latest = LatestConditionMemory.fromRow(memory);
+    if (latest == null ||
+        !latest.isFreshAt(now ?? DateTime.now())) {
+      return null;
+    }
+    return latest;
   }
 
   Future<List<ConditionCheckMemoryItem>>
