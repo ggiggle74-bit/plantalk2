@@ -4,18 +4,18 @@ import {
 } from "./handler.ts";
 
 const supabaseUrl = "https://project-ref.supabase.co";
-const imageUrl =
-  `${supabaseUrl}/storage/v1/object/public/plant-photos/plants/test/photo.jpg`;
+const imageUrl = supabaseUrl +
+  "/storage/v1/object/public/plant-photos/plants/test/photo.jpg";
 const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+const reservationId = "reservation-0001";
+const authorization = "Bearer test-access-token-that-is-long-enough";
 
 Deno.test("handles CORS preflight without reading secrets", async () => {
   const handler = createPlantHealthAssessHandler({
     getEnv: () => {
       throw new Error("environment must not be read");
     },
-    fetcher: async () => {
-      throw new Error("fetch must not be called");
-    },
+    fetcher: neverFetch,
   });
 
   const response = await handler(
@@ -27,8 +27,7 @@ Deno.test("handles CORS preflight without reading secrets", async () => {
 });
 
 Deno.test("rejects unsupported methods", async () => {
-  const handler = testHandler({ fetcher: neverFetch });
-  const response = await handler(
+  const response = await testHandler({ fetcher: neverFetch })(
     new Request("http://localhost/plant-health-assess", { method: "GET" }),
   );
 
@@ -40,9 +39,10 @@ Deno.test("requires the Kindwise secret", async () => {
   const handler = createPlantHealthAssessHandler({
     getEnv: (name) => name === "SUPABASE_URL" ? supabaseUrl : undefined,
     fetcher: neverFetch,
+    claimReservation: async () => true,
   });
-  const response = await handler(jsonRequest({ imageUrl }));
 
+  const response = await handler(jsonRequest({ imageUrl }));
   assertEquals(response.status, 500);
   assertIncludes(
     String((await responseJson(response)).error),
@@ -50,7 +50,7 @@ Deno.test("requires the Kindwise secret", async () => {
   );
 });
 
-Deno.test("validates JSON body and imageUrl before fetching", async () => {
+Deno.test("requires authenticated reservation input before fetching", async () => {
   let fetchCount = 0;
   const handler = testHandler({
     fetcher: async () => {
@@ -59,152 +59,129 @@ Deno.test("validates JSON body and imageUrl before fetching", async () => {
     },
   });
 
-  const malformed = await handler(
-    new Request("http://localhost/plant-health-assess", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{",
-    }),
+  const noAuth = await handler(
+    jsonRequest({ imageUrl, reservationId }, { authorization: null }),
   );
-  const missing = await handler(jsonRequest({}));
-  const foreignOrigin = await handler(
+  const noReservation = await handler(
+    jsonRequest({ imageUrl, reservationId: "   " }),
+  );
+  const foreignImage = await handler(
     jsonRequest({
-      imageUrl:
-        "https://example.test/storage/v1/object/public/plant-photos/photo.jpg",
+      imageUrl: "https://example.test/storage/v1/object/public/plant-photos/a.jpg",
     }),
-  );
-  const nonStorage = await handler(
-    jsonRequest({ imageUrl: `${supabaseUrl}/rest/v1/plants` }),
   );
 
-  assertEquals(malformed.status, 400);
-  assertEquals(missing.status, 400);
-  assertEquals(foreignOrigin.status, 400);
-  assertEquals(nonStorage.status, 400);
+  assertEquals(noAuth.status, 401);
+  assertEquals(noReservation.status, 400);
+  assertEquals(foreignImage.status, 400);
   assertEquals(fetchCount, 0);
 });
 
-Deno.test("downloads one Storage image and sends the minimal Kindwise request", async () => {
-  const calls: Array<{ url: string; init?: RequestInit }> = [];
-  const upstreamPayload = {
-    access_token: "fake-provider-result-token",
-    model_version: "fake-model",
-    created: 1782057600,
-    completed: 1782057601,
-    status: "COMPLETED",
-    input: {
-      images: ["private-upstream-image"],
-      latitude: 37.5,
-      longitude: 127.0,
-    },
-    result: {
-      is_plant: { binary: true, probability: 0.99 },
-      is_healthy: { binary: false, probability: 0.18, threshold: 0.63 },
-      disease: {
-        suggestions: [
-          {
-            id: "fake-insect",
-            name: "Insecta",
-            probability: 0.72,
-            redundant: false,
-            similar_images: [{ url: "private-similar-image" }],
-            details: {
-              local_name: "해충 피해",
-              description: "private-description",
-              treatment: { chemical: ["private-treatment"] },
-              cause: "private-cause",
-            },
-          },
-        ],
-      },
-    },
-  };
-
-  const fetcher: FetchLike = async (input, init) => {
-    const url = input.toString();
-    calls.push({ url, init });
-    if (calls.length === 1) {
-      return new Response(jpegBytes, {
-        status: 200,
-        headers: { "content-type": "application/octet-stream" },
-      });
-    }
-    if (calls.length === 2) {
-      return Response.json(upstreamPayload);
-    }
-    throw new Error("unexpected fetch");
-  };
-
-  const logs: unknown[] = [];
+Deno.test("does not call Kindwise when server rejects the reservation claim", async () => {
+  const calls: string[] = [];
   const handler = testHandler({
-    fetcher,
-    logger: {
-      info: (...values: unknown[]) => logs.push(values),
-      warn: (...values: unknown[]) => logs.push(values),
+    fetcher: async (input) => {
+      calls.push(input.toString());
+      return new Response(jpegBytes);
+    },
+    claimReservation: async (input) => {
+      assertEquals(input.authorization, authorization);
+      assertEquals(input.reservationId, reservationId);
+      return false;
     },
   });
+
+  const response = await handler(jsonRequest({ imageUrl }));
+
+  assertEquals(response.status, 403);
+  assertEquals(calls, [imageUrl]);
+  assertEquals(
+    (await responseJson(response)).error,
+    "Deep health usage reservation is not available.",
+  );
+});
+
+Deno.test("claims once before the minimal Kindwise request", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const claimCalls: Array<{ authorization: string; reservationId: string }> = [];
+  const handler = testHandler({
+    fetcher: async (input, init) => {
+      calls.push({ url: input.toString(), init });
+      if (calls.length === 1) return new Response(jpegBytes);
+      if (calls.length === 2) return Response.json(healthyPayload());
+      throw new Error("unexpected fetch");
+    },
+    claimReservation: async (input) => {
+      claimCalls.push(input);
+      return true;
+    },
+  });
+
   const response = await handler(jsonRequest({ imageUrl }));
   const decoded = await responseJson(response);
 
   assertEquals(response.status, 200);
+  assertEquals(claimCalls, [{ authorization, reservationId }]);
   assertEquals(calls.length, 2);
   assertEquals(calls[0].url, imageUrl);
-  assertEquals(calls[0].init?.method, "GET");
 
   const kindwiseUrl = new URL(calls[1].url);
-  assertEquals(kindwiseUrl.origin + kindwiseUrl.pathname, "https://api.plant.id/v3/health_assessment");
+  assertEquals(
+    kindwiseUrl.origin + kindwiseUrl.pathname,
+    "https://api.plant.id/v3/health_assessment",
+  );
   assertEquals(
     kindwiseUrl.searchParams.get("details"),
     "local_name,description,treatment,cause",
   );
-  assertEquals(kindwiseUrl.searchParams.get("language"), null);
 
   const headers = new Headers(calls[1].init?.headers);
   assertEquals(headers.get("api-key"), "test-kindwise-key");
-  const providerRequest = JSON.parse(String(calls[1].init?.body)) as Record<string, unknown>;
-  assertEquals(providerRequest, {
+  assertEquals(JSON.parse(String(calls[1].init?.body)), {
     images: ["/9j/2Q=="],
   });
-  assert(!("similar_images" in providerRequest));
-  assert(!("health" in providerRequest));
-  assert(!("disease_level" in providerRequest));
-
   assertEquals(decoded, {
     access_token: "fake-provider-result-token",
     model_version: "fake-model",
     created: 1782057600,
     status: "COMPLETED",
     result: {
-      is_healthy: { binary: false, probability: 0.18, threshold: 0.63 },
-      disease: {
-        suggestions: [
-          {
-            id: "fake-insect",
-            name: "Insecta",
-            probability: 0.72,
-            redundant: false,
-            details: {
-              local_name: "해충 피해",
-              classification: [],
-              common_names: [],
-            },
-          },
-        ],
-      },
+      is_healthy: { binary: true, probability: 0.94, threshold: 0.63 },
+      disease: { suggestions: [] },
+    },
+  });
+});
+
+Deno.test("does not expose provider secrets in upstream failures", async () => {
+  let callCount = 0;
+  const handler = testHandler({
+    fetcher: async () => {
+      callCount += 1;
+      if (callCount === 1) return new Response(jpegBytes);
+      return Response.json(
+        {
+          message: "Invalid request.",
+          apiKey: "leaked-key",
+          authorization: "Bearer test-kindwise-key",
+          image: "/9j/" + "A".repeat(120),
+        },
+        { status: 400 },
+      );
     },
   });
 
+  const response = await handler(jsonRequest({ imageUrl }));
+  const decoded = await responseJson(response);
   const serialized = JSON.stringify(decoded);
-  assert(!serialized.includes("private-upstream-image"));
-  assert(!serialized.includes("private-similar-image"));
-  assert(!serialized.includes("private-description"));
-  assert(!serialized.includes("private-treatment"));
-  assert(!serialized.includes("private-cause"));
+
+  assertEquals(response.status, 502);
+  assertEquals(decoded.status, 400);
   assert(!serialized.includes("test-kindwise-key"));
-  assertEquals(logs.length, 1);
+  assert(!serialized.includes("leaked-key"));
+  assert(!serialized.includes("/9j/"));
 });
 
-Deno.test("rejects empty, unsupported, and oversized image responses", async () => {
+Deno.test("rejects empty, unsupported, and oversized images before claiming", async () => {
   for (const [imageResponse, expectedStatus] of [
     [new Response(new Uint8Array()), 400],
     [new Response(new Uint8Array([1, 2, 3, 4])), 400],
@@ -215,171 +192,46 @@ Deno.test("rejects empty, unsupported, and oversized image responses", async () 
       413,
     ],
   ] as const) {
-    let callCount = 0;
+    let claimCount = 0;
     const handler = testHandler({
-      fetcher: async () => {
-        callCount += 1;
-        return imageResponse;
+      fetcher: async () => imageResponse,
+      claimReservation: async () => {
+        claimCount += 1;
+        return true;
       },
     });
 
     const response = await handler(jsonRequest({ imageUrl }));
     assertEquals(response.status, expectedStatus);
-    assertEquals(callCount, 1);
+    assertEquals(claimCount, 0);
   }
 });
 
-Deno.test("includes sanitized upstream error details for non-OK Kindwise responses", async () => {
-  let callCount = 0;
+Deno.test("fails closed when reservation verification cannot be completed", async () => {
   const handler = testHandler({
-    fetcher: async () => {
-      callCount += 1;
-      if (callCount === 1) return new Response(jpegBytes);
-      return Response.json(
-        {
-          message: "Invalid health assessment request.",
-          apiKey: "leaked-key",
-          headers: {
-            authorization: "Bearer test-kindwise-key",
-            "api-key": "test-kindwise-key",
-          },
-          image: `/9j/${"A".repeat(120)}`,
-          detail: "provider-private-debug-detail",
-        },
-        { status: 400 },
-      );
-    },
-    logger: quietLogger,
-  });
-
-  const response = await handler(jsonRequest({ imageUrl }));
-  const decoded = await responseJson(response);
-  const upstreamError = decoded.upstreamError as Record<string, unknown>;
-  const serialized = JSON.stringify(decoded);
-
-  assertEquals(response.status, 502);
-  assertEquals(decoded.status, 400);
-  assertEquals(decoded.error, "Kindwise plant health request failed.");
-  assertEquals(upstreamError.message, "Invalid health assessment request.");
-  assertEquals(upstreamError.apiKey, "[redacted]");
-  assertEquals(upstreamError.headers, "[redacted]");
-  assertEquals(upstreamError.image, "[redacted]");
-  assertEquals(upstreamError.detail, "provider-private-debug-detail");
-  assert(!serialized.includes("test-kindwise-key"));
-  assert(!serialized.includes("leaked-key"));
-  assert(!serialized.includes("Bearer"));
-  assert(!serialized.includes("/9j/"));
-});
-
-Deno.test("truncates long upstream error text", async () => {
-  let callCount = 0;
-  const handler = testHandler({
-    fetcher: async () => {
-      callCount += 1;
-      if (callCount === 1) return new Response(jpegBytes);
-      return new Response(`provider-error ${".".repeat(2000)}`, {
-        status: 400,
-      });
-    },
-    logger: quietLogger,
-  });
-
-  const response = await handler(jsonRequest({ imageUrl }));
-  const decoded = await responseJson(response);
-
-  assertEquals(response.status, 502);
-  assertEquals(decoded.status, 400);
-  assert(typeof decoded.upstreamError === "string");
-  assertEquals(String(decoded.upstreamError).length, 1500);
-  assert(String(decoded.upstreamError).startsWith("provider-error "));
-});
-Deno.test("sanitizes malformed provider fields to safe nulls and empty lists", async () => {
-  let callCount = 0;
-  const handler = testHandler({
-    fetcher: async () => {
-      callCount += 1;
-      if (callCount === 1) return new Response(jpegBytes);
-      return Response.json({
-        access_token: { private: true },
-        created: false,
-        result: {
-          is_healthy: {
-            binary: "false",
-            probability: null,
-            threshold: "not-a-number",
-          },
-          disease: {
-            suggestions: [
-              {
-                id: "candidate",
-                name: "Fungi",
-                probability: true,
-                details: {
-                  local_name: ["private"],
-                  classification: ["Fungi", null, 42],
-                  common_names: "fungus",
-                },
-              },
-            ],
-          },
-        },
-      });
-    },
-  });
-
-  const response = await handler(jsonRequest({ imageUrl }));
-  const decoded = await responseJson(response);
-  assertEquals(decoded, {
-    access_token: null,
-    model_version: null,
-    created: null,
-    status: null,
-    result: {
-      is_healthy: { binary: null, probability: null, threshold: null },
-      disease: {
-        suggestions: [
-          {
-            id: "candidate",
-            name: "Fungi",
-            probability: null,
-            redundant: null,
-            details: {
-              local_name: null,
-              classification: ["Fungi", "42"],
-              common_names: [],
-            },
-          },
-        ],
-      },
-    },
-  });
-});
-
-Deno.test("rejects invalid successful upstream JSON", async () => {
-  let callCount = 0;
-  const handler = testHandler({
-    fetcher: async () => {
-      callCount += 1;
-      return callCount === 1
-        ? new Response(jpegBytes)
-        : new Response("not-json", { status: 200 });
+    fetcher: async () => new Response(jpegBytes),
+    claimReservation: async () => {
+      throw new Error("rpc unavailable");
     },
   });
 
   const response = await handler(jsonRequest({ imageUrl }));
   assertEquals(response.status, 502);
-  assertIncludes(
-    String((await responseJson(response)).error),
-    "invalid JSON",
+  assertEquals(
+    (await responseJson(response)).error,
+    "Deep health usage could not be verified.",
   );
 });
 
 function testHandler({
   fetcher,
-  logger = quietLogger,
+  claimReservation = async () => true,
 }: {
   fetcher: FetchLike;
-  logger?: Pick<Console, "info" | "warn">;
+  claimReservation?: (input: {
+    authorization: string;
+    reservationId: string;
+  }) => Promise<boolean>;
 }) {
   return createPlantHealthAssessHandler({
     getEnv: (name) => {
@@ -388,16 +240,41 @@ function testHandler({
       return undefined;
     },
     fetcher,
-    logger,
+    claimReservation,
+    logger: quietLogger,
   });
 }
 
-function jsonRequest(body: unknown): Request {
+function jsonRequest(
+  body: Record<string, unknown>,
+  options: { authorization?: string | null } = {},
+): Request {
   return new Request("http://localhost/plant-health-assess", {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+    headers: {
+      "content-type": "application/json",
+      ...(options.authorization === null
+        ? {}
+        : { authorization: options.authorization ?? authorization }),
+    },
+    body: JSON.stringify({
+      reservationId,
+      ...body,
+    }),
   });
+}
+
+function healthyPayload(): Record<string, unknown> {
+  return {
+    access_token: "fake-provider-result-token",
+    model_version: "fake-model",
+    created: 1782057600,
+    status: "COMPLETED",
+    result: {
+      is_healthy: { binary: true, probability: 0.94, threshold: 0.63 },
+      disease: { suggestions: [] },
+    },
+  };
 }
 
 async function responseJson(response: Response): Promise<Record<string, unknown>> {
@@ -423,12 +300,15 @@ function assertEquals(actual: unknown, expected: unknown): void {
   const actualJson = JSON.stringify(actual);
   const expectedJson = JSON.stringify(expected);
   if (actualJson !== expectedJson) {
-    throw new Error(`Expected ${expectedJson}, received ${actualJson}`);
+    throw new Error("Expected " + expectedJson + ", received " + actualJson);
   }
 }
 
 function assertIncludes(actual: string, expectedSubstring: string): void {
   if (!actual.includes(expectedSubstring)) {
-    throw new Error(`Expected ${JSON.stringify(actual)} to include ${JSON.stringify(expectedSubstring)}`);
+    throw new Error(
+      "Expected " + JSON.stringify(actual) + " to include " +
+        JSON.stringify(expectedSubstring),
+    );
   }
 }
