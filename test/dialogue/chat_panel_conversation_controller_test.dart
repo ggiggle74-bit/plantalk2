@@ -252,7 +252,13 @@ void main() {
     );
 
     expect(orchestrator.callCount, 0);
-    expect(response.replyText, contains(conditionMarker));
+    expect(
+      response.replyText,
+      isNot(ChatPanelConversationController.conditionMemoryUnavailableReply),
+    );
+    expect(response.replyText, isNot('API 답변'));
+    expect(response.replyText.trim(), isNotEmpty);
+    expect(response.conditionMemoryReplyCount, 1);
   });
 
   test('legacy condition-memory path wins over orchestrator', () async {
