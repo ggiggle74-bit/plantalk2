@@ -41,7 +41,7 @@ void main() {
           plantName: '초록이',
           initialPlantMessage: '',
           waterDay: 0,
-          initialConditionMemory: const LatestConditionMemory(
+          initialConditionMemory: LatestConditionMemory(
             message: staleMarker,
             eventType: 'normal',
             checkedAt: DateTime.utc(2026, 7, 1),
@@ -78,7 +78,7 @@ void main() {
           initialPlantMessage: '',
           waterDay: 0,
           fetchLatestConditionMemory: (_) async {
-            return const LatestConditionMemory(
+            return LatestConditionMemory(
               message: staleMarker,
               eventType: 'normal',
               checkedAt: DateTime.utc(2026, 7, 1),
