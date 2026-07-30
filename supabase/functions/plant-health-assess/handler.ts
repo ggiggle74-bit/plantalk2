@@ -174,7 +174,8 @@ export function createPlantHealthAssessHandler(
       );
     }
 
-    const claimReservation = dependencies.claimReservation ??
+    const claimReservation: ClaimDeepHealthReservationCallback =
+      dependencies.claimReservation ??
       ((input) =>
         claimDeepHealthReservation({
           fetcher,
@@ -546,8 +547,35 @@ async function readResponseBytes(
     throw new ImageTooLargeError();
   }
 
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.length > limit) throw new ImageTooLargeError();
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length > limit) throw new ImageTooLargeError();
+    return bytes;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalLength = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    totalLength += value.byteLength;
+    if (totalLength > limit) {
+      await reader.cancel();
+      throw new ImageTooLargeError();
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   return bytes;
 }
 
