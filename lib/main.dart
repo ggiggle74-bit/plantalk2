@@ -1,13 +1,15 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'admin_dialogue_screen.dart';
 import 'app/condition_check_action_coordinator.dart';
 import 'app/daily_opening_context_coordinator.dart';
+import 'app/deep_health_assessment_action_coordinator.dart';
+import 'app/plant_card_state_mapper.dart';
 import 'app/plant_chat_conversation_controller_factory.dart';
 import 'app/plant_chat_result_handler.dart';
 import 'app/plant_registration_action_coordinator.dart';
-import 'app/plant_card_state_mapper.dart';
 import 'dialogue/chat_panel.dart';
 import 'models/latest_condition_memory.dart';
 import 'plant_analysis/factories/existing_plant_state_check_service_factory.dart';
@@ -15,10 +17,13 @@ import 'photo/mock_plant_photo_analysis.dart';
 import 'photo/photo_input_service.dart';
 import 'photo/photo_source_picker.dart';
 import 'photo/plant_registration_preview.dart';
+import 'services/deep_health_assessment_flow_service.dart';
 import 'services/plant_condition_check_flow_service.dart';
-import 'services/plant_service.dart';
 import 'services/plant_photo_flow_service.dart';
+import 'services/plant_service.dart';
 import 'services/photo_service.dart';
+import 'services/supabase_deep_health_assessment_analysis_service.dart';
+import 'services/supabase_deep_health_assessment_gate_service.dart';
 import 'widgets/delete_plant_confirmation_dialog.dart';
 import 'widgets/edit_plant_name_dialog.dart';
 import 'widgets/plant_card.dart';
@@ -61,6 +66,9 @@ class _MyAppState extends State<MyApp> {
       ExistingPlantStateCheckServiceFactory.supabase().build();
   final ConditionCheckActionCoordinator conditionCheckActionCoordinator =
       const ConditionCheckActionCoordinator();
+  final DeepHealthAssessmentActionCoordinator
+  deepHealthAssessmentActionCoordinator =
+      const DeepHealthAssessmentActionCoordinator();
   final DailyOpeningContextCoordinator dailyOpeningContextCoordinator =
       DailyOpeningContextCoordinator.supabase();
   final chatConversationController =
@@ -71,11 +79,13 @@ class _MyAppState extends State<MyApp> {
       const PlantRegistrationActionCoordinator();
   late final PlantPhotoFlowService plantPhotoFlowService;
   late final PlantConditionCheckFlowService plantConditionCheckFlowService;
+  late final DeepHealthAssessmentFlowService deepHealthAssessmentFlowService;
 
   String monsteraMessage = '목이 조금 말라요 🌱';
   int monsteraWaterDay = 3;
 
   List<Map<String, dynamic>> extraPlants = [];
+  bool isDeepHealthAssessmentInProgress = false;
 
   @override
   void initState() {
@@ -89,6 +99,21 @@ class _MyAppState extends State<MyApp> {
       conditionAnalysisService:
           stateCheckAnalysisServices.generalObservationService,
       plantService: plantService,
+    );
+    deepHealthAssessmentFlowService = DeepHealthAssessmentFlowService(
+      gateService: SupabaseDeepHealthAssessmentGateService(),
+      savePhoto: plantPhotoFlowService.saveConditionCheckPhoto,
+      analyze: SupabaseDeepHealthAssessmentAnalysisService().analyzeCondition,
+      insertMemory: (payload) {
+        return plantService.insertPlantMemoryBestEffort(
+          plantId: payload.plantId,
+          memoryType: payload.memoryType,
+          eventType: payload.eventType,
+          message: payload.message,
+          photoUrl: payload.photoUrl,
+          isMock: payload.isMock,
+        );
+      },
     );
     loadPlantsFromSupabase();
   }
@@ -111,7 +136,7 @@ class _MyAppState extends State<MyApp> {
     String speciesDisplayName = '알 수 없음',
     String? speciesGuess,
   }) async {
-    return await plantService.addPlant(
+    return plantService.addPlant(
       plantName,
       speciesKey: speciesKey,
       speciesDisplayName: speciesDisplayName,
@@ -170,6 +195,32 @@ class _MyAppState extends State<MyApp> {
     );
     if (chatResult != null) {
       await updatePlantAfterChat(plant, chatResult);
+    }
+  }
+
+  Future<void> handleDeepHealthAssessment(
+    BuildContext context,
+    Map<String, dynamic> plant,
+  ) async {
+    if (isDeepHealthAssessmentInProgress) return;
+
+    setState(() {
+      isDeepHealthAssessmentInProgress = true;
+    });
+
+    try {
+      await deepHealthAssessmentActionCoordinator.handleAssessment(
+        context: context,
+        plant: plant,
+        photoInputService: photoInputService,
+        flowService: deepHealthAssessmentFlowService,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isDeepHealthAssessmentInProgress = false;
+        });
+      }
     }
   }
 
@@ -408,7 +459,8 @@ class _MyAppState extends State<MyApp> {
           return ChatPanel(
             plantId: plantId,
             plantName: plantName,
-            speciesDisplayName: speciesDisplayNameForChat(plantId, extraPlants),
+            speciesDisplayName:
+                speciesDisplayNameForChat(plantId, extraPlants),
             speciesKey: resolvedSpeciesKey,
             mood: resolvedMood,
             friendship: resolvedFriendship,
@@ -443,7 +495,6 @@ class _MyAppState extends State<MyApp> {
                 ),
               ],
             ),
-
             body: ListView(
               children: [
                 Padding(
@@ -465,7 +516,6 @@ class _MyAppState extends State<MyApp> {
                   monsteraMessage,
                   monsteraWaterDay,
                   monsteraFriendship,
-
                   waterMonstera,
                   onTalk: () async {
                     final chatResult = await openChatPanel(
@@ -487,13 +537,11 @@ class _MyAppState extends State<MyApp> {
                     }
                   },
                 ),
-
                 plantCard(
                   '스투키',
                   stuckyMessage,
                   stuckyWaterDay,
                   stuckyFriendship,
-
                   waterStucky,
                   onTalk: () async {
                     final chatResult = await openChatPanel(
@@ -515,7 +563,6 @@ class _MyAppState extends State<MyApp> {
                     }
                   },
                 ),
-
                 ...extraPlants.asMap().entries.map((entry) {
                   final index = entry.key;
                   final plant = entry.value;
@@ -525,13 +572,13 @@ class _MyAppState extends State<MyApp> {
                     plant['message'],
                     waterDayOf(plant),
                     plant['friendship'] ?? 0,
-
                     () async {
                       final plantId = plantIdOf(plant);
                       final plantIndex = plantId == null
                           ? extraPlants.indexOf(plant)
                           : extraPlants.indexWhere(
-                              (extraPlant) => plantIdOf(extraPlant) == plantId,
+                              (extraPlant) =>
+                                  plantIdOf(extraPlant) == plantId,
                             );
                       if (plantIndex < 0) return;
 
@@ -580,9 +627,14 @@ class _MyAppState extends State<MyApp> {
                       });
                     },
                     photoPath: plant['photoPath'] as String?,
-                    speciesDisplayName: plant['speciesDisplayName']?.toString(),
+                    speciesDisplayName:
+                        plant['speciesDisplayName']?.toString(),
                     onConditionCheck: () =>
                         handleConditionCheck(context, plant),
+                    onDeepHealthAssessment: () =>
+                        handleDeepHealthAssessment(context, plant),
+                    isDeepHealthAssessmentInProgress:
+                        isDeepHealthAssessmentInProgress,
                     onPhoto: () async {
                       final source = await showPhotoSourcePicker(context);
                       if (source == null) return;
@@ -592,7 +644,8 @@ class _MyAppState extends State<MyApp> {
                       if (image == null) return;
                       if (!context.mounted) return;
 
-                      const reactionMessage = '사진 봤다. 저장도 해뒀다. 이제 말 좀 걸어봐라.';
+                      const reactionMessage =
+                          '사진 봤다. 저장도 해뒀다. 이제 말 좀 걸어봐라.';
 
                       await showDialog(
                         context: context,
