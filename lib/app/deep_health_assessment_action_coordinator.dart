@@ -77,8 +77,8 @@ class DeepHealthAssessmentActionCoordinator {
         return AlertDialog(
           title: const Text('심층 건강 분석'),
           content: Text(
-            completed.analysisResult.conditionMessage +
-                '\n\n사진 기반 참고 결과이므로 잎·흙 상태를 함께 확인해 주세요.',
+            '${completed.analysisResult.conditionMessage}\n\n'
+            '사진 기반 참고 결과이므로 잎·흙 상태를 함께 확인해 주세요.',
           ),
           actions: [
             TextButton(
