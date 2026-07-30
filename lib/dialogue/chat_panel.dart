@@ -80,7 +80,9 @@ class _ChatPanelState extends State<ChatPanel> {
 
     _conversationController =
         widget.conversationController ?? ChatPanelConversationController();
-    _latestConditionMemory = widget.initialConditionMemory;
+    _latestConditionMemory = _freshConditionMemory(
+      widget.initialConditionMemory,
+    );
 
     final String firstMessage;
     final initialMessage = widget.initialPlantMessage.trim();
@@ -220,13 +222,24 @@ class _ChatPanelState extends State<ChatPanel> {
     } catch (_) {
       return;
     }
-    if (memory == null || !mounted || widget.initialConditionMemory != null) {
+    final freshMemory = _freshConditionMemory(memory);
+    if (freshMemory == null || !mounted) {
       return;
     }
 
     setState(() {
-      _latestConditionMemory = memory;
+      _latestConditionMemory = freshMemory;
     });
+  }
+
+  LatestConditionMemory? _freshConditionMemory(
+    LatestConditionMemory? memory,
+  ) {
+    if (memory == null) {
+      return null;
+    }
+
+    return memory.isFreshAt(DateTime.now()) ? memory : null;
   }
 
   Future<LatestConditionMemory?> _fetchLatestConditionMemory(String plantId) {
@@ -249,7 +262,9 @@ class _ChatPanelState extends State<ChatPanel> {
             speciesDisplayName == '알 수 없음'
         ? '종류 미확인'
         : '추정 종류: $speciesDisplayName';
-    final latestConditionMemoryMessage = _latestConditionMemory?.message;
+    final latestConditionMemoryMessage = _freshConditionMemory(
+      _latestConditionMemory,
+    )?.message;
 
     return PopScope(
       canPop: false,
