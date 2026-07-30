@@ -12,7 +12,20 @@
 6. 결과 메모리 저장까지 완료되면 사용을 확정한다.
 7. 실패하면 예약을 반환한다.
 
-무료횟수가 소진되면 결제 기능이 아직 준비 중이라는 안내만 보여 준다. 구매·복원은 다음 수익화 단계의 범위다.
+기본 정책은 사용자별 무료 1회이며, 정상 완료 시점부터 30일이 지나면 자동으로 다시 1회 사용할 수 있다. 소진 중에는 앱이 서버가 계산한 다음 사용 가능 시각을 안내한다.
+
+## 리셋 기간 변경
+
+앱 코드나 클라이언트는 정책 테이블을 바꿀 수 없다. 운영자는 Supabase SQL Editor에서 아래처럼 전역 리셋 기간만 변경한다. 앱 업데이트나 사용자별 수동 초기화는 필요 없다.
+
+```sql
+update public.deep_health_usage_policy
+set reset_interval_days = 14,
+    updated_at = now()
+where policy_key = 'default';
+```
+
+허용 범위는 1~365일이며 기본값은 30일이다. 기간 변경은 새 예약 판단부터 적용된다. 이미 정상 완료된 건도 바뀐 기간 기준으로 다시 계산된다.
 
 ## 서버 보호
 
@@ -20,6 +33,7 @@
 - claimed 상태는 무료 한도를 계속 점유한다.
 - 같은 예약의 두 번째 Edge Function 호출은 Provider 호출 전에 거절된다.
 - reserved와 claimed 예약은 만료되면 다음 예약에서 expired로 회수된다.
+- committed 상태만 리셋 기간 안에서 무료 한도를 점유한다.
 - commit과 release는 claimed 상태도 처리한다.
 - Edge Function은 사용자의 JWT로 RPC를 호출한다. 서비스 역할 키를 앱이나 Function 응답에 노출하지 않는다.
 
@@ -34,9 +48,9 @@
 
 이 PR을 병합해도 실제 기능을 사용하려면 다음 순서가 필요하다.
 
-1. 20260730070000 및 20260730080000 Supabase migration 적용
+1. 20260730070000, 20260730080000, 20260730090000 Supabase migration 적용
 2. plant-health-assess Edge Function 배포
 3. SUPABASE_ANON_KEY와 KINDWISE_PLANT_HEALTH_API_KEY 확인
-4. 실제 기기에서 무료 1회, 중복 탭, 실패 반환, 소진 안내를 확인
+4. 실제 기기에서 무료 1회, 중복 탭, 실패 반환, 리셋 시점, 소진 안내를 확인
 
 마이그레이션과 배포는 자동 실행하지 않는다.
