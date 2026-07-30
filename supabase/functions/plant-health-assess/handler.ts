@@ -6,17 +6,25 @@ export type FetchLike = (
 ) => Promise<Response>;
 
 type EnvReader = (name: string) => string | undefined;
-
 type Logger = Pick<Console, "info" | "warn">;
+
+export type ClaimDeepHealthReservationCallback = (
+  input: {
+    authorization: string;
+    reservationId: string;
+  },
+) => Promise<boolean>;
 
 export type PlantHealthAssessDependencies = {
   getEnv: EnvReader;
   fetcher?: FetchLike;
   logger?: Logger;
+  claimReservation?: ClaimDeepHealthReservationCallback;
 };
 
 type PlantHealthAssessRequest = {
   imageUrl?: unknown;
+  reservationId?: unknown;
 };
 
 const kindwiseEndpoint = "https://api.plant.id/v3/health_assessment";
@@ -28,9 +36,11 @@ const requestedDetails = [
 ] as const;
 const maxImageBytes = 10 * 1024 * 1024;
 const imageFetchTimeoutMs = 15_000;
+const reservationClaimTimeoutMs = 5_000;
 const kindwiseFetchTimeoutMs = 30_000;
 const maxUpstreamErrorChars = 1500;
 const publicStoragePathPrefix = "/storage/v1/object/public/";
+const claimUsageFunctionName = "claim_deep_health_assessment_usage";
 
 export function createPlantHealthAssessHandler(
   dependencies: PlantHealthAssessDependencies,
@@ -70,6 +80,19 @@ export function createPlantHealthAssessHandler(
       );
     }
 
+    const supabaseAnonKey = stringOrNull(
+      dependencies.getEnv("SUPABASE_ANON_KEY"),
+    );
+    if (!supabaseAnonKey && !dependencies.claimReservation) {
+      return jsonResponse(
+        {
+          error:
+            "SUPABASE_ANON_KEY Edge Function environment value is missing.",
+        },
+        500,
+      );
+    }
+
     let body: PlantHealthAssessRequest;
     try {
       const decoded: unknown = await request.json();
@@ -79,6 +102,16 @@ export function createPlantHealthAssessHandler(
       body = decoded;
     } catch (_) {
       return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+    }
+
+    const authorization = readBearerAuthorization(request);
+    if (!authorization) {
+      return jsonResponse({ error: "Authentication is required." }, 401);
+    }
+
+    const reservationId = validatedReservationId(body.reservationId);
+    if (!reservationId) {
+      return jsonResponse({ error: "reservationId is required." }, 400);
     }
 
     const imageUrlResult = validatedImageUrl(body.imageUrl, supabaseOrigin);
@@ -122,7 +155,7 @@ export function createPlantHealthAssessHandler(
     } catch (error) {
       if (error instanceof ImageTooLargeError) {
         return jsonResponse(
-          { error: `Plant image must not exceed ${maxImageBytes} bytes.` },
+          { error: "Plant image must not exceed 10485760 bytes." },
           413,
         );
       }
@@ -141,6 +174,33 @@ export function createPlantHealthAssessHandler(
       );
     }
 
+    const claimReservation = dependencies.claimReservation ??
+      ((input) =>
+        claimDeepHealthReservation({
+          fetcher,
+          supabaseOrigin,
+          supabaseAnonKey: supabaseAnonKey!,
+          ...input,
+        }));
+
+    let claimAccepted: boolean;
+    try {
+      claimAccepted = await claimReservation({ authorization, reservationId });
+    } catch (_) {
+      logger.warn("plant-health-assess reservation claim failed");
+      return jsonResponse(
+        { error: "Deep health usage could not be verified." },
+        502,
+      );
+    }
+
+    if (!claimAccepted) {
+      return jsonResponse(
+        { error: "Deep health usage reservation is not available." },
+        403,
+      );
+    }
+
     const kindwiseUrl = new URL(kindwiseEndpoint);
     kindwiseUrl.searchParams.set("details", requestedDetails.join(","));
 
@@ -154,7 +214,7 @@ export function createPlantHealthAssessHandler(
           headers: {
             accept: "application/json",
             "Content-Type": "application/json",
-      "Cache-Control": "no-store",
+            "Cache-Control": "no-store",
             "Api-Key": apiKey,
           },
           body: JSON.stringify({
@@ -217,6 +277,53 @@ export function createPlantHealthAssessHandler(
   };
 }
 
+async function claimDeepHealthReservation({
+  fetcher,
+  supabaseOrigin,
+  supabaseAnonKey,
+  authorization,
+  reservationId,
+}: {
+  fetcher: FetchLike;
+  supabaseOrigin: string;
+  supabaseAnonKey: string;
+  authorization: string;
+  reservationId: string;
+}): Promise<boolean> {
+  const claimUrl = new URL(
+    "/rest/v1/rpc/" + claimUsageFunctionName,
+    supabaseOrigin,
+  );
+  const response = await fetchWithTimeout(
+    fetcher,
+    claimUrl,
+    {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        apikey: supabaseAnonKey,
+        authorization,
+      },
+      body: JSON.stringify({ p_reservation_id: reservationId }),
+    },
+    reservationClaimTimeoutMs,
+  );
+
+  if (!response.ok) {
+    return false;
+  }
+
+  const decoded: unknown = await response.json();
+  const row = Array.isArray(decoded) ? decoded[0] : decoded;
+  if (!isRecord(row)) return false;
+
+  return row.claimed === true &&
+    row.reservation_id === reservationId &&
+    row.reservation_status === "claimed";
+}
+
 export function sanitizeKindwiseResponse(
   decoded: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -262,6 +369,21 @@ function sanitizeSuggestion(value: unknown): Record<string, unknown> | null {
       common_names: stringList(details.common_names),
     },
   };
+}
+
+function readBearerAuthorization(request: Request): string | null {
+  const authorization = request.headers.get("authorization")?.trim();
+  if (!authorization?.startsWith("Bearer ")) return null;
+
+  const token = authorization.slice("Bearer ".length).trim();
+  return token.length >= 20 ? "Bearer " + token : null;
+}
+
+function validatedReservationId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const reservationId = value.trim();
+  if (reservationId.length < 8 || reservationId.length > 200) return null;
+  return reservationId;
 }
 
 function validatedImageUrl(
@@ -318,28 +440,7 @@ async function readResponseTextSnippet(
   response: Response,
   maxChars: number,
 ): Promise<string> {
-  if (maxChars <= 0) return "";
-  if (!response.body) {
-    return truncateText(await response.text(), maxChars);
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let text = "";
-
-  while (text.length < maxChars) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-
-    text += decoder.decode(value, { stream: true });
-    if (text.length >= maxChars) {
-      await reader.cancel();
-      break;
-    }
-  }
-  text += decoder.decode();
-
+  const text = await response.text();
   return truncateText(text, maxChars);
 }
 
@@ -420,6 +521,7 @@ function redactSensitiveText(value: string, secrets: string[]): string {
 function truncateText(value: string, maxChars: number): string {
   return value.length > maxChars ? value.slice(0, maxChars) : value;
 }
+
 async function fetchWithTimeout(
   fetcher: FetchLike,
   input: RequestInfo | URL,
@@ -444,35 +546,8 @@ async function readResponseBytes(
     throw new ImageTooLargeError();
   }
 
-  if (!response.body) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.length > limit) throw new ImageTooLargeError();
-    return bytes;
-  }
-
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalLength = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-
-    totalLength += value.byteLength;
-    if (totalLength > limit) {
-      await reader.cancel();
-      throw new ImageTooLargeError();
-    }
-    chunks.push(value);
-  }
-
-  const bytes = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.length > limit) throw new ImageTooLargeError();
   return bytes;
 }
 
