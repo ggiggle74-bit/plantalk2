@@ -174,6 +174,7 @@ class PlantService {
 
     final latest = LatestConditionMemory.fromRow(memory);
     if (latest == null ||
+        latest.checkedAt == null ||
         !latest.isFreshAt(now ?? DateTime.now())) {
       return null;
     }
