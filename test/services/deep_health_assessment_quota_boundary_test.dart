@@ -88,16 +88,39 @@ void main() {
     expect(migration, contains('to authenticated'));
   });
 
-  test('server gate is not activated in runtime composition yet', () {
+  test('runtime uses the server gate for deep health assessments', () {
     final mainSource = File('lib/main.dart').readAsStringSync();
 
     expect(
       mainSource,
-      isNot(contains('SupabaseDeepHealthAssessmentGateService')),
+      contains('SupabaseDeepHealthAssessmentGateService'),
     );
     expect(
       mainSource,
-      isNot(contains('supabase_deep_health_assessment_gate_service')),
+      contains('supabase_deep_health_assessment_gate_service'),
     );
+  });
+
+  test('reset policy is private, configurable, and applies only recent commits', () {
+    final resetMigration = File(
+      'supabase/migrations/'
+      '20260730090000_deep_health_usage_reset_policy.sql',
+    ).readAsStringSync();
+
+    expect(resetMigration, contains('deep_health_usage_policy'));
+    expect(resetMigration, contains('default 30'));
+    expect(resetMigration, contains('between 1 and 365'));
+    expect(resetMigration, contains('enable row level security'));
+    expect(
+      resetMigration,
+      contains('revoke all on table public.deep_health_usage_policy'),
+    );
+    expect(resetMigration, contains('make_interval(days => v_reset_interval_days)'));
+    expect(
+      resetMigration,
+      contains("reservation.status = 'committed'"),
+    );
+    expect(resetMigration, contains('reservation.committed_at > v_window_started_at'));
+    expect(resetMigration, contains('reset_at timestamptz'));
   });
 }

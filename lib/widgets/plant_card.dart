@@ -13,6 +13,8 @@ Widget plantCard(
   VoidCallback? onDelete,
   VoidCallback? onPhoto,
   VoidCallback? onConditionCheck,
+  VoidCallback? onDeepHealthAssessment,
+  bool isDeepHealthAssessmentInProgress = false,
   String? photoPath,
   String? speciesDisplayName,
 }) {
@@ -97,6 +99,17 @@ Widget plantCard(
                 ElevatedButton(
                   onPressed: onConditionCheck,
                   child: const Text('상태 확인'),
+                ),
+              if (onDeepHealthAssessment != null)
+                ElevatedButton(
+                  onPressed: isDeepHealthAssessmentInProgress
+                      ? null
+                      : onDeepHealthAssessment,
+                  child: Text(
+                    isDeepHealthAssessmentInProgress
+                        ? '심층 진단 중…'
+                        : '🔎 심층 진단',
+                  ),
                 ),
             ],
           ),

@@ -4,7 +4,8 @@ import '../plant_analysis/models/plant_analysis_input.dart';
 import '../plant_analysis/selectors/plant_condition_representative_event_selector.dart';
 import '../plant_analysis/services/plant_analysis_service.dart';
 
-const _defaultMockConditionMessage = '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
+const _defaultMockConditionMessage =
+    '사진을 확인했어요. 지금은 큰 이상이 없어 보여요.';
 
 class PlantConditionEventTypes {
   const PlantConditionEventTypes._();
@@ -38,12 +39,16 @@ class PlantConditionAnalysisRequest {
     required this.photoUrl,
     this.speciesKey,
     this.speciesDisplayName,
+    this.deepHealthReservationId,
   });
 
   final String plantId;
   final String photoUrl;
   final String? speciesKey;
   final String? speciesDisplayName;
+
+  /// Present only for the server-gated Kindwise deep health path.
+  final String? deepHealthReservationId;
 }
 
 class PlantConditionAnalysisResult {
@@ -122,6 +127,7 @@ class PlantAnalysisBackedConditionAnalysisService
         speciesKey: request.speciesKey,
         speciesDisplayName: request.speciesDisplayName,
         imageUrl: request.photoUrl,
+        deepHealthReservationId: request.deepHealthReservationId,
       ),
     );
     final normalizedEvent = _representativeEventSelector.select(

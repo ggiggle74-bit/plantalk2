@@ -19,16 +19,24 @@ class SupabaseKindwisePlantHealthProxy {
   final InvokeSupabaseKindwisePlantHealthFunctionCallback? _invokeFunction;
   final String functionName;
 
-  Future<Map<String, dynamic>> invoke({required String imageUrl}) async {
+  Future<Map<String, dynamic>> invoke({
+    required String imageUrl,
+    String? reservationId,
+  }) async {
     final normalizedFunctionName = _validatedFunctionName(functionName);
     final normalizedImageUrl = _validatedImageUrl(imageUrl);
+    final normalizedReservationId = _optionalReservationId(reservationId);
     final invokeFunction = _invokeFunction ?? _invokeSupabaseFunction;
+    final body = <String, Object?>{'imageUrl': normalizedImageUrl};
+    if (normalizedReservationId != null) {
+      body['reservationId'] = normalizedReservationId;
+    }
 
     final Object? response;
     try {
       response = await invokeFunction(
         functionName: normalizedFunctionName,
-        body: {'imageUrl': normalizedImageUrl},
+        body: body,
       );
     } catch (error) {
       throw PlantAnalysisException(
@@ -78,6 +86,17 @@ class SupabaseKindwisePlantHealthProxy {
     }
 
     return imageUrl;
+  }
+
+  static String? _optionalReservationId(String? value) {
+    if (value == null) return null;
+    final reservationId = value.trim();
+    if (reservationId.isEmpty) {
+      throw const PlantAnalysisException(
+        'Kindwise plant health reservationId must not be blank.',
+      );
+    }
+    return reservationId;
   }
 
   static Map<String, dynamic> _validatedResponseMap(Object? response) {

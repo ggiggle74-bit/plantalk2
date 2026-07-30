@@ -112,6 +112,7 @@ class DeepHealthAssessmentFlowService {
           photoUrl: photoUrl,
           speciesKey: speciesKey,
           speciesDisplayName: speciesDisplayName,
+          deepHealthReservationId: reservationId,
         ),
       );
       _validatePaidAnalysis(analysisResult);

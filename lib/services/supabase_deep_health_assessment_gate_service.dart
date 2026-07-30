@@ -41,6 +41,7 @@ class SupabaseDeepHealthAssessmentGateService
     final freeRemaining = _requiredNonNegativeInt(row, 'free_remaining');
     final currentUsage = _requiredNonNegativeInt(row, 'current_usage');
     final limit = _requiredNonNegativeInt(row, 'usage_limit');
+    final resetAt = _requiredNullableUtcDateTime(row, 'reset_at');
 
     if (allowed == requiresPayment ||
         allowed != (reservationId != null) ||
@@ -57,12 +58,15 @@ class SupabaseDeepHealthAssessmentGateService
             freeRemaining: freeRemaining,
             currentUsage: currentUsage,
             limit: limit,
+            resetAt: resetAt,
           )
         : EntitlementCheckResult.paymentRequired(
             feature: PaidFeature.deepHealthAssessment,
             freeRemaining: freeRemaining,
             currentUsage: currentUsage,
             limit: limit,
+            resetAt: resetAt,
+            message: _cooldownMessage(resetAt),
           );
 
     return DeepHealthAssessmentAuthorization(
@@ -153,6 +157,44 @@ class SupabaseDeepHealthAssessmentGateService
     throw FormatException(
       'Deep health quota RPC field $key must be a non-negative integer.',
     );
+  }
+
+  static DateTime? _requiredNullableUtcDateTime(
+    Map<String, Object?> row,
+    String key,
+  ) {
+    if (!row.containsKey(key)) {
+      throw FormatException('Deep health quota RPC field $key is required.');
+    }
+
+    final value = row[key];
+    if (value == null) return null;
+    if (value is DateTime) return value.toUtc();
+    if (value is! String || value.trim().isEmpty) {
+      throw FormatException(
+        'Deep health quota RPC field $key must be an ISO-8601 timestamp or null.',
+      );
+    }
+
+    final parsed = DateTime.tryParse(value.trim());
+    if (parsed == null) {
+      throw FormatException(
+        'Deep health quota RPC field $key must be an ISO-8601 timestamp or null.',
+      );
+    }
+    return parsed.toUtc();
+  }
+
+  static String _cooldownMessage(DateTime? resetAt) {
+    if (resetAt == null) {
+      return '무료 심층 분석을 모두 사용했어요. 설정된 기간 뒤 다시 사용할 수 있어요.';
+    }
+
+    final local = resetAt.toLocal();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '무료 심층 분석을 모두 사용했어요.\n'
+        '${local.month}월 ${local.day}일 $hour:$minute 이후 다시 사용할 수 있어요.';
   }
 
   static String _requiredText(Map<String, Object?> row, String key) {

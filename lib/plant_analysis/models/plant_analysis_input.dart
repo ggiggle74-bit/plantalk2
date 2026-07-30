@@ -9,6 +9,7 @@ class PlantAnalysisInput {
     this.userPrompt,
     this.requestedAt,
     this.metadata = const {},
+    this.deepHealthReservationId,
   });
 
   final String plantId;
@@ -20,6 +21,9 @@ class PlantAnalysisInput {
   final String? userPrompt;
   final DateTime? requestedAt;
   final Map<String, Object?> metadata;
+
+  /// Server-issued usage reservation for the paid Kindwise path only.
+  final String? deepHealthReservationId;
 }
 
 class PlantAnalysisTypes {
