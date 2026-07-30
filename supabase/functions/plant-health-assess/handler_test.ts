@@ -152,6 +152,55 @@ Deno.test("claims once before the minimal Kindwise request", async () => {
   });
 });
 
+Deno.test("uses the caller JWT to claim the reservation before Kindwise", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const handler = createPlantHealthAssessHandler({
+    getEnv: (name) => {
+      if (name === "KINDWISE_PLANT_HEALTH_API_KEY") return "test-kindwise-key";
+      if (name === "SUPABASE_URL") return supabaseUrl;
+      if (name === "SUPABASE_ANON_KEY") return "test-supabase-anon-key";
+      return undefined;
+    },
+    fetcher: async (input, init) => {
+      calls.push({ url: input.toString(), init });
+      if (calls.length === 1) return new Response(jpegBytes);
+      if (calls.length === 2) {
+        return Response.json([{
+          claimed: true,
+          reservation_id: reservationId,
+          reservation_status: "claimed",
+        }]);
+      }
+      if (calls.length === 3) return Response.json(healthyPayload());
+      throw new Error("unexpected fetch");
+    },
+    logger: quietLogger,
+  });
+
+  const response = await handler(jsonRequest({ imageUrl }));
+
+  assertEquals(response.status, 200);
+  assertEquals(calls.length, 3);
+  assertEquals(calls[0].url, imageUrl);
+
+  const claim = calls[1];
+  assertEquals(
+    claim.url,
+    supabaseUrl + "/rest/v1/rpc/claim_deep_health_assessment_usage",
+  );
+  const claimHeaders = new Headers(claim.init?.headers);
+  assertEquals(claimHeaders.get("apikey"), "test-supabase-anon-key");
+  assertEquals(claimHeaders.get("authorization"), authorization);
+  assertEquals(JSON.parse(String(claim.init?.body)), {
+    p_reservation_id: reservationId,
+  });
+
+  assertEquals(
+    new URL(calls[2].url).origin + new URL(calls[2].url).pathname,
+    "https://api.plant.id/v3/health_assessment",
+  );
+});
+
 Deno.test("does not expose provider secrets in upstream failures", async () => {
   let callCount = 0;
   const handler = testHandler({
