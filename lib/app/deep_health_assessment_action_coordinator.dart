@@ -57,9 +57,7 @@ class DeepHealthAssessmentActionCoordinator {
         builder: (dialogContext) {
           return AlertDialog(
             title: Text(outcome.access.title),
-            content: Text(
-              outcome.access.message + '\n\n결제 기능은 준비 중이에요.',
-            ),
+            content: Text(outcome.access.message),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
