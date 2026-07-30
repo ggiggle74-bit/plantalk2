@@ -441,7 +441,28 @@ async function readResponseTextSnippet(
   response: Response,
   maxChars: number,
 ): Promise<string> {
-  const text = await response.text();
+  if (maxChars <= 0) return "";
+  if (!response.body) {
+    return truncateText(await response.text(), maxChars);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+
+  while (text.length < maxChars) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    text += decoder.decode(value, { stream: true });
+    if (text.length >= maxChars) {
+      await reader.cancel();
+      break;
+    }
+  }
+  text += decoder.decode();
+
   return truncateText(text, maxChars);
 }
 
