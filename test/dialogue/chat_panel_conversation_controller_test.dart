@@ -177,6 +177,84 @@ void main() {
     expect(response.replyText, contains('최근 일주일'));
   });
 
+  test('stale condition memory is treated as unavailable without API', () async {
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: '오래된 사진을 근거로 추측한 API 답변',
+        usedApi: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+    var dbCallCount = 0;
+    final now = DateTime.utc(2026, 7, 30, 12);
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '초록이',
+        userMessage: '최근 사진에서 상태가 어땠어?',
+        waterDay: 0,
+        now: now,
+        latestConditionMemory: LatestConditionMemory(
+          message: '예전 사진에서는 괜찮아 보였어.',
+          eventType: 'normal',
+          checkedAt: now.subtract(
+            const Duration(days: 7, seconds: 1),
+          ),
+        ),
+        fetchDialogueReply: ({situation, conditionKey}) async {
+          dbCallCount++;
+          return 'DB 상태 답변';
+        },
+      ),
+    );
+
+    expect(dbCallCount, 0);
+    expect(orchestrator.callCount, 0);
+    expect(
+      response.replyText,
+      ChatPanelConversationController.conditionMemoryUnavailableReply,
+    );
+    expect(response.replyText, contains('최근 일주일'));
+  });
+
+  test('condition memory exactly seven days old remains available', () async {
+    final orchestrator = _FakeConversationOrchestrator(
+      _orchestratorResponse(
+        route: ConversationRoute.api,
+        replyText: 'API 답변',
+        usedApi: true,
+      ),
+    );
+    final controller = ChatPanelConversationController(
+      conversationOrchestrator: orchestrator,
+    );
+    final now = DateTime.utc(2026, 7, 30, 12);
+    const conditionMarker = '일주일 전 사진에서는 큰 이상이 없었어.';
+
+    final response = await controller.generateReply(
+      ChatPanelConversationRequest(
+        plantId: 'plant-1',
+        plantName: '초록이',
+        userMessage: '최근 사진에서 상태가 어땠어?',
+        waterDay: 0,
+        now: now,
+        latestConditionMemory: LatestConditionMemory(
+          message: conditionMarker,
+          eventType: 'normal',
+          checkedAt: now.subtract(const Duration(days: 7)),
+        ),
+        fetchDialogueReply: _nullDialogueReply,
+      ),
+    );
+
+    expect(orchestrator.callCount, 0);
+    expect(response.replyText, contains(conditionMarker));
+  });
+
   test('legacy condition-memory path wins over orchestrator', () async {
     const conditionMarker = '사진만으로는 상태를 확실히 판단하기 어려워요.';
     const orchestratorMarker = 'ORCHESTRATOR_MARKER 조건 답변';
