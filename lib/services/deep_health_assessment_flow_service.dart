@@ -50,6 +50,22 @@ class DeepHealthAssessmentCompletedOutcome
   bool get isCompleted => true;
 }
 
+class DeepHealthAssessmentUsageRecoveryException implements Exception {
+  const DeepHealthAssessmentUsageRecoveryException({
+    required this.originalError,
+    required this.releaseError,
+  });
+
+  final Object originalError;
+  final Object releaseError;
+
+  @override
+  String toString() {
+    return 'Deep health assessment failed and its usage reservation '
+        'could not be released.';
+  }
+}
+
 class DeepHealthAssessmentFlowService {
   const DeepHealthAssessmentFlowService({
     required DeepHealthAssessmentGateService gateService,
@@ -78,41 +94,64 @@ class DeepHealthAssessmentFlowService {
     EntitlementCheckContext entitlementContext =
         const EntitlementCheckContext(),
   }) async {
-    final access = await _gateService.authorizeAndReserve(
+    final authorization = await _gateService.authorizeAndReserve(
       context: entitlementContext,
     );
-    _validateAccess(access);
+    final reservationId = _validateAuthorization(authorization);
+    final access = authorization.access;
 
     if (!access.allowed) {
       return DeepHealthAssessmentBlockedOutcome(access: access);
     }
 
-    final photoUrl = await _savePhoto(image: image, plantId: plantId);
-    final analysisResult = await _analyze(
-      PlantConditionAnalysisRequest(
+    try {
+      final photoUrl = await _savePhoto(image: image, plantId: plantId);
+      final analysisResult = await _analyze(
+        PlantConditionAnalysisRequest(
+          plantId: plantId,
+          photoUrl: photoUrl,
+          speciesKey: speciesKey,
+          speciesDisplayName: speciesDisplayName,
+        ),
+      );
+      _validatePaidAnalysis(analysisResult);
+
+      final memoryPayload = _memoryBridge.fromNormalizedEvent(
+        event: analysisResult.normalizedEvent,
         plantId: plantId,
         photoUrl: photoUrl,
-        speciesKey: speciesKey,
-        speciesDisplayName: speciesDisplayName,
-      ),
-    );
-    final memoryPayload = _memoryBridge.fromNormalizedEvent(
-      event: analysisResult.normalizedEvent,
-      plantId: plantId,
-      photoUrl: photoUrl,
-    );
+      );
+      await _insertMemory(memoryPayload);
+      await _gateService.commitReservation(reservationId: reservationId!);
 
-    await _insertMemory(memoryPayload);
+      return DeepHealthAssessmentCompletedOutcome(
+        access: access,
+        photoUrl: photoUrl,
+        analysisResult: analysisResult,
+        memoryPayload: memoryPayload,
+      );
+    } catch (error, stackTrace) {
+      try {
+        await _gateService.releaseReservation(
+          reservationId: reservationId!,
+        );
+      } catch (releaseError) {
+        throw DeepHealthAssessmentUsageRecoveryException(
+          originalError: error,
+          releaseError: releaseError,
+        );
+      }
 
-    return DeepHealthAssessmentCompletedOutcome(
-      access: access,
-      photoUrl: photoUrl,
-      analysisResult: analysisResult,
-      memoryPayload: memoryPayload,
-    );
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
-  void _validateAccess(EntitlementCheckResult access) {
+  String? _validateAuthorization(
+    DeepHealthAssessmentAuthorization authorization,
+  ) {
+    final access = authorization.access;
+    final normalizedReservationId = authorization.reservationId?.trim();
+
     if (access.feature != PaidFeature.deepHealthAssessment) {
       throw StateError(
         'Deep health assessment gate returned a result for another feature.',
@@ -122,6 +161,30 @@ class DeepHealthAssessmentFlowService {
     if (access.allowed == access.requiresPayment) {
       throw StateError(
         'Deep health assessment gate returned an inconsistent decision.',
+      );
+    }
+
+    if (access.allowed &&
+        (normalizedReservationId == null ||
+            normalizedReservationId.isEmpty)) {
+      throw StateError(
+        'Allowed deep health assessment requires a usage reservation.',
+      );
+    }
+
+    if (!access.allowed && normalizedReservationId != null) {
+      throw StateError(
+        'Blocked deep health assessment must not reserve usage.',
+      );
+    }
+
+    return normalizedReservationId;
+  }
+
+  void _validatePaidAnalysis(PlantConditionAnalysisResult result) {
+    if (result.isMock || result.normalizedEvent.isMock) {
+      throw StateError(
+        'Paid deep health assessment must not complete with mock data.',
       );
     }
   }

@@ -13,7 +13,7 @@ import 'package:plantalk2/services/deep_health_assessment_gate_service.dart';
 import 'package:plantalk2/services/plant_condition_analysis_service.dart';
 
 void main() {
-  test('blocked access stops photo, provider, and memory work', () async {
+  test('blocked access does not create a reservation or side effects', () async {
     final events = <String>[];
     final access = EntitlementCheckResult.paymentRequired(
       feature: PaidFeature.deepHealthAssessment,
@@ -21,7 +21,7 @@ void main() {
     );
     final service = _service(
       events: events,
-      access: access,
+      authorization: DeepHealthAssessmentAuthorization(access: access),
     );
 
     final outcome = await service.assess(
@@ -35,7 +35,7 @@ void main() {
     expect(outcome.isCompleted, isFalse);
   });
 
-  test('allowed access runs gate, photo, analysis, and memory once', () async {
+  test('successful assessment commits the reserved usage once', () async {
     final events = <String>[];
     const entitlementContext = EntitlementCheckContext(currentUsage: 1);
     EntitlementCheckContext? receivedContext;
@@ -50,7 +50,16 @@ void main() {
         authorizeAndReserve: ({required context}) async {
           events.add('gate');
           receivedContext = context;
-          return access;
+          return DeepHealthAssessmentAuthorization(
+            access: access,
+            reservationId: _reservationId,
+          );
+        },
+        commitReservation: ({required reservationId}) async {
+          events.add('commit:$reservationId');
+        },
+        releaseReservation: ({required reservationId}) async {
+          events.add('release:$reservationId');
         },
       ),
       savePhoto: ({required image, required plantId}) async {
@@ -81,7 +90,13 @@ void main() {
       entitlementContext: entitlementContext,
     );
 
-    expect(events, ['gate', 'photo', 'analysis', 'memory']);
+    expect(events, [
+      'gate',
+      'photo',
+      'analysis',
+      'memory',
+      'commit:$_reservationId',
+    ]);
     expect(receivedContext, same(entitlementContext));
     expect(receivedRequest?.plantId, _plantId);
     expect(receivedRequest?.photoUrl, _photoUrl);
@@ -93,20 +108,19 @@ void main() {
     expect(completed.access, same(access));
     expect(completed.photoUrl, _photoUrl);
     expect(completed.analysisResult.conditionMessage, _providerMessage);
-    expect(
-      completed.memoryPayload.memoryType,
-      DeepHealthAssessmentMemoryPayloadBridge
-          .deepHealthAssessmentMemoryType,
-    );
     expect(completed.isCompleted, isTrue);
   });
 
-  test('wrong-feature gate result fails before side effects', () async {
+  test('allowed access without a reservation fails closed', () async {
     final events = <String>[];
-    final access = EntitlementCheckResult.allowed(
-      feature: PaidFeature.plantCharacterSlot,
+    final service = _service(
+      events: events,
+      authorization: DeepHealthAssessmentAuthorization(
+        access: EntitlementCheckResult.allowed(
+          feature: PaidFeature.deepHealthAssessment,
+        ),
+      ),
     );
-    final service = _service(events: events, access: access);
 
     await expectLater(
       service.assess(image: _image(), plantId: _plantId),
@@ -116,19 +130,32 @@ void main() {
     expect(events, ['gate']);
   });
 
-  test('analysis failure stops memory persistence', () async {
+  test('wrong-feature gate result fails before side effects', () async {
+    final events = <String>[];
+    final service = _service(
+      events: events,
+      authorization: DeepHealthAssessmentAuthorization(
+        access: EntitlementCheckResult.allowed(
+          feature: PaidFeature.plantCharacterSlot,
+        ),
+        reservationId: _reservationId,
+      ),
+    );
+
+    await expectLater(
+      service.assess(image: _image(), plantId: _plantId),
+      throwsStateError,
+    );
+
+    expect(events, ['gate']);
+  });
+
+  test('analysis failure releases usage and stops memory', () async {
     final events = <String>[];
     final error = StateError('analysis failed');
     var memoryCalled = false;
     final service = DeepHealthAssessmentFlowService(
-      gateService: CallbackDeepHealthAssessmentGateService(
-        authorizeAndReserve: ({required context}) async {
-          events.add('gate');
-          return EntitlementCheckResult.allowed(
-            feature: PaidFeature.deepHealthAssessment,
-          );
-        },
-      ),
+      gateService: _gate(events),
       savePhoto: ({required image, required plantId}) async {
         events.add('photo');
         return _photoUrl;
@@ -147,22 +174,52 @@ void main() {
       throwsA(same(error)),
     );
 
-    expect(events, ['gate', 'photo', 'analysis']);
+    expect(events, [
+      'gate',
+      'photo',
+      'analysis',
+      'release:$_reservationId',
+    ]);
     expect(memoryCalled, isFalse);
   });
 
-  test('awaits deep memory persistence before completing', () async {
+  test('mock result is rejected and releases usage', () async {
+    final events = <String>[];
+    var memoryCalled = false;
+    final service = DeepHealthAssessmentFlowService(
+      gateService: _gate(events),
+      savePhoto: ({required image, required plantId}) async {
+        events.add('photo');
+        return _photoUrl;
+      },
+      analyze: (request) async {
+        events.add('analysis');
+        return _analysisResult(isMock: true);
+      },
+      insertMemory: (payload) async {
+        memoryCalled = true;
+      },
+    );
+
+    await expectLater(
+      service.assess(image: _image(), plantId: _plantId),
+      throwsStateError,
+    );
+
+    expect(events, [
+      'gate',
+      'photo',
+      'analysis',
+      'release:$_reservationId',
+    ]);
+    expect(memoryCalled, isFalse);
+  });
+
+  test('awaits memory persistence before committing usage', () async {
     final memoryCompleter = Completer<void>();
     final events = <String>[];
     final service = DeepHealthAssessmentFlowService(
-      gateService: CallbackDeepHealthAssessmentGateService(
-        authorizeAndReserve: ({required context}) async {
-          events.add('gate');
-          return EntitlementCheckResult.allowed(
-            feature: PaidFeature.deepHealthAssessment,
-          );
-        },
-      ),
+      gateService: _gate(events),
       savePhoto: ({required image, required plantId}) async {
         events.add('photo');
         return _photoUrl;
@@ -190,19 +247,114 @@ void main() {
     memoryCompleter.complete();
     await future;
 
+    expect(events.last, 'commit:$_reservationId');
     expect(completed, isTrue);
   });
+
+  test('commit failure releases usage and preserves the error', () async {
+    final events = <String>[];
+    final commitError = StateError('commit failed');
+    final service = _service(
+      events: events,
+      authorization: _allowedAuthorization(),
+      commitError: commitError,
+    );
+
+    await expectLater(
+      service.assess(image: _image(), plantId: _plantId),
+      throwsA(same(commitError)),
+    );
+
+    expect(events, [
+      'gate',
+      'photo',
+      'analysis',
+      'memory',
+      'commit:$_reservationId',
+      'release:$_reservationId',
+    ]);
+  });
+
+  test('release failure reports both the original and recovery errors', () async {
+    final events = <String>[];
+    final analysisError = StateError('analysis failed');
+    final releaseError = StateError('release failed');
+    final service = DeepHealthAssessmentFlowService(
+      gateService: _gate(events, releaseError: releaseError),
+      savePhoto: ({required image, required plantId}) async {
+        events.add('photo');
+        return _photoUrl;
+      },
+      analyze: (request) async {
+        events.add('analysis');
+        throw analysisError;
+      },
+      insertMemory: (payload) async {
+        events.add('memory');
+      },
+    );
+
+    try {
+      await service.assess(image: _image(), plantId: _plantId);
+      fail('expected usage recovery failure');
+    } on DeepHealthAssessmentUsageRecoveryException catch (error) {
+      expect(error.originalError, same(analysisError));
+      expect(error.releaseError, same(releaseError));
+    }
+
+    expect(events, [
+      'gate',
+      'photo',
+      'analysis',
+      'release:$_reservationId',
+    ]);
+  });
+}
+
+CallbackDeepHealthAssessmentGateService _gate(
+  List<String> events, {
+  Object? commitError,
+  Object? releaseError,
+}) {
+  return CallbackDeepHealthAssessmentGateService(
+    authorizeAndReserve: ({required context}) async {
+      events.add('gate');
+      return _allowedAuthorization();
+    },
+    commitReservation: ({required reservationId}) async {
+      events.add('commit:$reservationId');
+      if (commitError != null) {
+        throw commitError;
+      }
+    },
+    releaseReservation: ({required reservationId}) async {
+      events.add('release:$reservationId');
+      if (releaseError != null) {
+        throw releaseError;
+      }
+    },
+  );
 }
 
 DeepHealthAssessmentFlowService _service({
   required List<String> events,
-  required EntitlementCheckResult access,
+  required DeepHealthAssessmentAuthorization authorization,
+  Object? commitError,
 }) {
   return DeepHealthAssessmentFlowService(
     gateService: CallbackDeepHealthAssessmentGateService(
       authorizeAndReserve: ({required context}) async {
         events.add('gate');
-        return access;
+        return authorization;
+      },
+      commitReservation: ({required reservationId}) async {
+        events.add('commit:$reservationId');
+        if (commitError != null) {
+          throw commitError;
+        }
+      },
+      releaseReservation: ({required reservationId}) async {
+        events.add('release:$reservationId');
       },
     ),
     savePhoto: ({required image, required plantId}) async {
@@ -219,6 +371,15 @@ DeepHealthAssessmentFlowService _service({
   );
 }
 
+DeepHealthAssessmentAuthorization _allowedAuthorization() {
+  return DeepHealthAssessmentAuthorization(
+    access: EntitlementCheckResult.allowed(
+      feature: PaidFeature.deepHealthAssessment,
+    ),
+    reservationId: _reservationId,
+  );
+}
+
 XFile _image() {
   return XFile.fromData(
     Uint8List.fromList(const [1, 2, 3]),
@@ -227,19 +388,21 @@ XFile _image() {
   );
 }
 
-PlantConditionAnalysisResult _analysisResult() {
-  const event = NormalizedPlantEvent(
+PlantConditionAnalysisResult _analysisResult({bool isMock = false}) {
+  final event = NormalizedPlantEvent(
     eventType: PlantAnalysisEventTypes.pestSuspected,
-    sourceProvider: 'kindwise',
+    sourceProvider: isMock ? 'mock' : 'kindwise',
     confidence: 0.81,
     message: _providerMessage,
     sourceResultId: 'health-1',
+    isMock: isMock,
   );
 
-  return const PlantConditionAnalysisResult(
+  return PlantConditionAnalysisResult(
     conditionEventType: PlantConditionEventTypes.pestRisk,
     conditionMessage: _providerMessage,
     normalizedEvent: event,
+    isMock: isMock,
   );
 }
 
@@ -248,3 +411,4 @@ const _speciesKey = 'pothos';
 const _speciesDisplayName = '스킨답서스';
 const _photoUrl = 'https://example.test/deep-health.jpg';
 const _providerMessage = '잎 뒷면에 해충 신호가 의심돼요.';
+const _reservationId = 'reservation-1';
