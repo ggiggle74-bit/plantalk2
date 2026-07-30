@@ -47,21 +47,44 @@ void main() {
     );
   });
 
-  test('deep memory type stays separate from ordinary condition memory', () {
+  test('deep flow passes its reservation only to the paid analysis request', () {
     final source = File(
-      'lib/plant_analysis/bridges/'
-      'deep_health_assessment_memory_payload_bridge.dart',
+      'lib/services/deep_health_assessment_flow_service.dart',
+    ).readAsStringSync();
+    final ordinarySource = File(
+      'lib/services/plant_condition_check_flow_service.dart',
     ).readAsStringSync();
 
-    expect(source, contains("'deep_health_assessment'"));
-    expect(source, contains('deepHealthAssessmentMemoryType'));
+    expect(source, contains('deepHealthReservationId: reservationId'));
+    expect(
+      ordinarySource,
+      isNot(contains('deepHealthReservationId')),
+    );
   });
 
-  test('deep flow remains outside runtime composition', () {
+  test('deep runtime uses Supabase server gate and reserved provider only', () {
     final mainSource = File('lib/main.dart').readAsStringSync();
 
-    expect(mainSource, isNot(contains('DeepHealthAssessmentFlowService')));
-    expect(mainSource, isNot(contains('deep_health_assessment_flow_service')));
+    expect(
+      mainSource,
+      contains('SupabaseDeepHealthAssessmentGateService'),
+    );
+    expect(
+      mainSource,
+      contains('SupabaseDeepHealthAssessmentAnalysisService'),
+    );
+    expect(
+      mainSource,
+      contains('DeepHealthAssessmentActionCoordinator'),
+    );
+    expect(
+      mainSource,
+      isNot(contains('LocalEntitlementGateService')),
+    );
+    expect(
+      mainSource,
+      isNot(contains('MockPlantConditionAnalysisService')),
+    );
   });
 
   test('slot contract has no provider, UI, or local gate dependency', () {
