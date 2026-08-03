@@ -15,6 +15,7 @@ Widget plantCard(
   VoidCallback? onConditionCheck,
   VoidCallback? onDeepHealthAssessment,
   bool isDeepHealthAssessmentInProgress = false,
+  bool isSamplePlant = false,
   String? photoPath,
   String? speciesDisplayName,
 }) {
@@ -71,6 +72,13 @@ Widget plantCard(
             speciesLabel,
             style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
+          if (isSamplePlant) ...[
+            const SizedBox(height: 8),
+            const Text(
+              '예시 식물이에요. 내 식물을 등록하면 상태 확인과 심층 진단을 이용할 수 있어요.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ],
           const SizedBox(height: 10),
           if (photoPath != null) ...[
             photoPreview(photoPath),
