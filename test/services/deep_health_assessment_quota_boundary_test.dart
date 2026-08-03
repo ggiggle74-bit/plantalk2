@@ -122,5 +122,13 @@ void main() {
     );
     expect(resetMigration, contains('reservation.committed_at > v_window_started_at'));
     expect(resetMigration, contains('reset_at timestamptz'));
+    final dropIndex = resetMigration.indexOf(
+      'drop function if exists public.reserve_deep_health_assessment_usage()',
+    );
+    final createIndex = resetMigration.indexOf(
+      'create function public.reserve_deep_health_assessment_usage()',
+    );
+    expect(dropIndex, greaterThanOrEqualTo(0));
+    expect(createIndex, greaterThan(dropIndex));
   });
 }

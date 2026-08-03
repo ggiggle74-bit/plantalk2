@@ -19,7 +19,11 @@ alter table public.deep_health_usage_policy enable row level security;
 
 revoke all on table public.deep_health_usage_policy from anon, authenticated;
 
-create or replace function public.reserve_deep_health_assessment_usage()
+-- PostgreSQL cannot change a function's OUT row type with CREATE OR REPLACE.
+-- This drops only the old reserve RPC before recreating it with reset_at.
+drop function if exists public.reserve_deep_health_assessment_usage();
+
+create function public.reserve_deep_health_assessment_usage()
 returns table (
   allowed boolean,
   requires_payment boolean,
