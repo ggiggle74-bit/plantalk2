@@ -517,6 +517,7 @@ class _MyAppState extends State<MyApp> {
                   monsteraWaterDay,
                   monsteraFriendship,
                   waterMonstera,
+                  isSamplePlant: true,
                   onTalk: () async {
                     final chatResult = await openChatPanel(
                       context,
@@ -543,6 +544,7 @@ class _MyAppState extends State<MyApp> {
                   stuckyWaterDay,
                   stuckyFriendship,
                   waterStucky,
+                  isSamplePlant: true,
                   onTalk: () async {
                     final chatResult = await openChatPanel(
                       context,
